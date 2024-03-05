@@ -1,0 +1,52 @@
+[package]
+name = "predawn"
+description = "Predawn is a Rust web framework like Spring Boot."
+keywords = ["http", "web", "framework", "async"]
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+include.workspace = true
+readme.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+predawn-core = { workspace = true }
+predawn-macro = { workspace = true }
+predawn-schema = { workspace = true }
+
+hyper = { workspace = true, features = ["server", "http1", "http2"] }
+thiserror = { workspace = true }
+bytes = { workspace = true }
+http = { workspace = true }
+futures-util = { workspace = true }
+async-trait = { workspace = true }
+matchit = { workspace = true }
+tokio = { workspace = true, features = ["macros", "signal"] }
+hyper-util = { workspace = true, features = ["tokio", "server", "server-auto"] }
+tracing = { workspace = true }
+rudi = { workspace = true, features = ["rudi-macro"] }
+paste = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true, features = ["preserve_order"] }
+serde_path_to_error = { workspace = true }
+mime = { workspace = true }
+serde_html_form = { workspace = true }
+indexmap = { workspace = true, features = ["std"] }
+percent-encoding = { workspace = true }
+tower = { workspace = true }
+config = { workspace = true, features = ["toml"] }
+once_cell = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["std", "fmt", "ansi"] }
+
+[features]
+default = ["auto-register"]
+auto-register = ["rudi/auto-register", "predawn-macro/auto-register"]
+schemars = ["predawn-schema/schemars"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

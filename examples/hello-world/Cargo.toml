@@ -1,0 +1,25 @@
+[package]
+name = "hello-world"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+include.workspace = true
+readme.workspace = true
+
+[dependencies]
+predawn = { workspace = true, features = ["auto-register"] }
+
+http = { workspace = true }
+rudi = { workspace = true, features = [
+    "rudi-macro",
+    "auto-register",
+    "tracing",
+] }
+serde = { workspace = true, features = ["derive"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "signal"] }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+tower = { workspace = true, features = ["limit"] }

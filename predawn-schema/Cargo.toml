@@ -1,0 +1,30 @@
+[package]
+name = "predawn-schema"
+description = "OpenAPI schema for predawn"
+keywords = ["http", "web", "framework", "async", "openapi", "schema"]
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+include.workspace = true
+readme.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+openapiv3 = { workspace = true }
+indexmap = { workspace = true }
+serde_json = { workspace = true }
+bytes = { workspace = true }
+macro-v = { workspace = true }
+paste = { workspace = true }
+schemars = { workspace = true, optional = true }
+
+[features]
+raw_value = ["serde_json/raw_value"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
