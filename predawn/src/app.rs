@@ -25,12 +25,8 @@ use crate::{
 };
 
 pub trait Hooks {
-    fn openapi_info() -> Info {
-        Default::default()
-    }
-
-    fn load_config() -> Result<Config, ConfigError> {
-        Config::load(Environment::resolve_from_env())
+    fn load_config(env: &Environment) -> Result<Config, ConfigError> {
+        Config::load(env)
     }
 
     fn init_logger(config: &Config) {
@@ -41,32 +37,34 @@ pub trait Hooks {
             .init();
     }
 
-    fn create_context(config: Config) -> impl Future<Output = Context> {
+    fn create_context(config: Config, env: Environment) -> impl Future<Output = Context> {
         async {
             Context::options()
                 .singleton(config)
+                .singleton(env)
                 .auto_register_async()
                 .await
         }
+    }
+
+    fn openapi_info() -> Info {
+        Default::default()
     }
 
     fn after_routes(router: &Router) {
         let _router = router;
     }
 
-    fn add_middlewares<H: Handler>(
+    fn before_run<H: Handler>(
+        cx: Context,
         router: H,
-        cx: &mut Context,
-    ) -> impl Future<Output = impl Handler> {
-        async {
-            let _cx = cx;
-            router
-        }
+    ) -> impl Future<Output = (Context, impl Handler)> {
+        async { (cx, router) }
     }
 
     fn start_server<H: Handler>(
-        router: H,
         cx: &mut Context,
+        router: H,
     ) -> impl Future<Output = io::Result<()>> {
         async {
             let cfg = cx.resolve::<ServerConfig>();
@@ -85,18 +83,26 @@ pub trait Hooks {
 }
 
 pub async fn run_app<H: Hooks>() {
-    let config = H::load_config().unwrap();
+    let env = Environment::resolve_from_env();
+
+    let (mut cx, router) = create_app::<H>(env).await;
+
+    H::start_server(&mut cx, router).await.unwrap();
+}
+
+pub(crate) async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
+    let config = H::load_config(&env).unwrap();
 
     H::init_logger(&config);
 
-    let config = H::load_config().unwrap();
+    let config = H::load_config(&env).unwrap();
 
     let server_cfg = config.get::<ServerConfig>().unwrap_or_default();
     let root_path = server_cfg.normalized_root_path();
     let full_non_application_root_path = server_cfg.full_non_application_root_path();
     let request_body_limit = server_cfg.request_body_limit;
 
-    let mut cx = H::create_context(config).await;
+    let mut cx = H::create_context(config, env).await;
 
     let mut route_table = HashMap::with_capacity(128);
     let mut paths = BTreeMap::new();
@@ -148,7 +154,7 @@ pub async fn run_app<H: Hooks>() {
 
     H::after_routes(&router);
 
-    let router = H::add_middlewares(router, &mut cx).await;
+    let (cx, router) = H::before_run(cx, router).await;
 
     let router = router.before(move |mut req| async move {
         req.head
@@ -158,5 +164,5 @@ pub async fn run_app<H: Hooks>() {
         Ok(req)
     });
 
-    H::start_server(router, &mut cx).await.unwrap();
+    (cx, router)
 }

@@ -18,8 +18,10 @@ use tower::limit::RateLimitLayer;
 struct App;
 
 impl Hooks for App {
-    async fn add_middlewares<H: Handler>(router: H, cx: &mut Context) -> impl Handler {
-        router.with(cx.resolve::<Tracing>())
+    async fn before_run<H: Handler>(mut cx: Context, router: H) -> (Context, impl Handler) {
+        let t = cx.resolve::<Tracing>();
+
+        (cx, router.with(t))
     }
 
     fn after_routes(router: &predawn::route::Router) {
@@ -114,5 +116,23 @@ impl ResponseError for MyError {
 
     fn status_codes() -> HashSet<StatusCode> {
         [StatusCode::INTERNAL_SERVER_ERROR].into()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use predawn::test_client::TestClient;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test_my_controller() {
+        let client = TestClient::new::<App>().await;
+        let res = client.get("/no_arg").send().await.unwrap();
+        assert_eq!(res.status(), 200);
+
+        let res = client.post("/").body("world").send().await.unwrap();
+        assert_eq!(res.status(), 200);
+        assert_eq!(res.text().await.unwrap(), "hello, world");
     }
 }

@@ -24,7 +24,7 @@ impl Config {
         Self { inner: config }
     }
 
-    pub fn load(env: Environment) -> Result<Self, ConfigError> {
+    pub fn load(env: &Environment) -> Result<Self, ConfigError> {
         static DEFAULT_FOLDER: Lazy<PathBuf> = Lazy::new(|| {
             let mut parent = match env::var("CARGO_MANIFEST_DIR") {
                 Ok(dir) => PathBuf::from(dir),
@@ -48,7 +48,7 @@ impl Config {
         Self::from_folder(env, DEFAULT_FOLDER.as_path())
     }
 
-    pub fn from_folder(env: Environment, path: &Path) -> Result<Self, ConfigError> {
+    pub fn from_folder(env: &Environment, path: &Path) -> Result<Self, ConfigError> {
         let app_cfg = path.join("app.toml");
         let env_cfg = path.join(format!("app-{}.toml", env));
         let env = config::Environment::default().separator("_");

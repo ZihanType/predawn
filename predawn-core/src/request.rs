@@ -6,12 +6,27 @@ use http::{
 use http_body_util::Limited;
 use hyper::body::Incoming;
 
-use crate::body::RequestBody;
+use crate::{body::RequestBody, impl_deref};
 
 pub const DEFAULT_REQUEST_BODY_LIMIT: usize = 2_097_152; // 2 mb
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct RequestBodyLimit(pub usize);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct LocalAddr(pub SocketAddr);
+
+impl_deref!(LocalAddr : SocketAddr);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct RemoteAddr(pub SocketAddr);
+
+impl_deref!(RemoteAddr : SocketAddr);
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OriginalUri(pub Uri);
+
+impl_deref!(OriginalUri : Uri);
 
 #[derive(Debug)]
 pub struct Request {
@@ -44,9 +59,9 @@ impl Request {
                 version,
                 headers,
                 extensions,
-                local_addr,
-                remote_addr,
-                original_uri: uri,
+                local_addr: LocalAddr(local_addr),
+                remote_addr: RemoteAddr(remote_addr),
+                original_uri: OriginalUri(uri),
             },
             body,
         }
@@ -82,11 +97,11 @@ pub struct Head {
     /// The request's extensions
     pub extensions: Extensions,
 
-    local_addr: SocketAddr,
+    pub(crate) local_addr: LocalAddr,
 
-    remote_addr: SocketAddr,
+    pub(crate) remote_addr: RemoteAddr,
 
-    original_uri: Uri,
+    pub(crate) original_uri: OriginalUri,
 }
 
 impl fmt::Debug for Head {
@@ -96,9 +111,9 @@ impl fmt::Debug for Head {
             .field("uri", &self.uri)
             .field("version", &self.version)
             .field("headers", &self.headers)
-            .field("local_addr", &self.local_addr)
-            .field("remote_addr", &self.remote_addr)
-            .field("original_uri", &self.original_uri)
+            .field("local_addr", &self.local_addr.0)
+            .field("remote_addr", &self.remote_addr.0)
+            .field("original_uri", &self.original_uri.0)
             .finish()
     }
 }
@@ -111,14 +126,14 @@ impl Head {
     }
 
     pub fn local_addr(&self) -> SocketAddr {
-        self.local_addr
+        self.local_addr.0
     }
 
     pub fn remote_addr(&self) -> SocketAddr {
-        self.remote_addr
+        self.remote_addr.0
     }
 
     pub fn original_uri(&self) -> &Uri {
-        &self.original_uri
+        &self.original_uri.0
     }
 }

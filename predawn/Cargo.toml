@@ -41,6 +41,7 @@ tower = { workspace = true }
 config = { workspace = true, features = ["toml"] }
 once_cell = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["std", "fmt", "ansi"] }
+reqwest = { workspace = true }
 
 [features]
 default = ["auto-register"]

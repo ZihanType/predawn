@@ -7,7 +7,10 @@ use http_body_util::{BodyExt, LengthLimitError};
 use openapiv3::{Components, Parameter};
 
 use crate::{
-    body::RequestBody, error::BoxError, media_type::MultiRequestMediaType, request::Head,
+    body::RequestBody,
+    error::BoxError,
+    media_type::MultiRequestMediaType,
+    request::{Head, LocalAddr, OriginalUri, RemoteAddr},
     response_error::ResponseError,
 };
 
@@ -267,7 +270,7 @@ impl<'a> FromRequest<'a> for String {
     }
 }
 
-macro_rules! impl_from_request_head {
+macro_rules! impl_from_request_head_for_cloneable {
     ($ty:ty; $($field:ident)?) => {
         #[async_trait]
         impl<'a> FromRequestHead<'a> for &'a $ty {
@@ -297,20 +300,29 @@ macro_rules! impl_from_request_head {
     };
 }
 
-impl_from_request_head!(Head; );
-impl_from_request_head!(Uri; uri);
-impl_from_request_head!(Method; method);
-impl_from_request_head!(HeaderMap; headers);
+macro_rules! impl_from_request_head_for_copyable {
+    ($ty:ty; $($field:ident)?) => {
+        #[async_trait]
+        impl<'a> FromRequestHead<'a> for $ty {
+            type Error = Infallible;
 
-#[async_trait]
-impl<'a> FromRequestHead<'a> for Version {
-    type Error = Infallible;
+            async fn from_request_head(head: &'a Head) -> Result<Self, Self::Error> {
+                Ok(head $(.$field)?)
+            }
 
-    async fn from_request_head(head: &'a Head) -> Result<Self, Self::Error> {
-        Ok(head.version)
-    }
-
-    fn parameters(_: &mut Components) -> Option<Vec<Parameter>> {
-        None
-    }
+            fn parameters(_: &mut Components) -> Option<Vec<Parameter>> {
+                None
+            }
+        }
+    };
 }
+
+impl_from_request_head_for_cloneable!(Head; );
+impl_from_request_head_for_cloneable!(Uri; uri);
+impl_from_request_head_for_cloneable!(Method; method);
+impl_from_request_head_for_cloneable!(HeaderMap; headers);
+impl_from_request_head_for_cloneable!(OriginalUri; original_uri);
+
+impl_from_request_head_for_copyable!(Version; version);
+impl_from_request_head_for_copyable!(LocalAddr; local_addr);
+impl_from_request_head_for_copyable!(RemoteAddr; remote_addr);

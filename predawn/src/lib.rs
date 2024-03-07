@@ -16,6 +16,7 @@ pub mod payload;
 pub mod plugin;
 pub mod route;
 pub mod server;
+pub mod test_client;
 
 #[doc(inline)]
 pub use predawn_core::*;
