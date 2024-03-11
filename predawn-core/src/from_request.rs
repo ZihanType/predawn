@@ -4,12 +4,12 @@ use async_trait::async_trait;
 use bytes::Bytes;
 use http::{HeaderMap, Method, StatusCode, Uri, Version};
 use http_body_util::{BodyExt, LengthLimitError};
-use openapiv3::{Components, Parameter};
 
 use crate::{
     body::RequestBody,
     error::BoxError,
     media_type::MultiRequestMediaType,
+    openapi::{self, Components, Parameter},
     request::{Head, LocalAddr, OriginalUri, RemoteAddr},
     response_error::ResponseError,
 };
@@ -41,7 +41,7 @@ pub trait FromRequest<'a, M = private::ViaRequest>: Sized {
 
     fn parameters(components: &mut Components) -> Option<Vec<Parameter>>;
 
-    fn request_body(components: &mut Components) -> Option<openapiv3::RequestBody>;
+    fn request_body(components: &mut Components) -> Option<openapi::RequestBody>;
 }
 
 #[async_trait]
@@ -56,7 +56,7 @@ impl<'a, T: FromRequestHead<'a>> FromRequest<'a, private::ViaHead> for T {
         T::parameters(components)
     }
 
-    fn request_body(_: &mut Components) -> Option<openapiv3::RequestBody> {
+    fn request_body(_: &mut Components) -> Option<openapi::RequestBody> {
         None
     }
 }
@@ -99,7 +99,7 @@ impl<'a, T: FromRequest<'a>> FromRequest<'a> for Option<T> {
         Ok(T::from_request(head, body).await.ok())
     }
 
-    fn request_body(components: &mut Components) -> Option<openapiv3::RequestBody> {
+    fn request_body(components: &mut Components) -> Option<openapi::RequestBody> {
         let mut request_body = T::request_body(components)?;
         request_body.required = false;
         Some(request_body)
@@ -131,7 +131,7 @@ impl<'a, T: FromRequest<'a>> FromRequest<'a> for Result<T, T::Error> {
         T::parameters(components)
     }
 
-    fn request_body(components: &mut Components) -> Option<openapiv3::RequestBody> {
+    fn request_body(components: &mut Components) -> Option<openapi::RequestBody> {
         T::request_body(components)
     }
 }
@@ -148,7 +148,7 @@ impl<'a> FromRequest<'a> for RequestBody {
         None
     }
 
-    fn request_body(components: &mut Components) -> Option<openapiv3::RequestBody> {
+    fn request_body(components: &mut Components) -> Option<openapi::RequestBody> {
         Bytes::request_body(components)
     }
 }
@@ -192,8 +192,8 @@ impl<'a> FromRequest<'a> for Bytes {
         None
     }
 
-    fn request_body(components: &mut Components) -> Option<openapiv3::RequestBody> {
-        Some(openapiv3::RequestBody {
+    fn request_body(components: &mut Components) -> Option<openapi::RequestBody> {
+        Some(openapi::RequestBody {
             description: Some("Extract binary from request body".to_owned()),
             content: <Bytes as MultiRequestMediaType>::content(components),
             required: true,
@@ -214,7 +214,7 @@ impl<'a> FromRequest<'a> for Vec<u8> {
         None
     }
 
-    fn request_body(components: &mut Components) -> Option<openapiv3::RequestBody> {
+    fn request_body(components: &mut Components) -> Option<openapi::RequestBody> {
         Bytes::request_body(components)
     }
 }
@@ -260,8 +260,8 @@ impl<'a> FromRequest<'a> for String {
         None
     }
 
-    fn request_body(components: &mut Components) -> Option<openapiv3::RequestBody> {
-        Some(openapiv3::RequestBody {
+    fn request_body(components: &mut Components) -> Option<openapi::RequestBody> {
+        Some(openapi::RequestBody {
             description: Some("Extract text from request body".to_owned()),
             content: <String as MultiRequestMediaType>::content(components),
             required: true,

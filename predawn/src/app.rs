@@ -90,7 +90,7 @@ pub async fn run_app<H: Hooks>() {
     H::start_server(&mut cx, router).await.unwrap();
 }
 
-pub(crate) async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
+pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
     let config = H::load_config(&env).unwrap();
 
     H::init_logger(&config);
@@ -147,7 +147,7 @@ pub(crate) async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Han
 
         let path = full_non_application_root_path.clone().join(path);
 
-        tracing::info!("register plugin: {}", path);
+        tracing::info!("registering plugin: {}", path);
 
         router.insert(path, MethodRouter::from(map)).unwrap();
     }

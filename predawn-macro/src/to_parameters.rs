@@ -36,8 +36,6 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         }
     };
 
-    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
-
     let mut parameter_impls = Vec::new();
     let mut errors = Vec::new();
 
@@ -57,9 +55,11 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         return Err(e);
     }
 
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
     let expand = quote_use! {
         # use std::vec::Vec;
-        # use predawn::__internal::predawn_core::openapi::{ToParameters, ParameterData, Components};
+        # use predawn::openapi::{ToParameters, ParameterData, Components};
 
         impl #impl_generics ToParameters for #ident #ty_generics #where_clause {
             fn parameters(components: &mut Components) -> Vec<ParameterData> {
@@ -90,8 +90,8 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
     let expand = quote_use! {
         # use core::default::Default;
         # use std::string::ToString;
-        # use predawn::__internal::predawn_schema::ToSchema;
-        # use predawn::__internal::predawn_core::openapi::{ParameterData, ParameterSchemaOrContent};
+        # use predawn::ToSchema;
+        # use predawn::openapi::{ParameterData, ParameterSchemaOrContent};
 
         ParameterData {
             name: ToString::to_string(#ident),

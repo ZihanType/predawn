@@ -36,8 +36,6 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         }
     };
 
-    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
-
     let mut errors = Vec::new();
 
     let properties = named
@@ -58,10 +56,12 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         return Err(e);
     }
 
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
     let expand = quote_use! {
         # use core::default::Default;
-        # use predawn::__internal::predawn_schema::ToSchema;
-        # use predawn::__internal::predawn_core::openapi::{Schema, ObjectType, SchemaKind, Type};
+        # use predawn::ToSchema;
+        # use predawn::openapi::{Schema, ObjectType, SchemaKind, Type};
 
         impl #impl_generics ToSchema for #ident #ty_generics #where_clause {
             fn schema() -> Schema {
@@ -96,8 +96,8 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
     let expand = quote_use! {
         # use std::string::ToString;
         # use std::boxed::Box;
-        # use predawn::__internal::predawn_schema::ToSchema;
-        # use predawn::__internal::predawn_core::openapi::ReferenceOr;
+        # use predawn::ToSchema;
+        # use predawn::openapi::ReferenceOr;
 
         #[allow(unused_mut)]
         let mut schema = <#ty as ToSchema>::schema();

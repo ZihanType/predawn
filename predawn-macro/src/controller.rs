@@ -70,19 +70,17 @@ pub(crate) fn generate(impl_attr: ImplAttr, mut item_impl: ItemImpl) -> syn::Res
     let auto_register = TokenStream::new();
 
     #[cfg(feature = "auto-register")]
-    let auto_register = {
-        quote_use! {
-            # use predawn::__internal::rudi::Singleton;
-            # use predawn::__internal::paste::paste;
-            # use std::sync::Arc;
-            # use core::any::type_name;
-            # use predawn::controller::Controller;
+    let auto_register = quote_use! {
+        # use predawn::__internal::rudi::Singleton;
+        # use predawn::__internal::paste::paste;
+        # use std::sync::Arc;
+        # use core::any::type_name;
+        # use predawn::controller::Controller;
 
-            paste! {
-                #[Singleton(name = type_name::<#self_ty>())]
-                fn [<#self_ty ToController>](c: #self_ty) -> Arc<dyn Controller> {
-                    Arc::new(c)
-                }
+        paste! {
+            #[Singleton(name = type_name::<#self_ty>())]
+            fn [<#self_ty ToController>](c: #self_ty) -> Arc<dyn Controller> {
+                Arc::new(c)
             }
         }
     };
@@ -97,7 +95,7 @@ pub(crate) fn generate(impl_attr: ImplAttr, mut item_impl: ItemImpl) -> syn::Res
         # use predawn::normalized_path::NormalizedPath;
         # use predawn::__internal::http::Method;
         # use predawn::__internal::rudi::Context;
-        # use predawn::__internal::predawn_core::openapi::{ReferenceOr, PathItem, Components};
+        # use predawn::openapi::{ReferenceOr, PathItem, Components};
 
         impl Controller for #self_ty {
             fn insert_routes(
@@ -202,14 +200,14 @@ fn generate_single_fn_impl<'a>(
         arg_idents.push(format_ident!("last"));
 
         last_from_request = quote_use! {
-            # use predawn::__internal::predawn_core::from_request::FromRequest;
+            # use predawn::from_request::FromRequest;
 
             let last = <#ty as FromRequest<_>>::from_request(&head, body).await?;
         };
 
         last_parameters = quote_use! {
-            # use predawn::__internal::predawn_core::from_request::FromRequest;
-            # use predawn::__internal::predawn_core::openapi::transform_parameters;
+            # use predawn::from_request::FromRequest;
+            # use predawn::openapi::transform_parameters;
 
             if let Some(parameters) = <#ty as FromRequest<_>>::parameters(components) {
                 operation
@@ -219,16 +217,16 @@ fn generate_single_fn_impl<'a>(
         };
 
         last_request_body = quote_use! {
-            # use predawn::__internal::predawn_core::from_request::FromRequest;
-            # use predawn::__internal::predawn_core::openapi::transform_request_body;
+            # use predawn::from_request::FromRequest;
+            # use predawn::openapi::transform_request_body;
 
             operation.request_body = transform_request_body(<#ty as FromRequest<_>>::request_body(components));
         };
 
         last_error_responses = quote_use! {
-            # use predawn::__internal::predawn_core::from_request::FromRequest;
-            # use predawn::__internal::predawn_core::response_error::ResponseError;
-            # use predawn::__internal::predawn_core::openapi::merge_responses;
+            # use predawn::from_request::FromRequest;
+            # use predawn::response_error::ResponseError;
+            # use predawn::openapi::merge_responses;
 
             merge_responses(
                 &mut responses,
@@ -256,14 +254,14 @@ fn generate_single_fn_impl<'a>(
         arg_idents.push(arg.clone());
 
         let from_request_head = quote_use! {
-            # use predawn::__internal::predawn_core::from_request::FromRequestHead;
+            # use predawn::from_request::FromRequestHead;
 
             let #arg = <#ty as FromRequestHead>::from_request_head(&head).await?;
         };
 
         let parameters = quote_use! {
-            # use predawn::__internal::predawn_core::from_request::FromRequestHead;
-            # use predawn::__internal::predawn_core::openapi::transform_parameters;
+            # use predawn::from_request::FromRequestHead;
+            # use predawn::openapi::transform_parameters;
 
             if let Some(parameters) = <#ty as FromRequestHead>::parameters(components) {
                 operation
@@ -273,9 +271,9 @@ fn generate_single_fn_impl<'a>(
         };
 
         let error_responses = quote_use! {
-            # use predawn::__internal::predawn_core::from_request::FromRequestHead;
-            # use predawn::__internal::predawn_core::response_error::ResponseError;
-            # use predawn::__internal::predawn_core::openapi::merge_responses;
+            # use predawn::from_request::FromRequestHead;
+            # use predawn::response_error::ResponseError;
+            # use predawn::openapi::merge_responses;
 
             merge_responses(
                 &mut responses,
@@ -294,9 +292,9 @@ fn generate_single_fn_impl<'a>(
     };
 
     let return_error_responses = quote_use! {
-        # use predawn::__internal::predawn_core::into_response::IntoResponse;
-        # use predawn::__internal::predawn_core::response_error::ResponseError;
-        # use predawn::__internal::predawn_core::openapi::merge_responses;
+        # use predawn::into_response::IntoResponse;
+        # use predawn::response_error::ResponseError;
+        # use predawn::openapi::merge_responses;
 
         merge_responses(
             &mut responses,
@@ -305,8 +303,8 @@ fn generate_single_fn_impl<'a>(
     };
 
     let return_responses = quote_use! {
-        # use predawn::__internal::predawn_core::into_response::IntoResponse;
-        # use predawn::__internal::predawn_core::openapi::merge_responses;
+        # use predawn::into_response::IntoResponse;
+        # use predawn::openapi::merge_responses;
 
         if let Some(new) = <#return_ty as IntoResponse>::responses(components) {
             merge_responses(&mut responses, new);
@@ -406,7 +404,7 @@ fn generate_single_fn_impl<'a>(
 
             let insert_operation_into_single_path = quote_use! {
                 # use core::default::Default;
-                # use predawn::__internal::predawn_core::openapi::ReferenceOr;
+                # use predawn::openapi::ReferenceOr;
 
                 if let ReferenceOr::Item(path_item) = paths
                     .entry(oai_path)
@@ -457,9 +455,9 @@ fn generate_single_fn_impl<'a>(
     let create_operation = quote_use! {
         # use core::stringify;
         # use std::collections::BTreeMap;
-        # use predawn::__internal::predawn_core::openapi::Operation;
-        # use predawn::__internal::predawn_schema::component_id;
-        # use predawn::__internal::predawn_core::openapi::transform_responses;
+        # use predawn::openapi::Operation;
+        # use predawn::component_id;
+        # use predawn::openapi::transform_responses;
 
         let mut operation = Operation::default();
 

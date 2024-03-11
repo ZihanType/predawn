@@ -1,12 +1,12 @@
-Response macros
+matchit
 
-MultiRequestMediaType   派生宏 自动实现 MultiRequestMediaType   FromRequest
-MultiResponseMediaType  派生宏 自动实现 MultiResponseMediaType  SingleResponse  IntoResponse
 SingleResponse          派生宏 自动实现 SingleResponse          IntoResponse
 MultiResponse           派生宏 自动实现 MultiResponse           IntoResponse
 
 controller: condition, skip
-ToSchema / ToParameter : default, description, example, deprecated, actual_type
+
+ToSchema / ToParameter / MultiRequestMediaType / MultiResponseMediaType:
+default, description, example, deprecated, actual_type
 
 Tag
 SecuritySchema

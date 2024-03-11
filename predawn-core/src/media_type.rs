@@ -1,10 +1,22 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, error, fmt};
 
 use bytes::{Bytes, BytesMut};
 use indexmap::IndexMap;
 use mime::{Mime, APPLICATION, CHARSET, OCTET_STREAM, PLAIN, TEXT, UTF_8};
-use openapiv3::{Components, MediaType};
 use predawn_schema::ToSchema;
+
+use crate::openapi::{Components, MediaType};
+
+#[derive(Debug)]
+pub struct InvalidContentType(pub String);
+
+impl fmt::Display for InvalidContentType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(&self.0, f)
+    }
+}
+
+impl error::Error for InvalidContentType {}
 
 pub fn has_media_type<'a>(
     content_type: &'a str,

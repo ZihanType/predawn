@@ -6,9 +6,12 @@ use std::{
 
 use http::{header::CONTENT_TYPE, HeaderValue, StatusCode};
 use mime::TEXT_PLAIN_UTF_8;
-use openapiv3::Components;
 
-use crate::{media_type::MultiResponseMediaType, response::Response};
+use crate::{
+    media_type::MultiResponseMediaType,
+    openapi::{self, Components},
+    response::Response,
+};
 
 pub trait ResponseError: Error + Send + Sync + 'static {
     fn as_status(&self) -> StatusCode;
@@ -26,13 +29,13 @@ pub trait ResponseError: Error + Send + Sync + 'static {
             .unwrap()
     }
 
-    fn responses(components: &mut Components) -> BTreeMap<StatusCode, openapiv3::Response> {
+    fn responses(components: &mut Components) -> BTreeMap<StatusCode, openapi::Response> {
         Self::status_codes()
             .into_iter()
             .map(|status| {
                 (
                     status,
-                    openapiv3::Response {
+                    openapi::Response {
                         description: status.canonical_reason().unwrap_or_default().to_string(),
                         content: <String as MultiResponseMediaType>::content(components),
                         ..Default::default()
@@ -56,7 +59,7 @@ impl ResponseError for Infallible {
         match *self {}
     }
 
-    fn responses(_: &mut Components) -> BTreeMap<StatusCode, openapiv3::Response> {
+    fn responses(_: &mut Components) -> BTreeMap<StatusCode, openapi::Response> {
         BTreeMap::new()
     }
 }

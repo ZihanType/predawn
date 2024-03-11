@@ -5,9 +5,12 @@ use std::{
 };
 
 use http::StatusCode;
-use openapiv3::Components;
 
-use crate::{openapi::merge_responses, response::Response, response_error::ResponseError};
+use crate::{
+    openapi::{self, merge_responses, Components},
+    response::Response,
+    response_error::ResponseError,
+};
 
 #[derive(Debug)]
 pub enum Either<L, R> {
@@ -66,7 +69,7 @@ where
         }
     }
 
-    fn responses(components: &mut Components) -> BTreeMap<StatusCode, openapiv3::Response> {
+    fn responses(components: &mut Components) -> BTreeMap<StatusCode, openapi::Response> {
         let mut responses = L::responses(components);
         merge_responses(&mut responses, R::responses(components));
         responses

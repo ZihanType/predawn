@@ -2,12 +2,12 @@ use std::{borrow::Cow, collections::BTreeMap, convert::Infallible};
 
 use bytes::{Bytes, BytesMut};
 use http::{header::CONTENT_TYPE, HeaderValue, StatusCode};
-use openapiv3::Components;
 
 use crate::{
     body::ResponseBody,
     either::Either,
     media_type::SingleMediaType,
+    openapi::{self, Components},
     response::{MultiResponse, Response},
     response_error::ResponseError,
 };
@@ -17,7 +17,7 @@ pub trait IntoResponse {
 
     fn into_response(self) -> Result<Response, Self::Error>;
 
-    fn responses(components: &mut Components) -> Option<BTreeMap<StatusCode, openapiv3::Response>>;
+    fn responses(components: &mut Components) -> Option<BTreeMap<StatusCode, openapi::Response>>;
 }
 
 impl IntoResponse for Response {
@@ -27,7 +27,7 @@ impl IntoResponse for Response {
         Ok(self)
     }
 
-    fn responses(_: &mut Components) -> Option<BTreeMap<StatusCode, openapiv3::Response>> {
+    fn responses(_: &mut Components) -> Option<BTreeMap<StatusCode, openapi::Response>> {
         None
     }
 }
@@ -39,7 +39,7 @@ impl IntoResponse for http::response::Parts {
         Ok(Response::from_parts(self, ResponseBody::empty()))
     }
 
-    fn responses(_: &mut Components) -> Option<BTreeMap<StatusCode, openapiv3::Response>> {
+    fn responses(_: &mut Components) -> Option<BTreeMap<StatusCode, openapi::Response>> {
         None
     }
 }
@@ -51,7 +51,7 @@ impl IntoResponse for ResponseBody {
         Ok(Response::new(self))
     }
 
-    fn responses(components: &mut Components) -> Option<BTreeMap<StatusCode, openapiv3::Response>> {
+    fn responses(components: &mut Components) -> Option<BTreeMap<StatusCode, openapi::Response>> {
         Some(<ResponseBody as MultiResponse>::responses(components))
     }
 }
@@ -63,7 +63,7 @@ impl IntoResponse for () {
         ResponseBody::empty().into_response()
     }
 
-    fn responses(components: &mut Components) -> Option<BTreeMap<StatusCode, openapiv3::Response>> {
+    fn responses(components: &mut Components) -> Option<BTreeMap<StatusCode, openapi::Response>> {
         Some(<() as MultiResponse>::responses(components))
     }
 }
@@ -77,7 +77,7 @@ impl IntoResponse for StatusCode {
         Ok(response)
     }
 
-    fn responses(_: &mut Components) -> Option<BTreeMap<StatusCode, openapiv3::Response>> {
+    fn responses(_: &mut Components) -> Option<BTreeMap<StatusCode, openapi::Response>> {
         None
     }
 }
@@ -89,7 +89,7 @@ impl IntoResponse for Infallible {
         match self {}
     }
 
-    fn responses(_: &mut Components) -> Option<BTreeMap<StatusCode, openapiv3::Response>> {
+    fn responses(_: &mut Components) -> Option<BTreeMap<StatusCode, openapi::Response>> {
         None
     }
 }
@@ -110,7 +110,7 @@ macro_rules! some_impl {
                 Ok(response)
             }
 
-            fn responses(components: &mut Components) -> Option<BTreeMap<StatusCode, openapiv3::Response>> {
+            fn responses(components: &mut Components) -> Option<BTreeMap<StatusCode, openapi::Response>> {
                 Some(<$ty as MultiResponse>::responses(components))
             }
         }
@@ -146,7 +146,7 @@ where
         }
     }
 
-    fn responses(components: &mut Components) -> Option<BTreeMap<StatusCode, openapiv3::Response>> {
+    fn responses(components: &mut Components) -> Option<BTreeMap<StatusCode, openapi::Response>> {
         T::responses(components)
     }
 }

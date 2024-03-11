@@ -2,26 +2,40 @@ use std::{borrow::Cow, collections::BTreeMap};
 
 use bytes::{Bytes, BytesMut};
 use http::StatusCode;
-use openapiv3::Components;
 
-use crate::{body::ResponseBody, media_type::MultiResponseMediaType};
+use crate::{
+    body::ResponseBody,
+    media_type::MultiResponseMediaType,
+    openapi::{self, Components},
+};
 
 pub type Response<T = ResponseBody> = http::Response<T>;
 
 pub trait SingleResponse {
-    const STATUS_CODE: StatusCode = StatusCode::OK;
+    const STATUS_CODE: u16 = 200;
 
-    fn response(components: &mut Components) -> openapiv3::Response;
+    fn response(components: &mut Components) -> openapi::Response;
 }
 
 pub trait MultiResponse {
-    fn responses(components: &mut Components) -> BTreeMap<StatusCode, openapiv3::Response>;
+    fn responses(components: &mut Components) -> BTreeMap<StatusCode, openapi::Response>;
 }
 
 impl<T: SingleResponse> MultiResponse for T {
-    fn responses(components: &mut Components) -> BTreeMap<StatusCode, openapiv3::Response> {
+    fn responses(components: &mut Components) -> BTreeMap<StatusCode, openapi::Response> {
         let mut map = BTreeMap::new();
-        map.insert(T::STATUS_CODE, T::response(components));
+
+        map.insert(
+            StatusCode::from_u16(T::STATUS_CODE).unwrap_or_else(|_| {
+                panic!(
+                    "<{} as SingleResponse>::STATUS_CODE is {}, which is not a valid status code",
+                    std::any::type_name::<T>(),
+                    T::STATUS_CODE
+                )
+            }),
+            T::response(components),
+        );
+
         map
     }
 }
@@ -30,8 +44,8 @@ macro_rules! simple_impl {
     ($($ty:ty),+ $(,)?) => {
         $(
             impl SingleResponse for $ty {
-                fn response(_: &mut Components) -> openapiv3::Response {
-                    openapiv3::Response::default()
+                fn response(_: &mut Components) -> openapi::Response {
+                    openapi::Response::default()
                 }
             }
         )+
@@ -44,8 +58,8 @@ macro_rules! some_impl {
     ($ty:ty; $($desc:tt)+) => {
         impl $($desc)+
         {
-            fn response(components: &mut Components) -> openapiv3::Response {
-                openapiv3::Response {
+            fn response(components: &mut Components) -> openapi::Response {
+                openapi::Response {
                     content: <$ty as MultiResponseMediaType>::content(components),
                     ..Default::default()
                 }

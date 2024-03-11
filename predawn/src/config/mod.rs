@@ -53,6 +53,16 @@ impl Config {
         let env_cfg = path.join(format!("app-{}.toml", env));
         let env = config::Environment::default().separator("_");
 
+        tracing::info!("trying to load configuration from `{}`", app_cfg.display());
+        if !app_cfg.exists() {
+            tracing::info!("`{}` does not exist", app_cfg.display());
+        }
+
+        tracing::info!("trying to load configuration from `{}`", env_cfg.display());
+        if !env_cfg.exists() {
+            tracing::info!("`{}` does not exist", env_cfg.display());
+        }
+
         let config = config::Config::builder()
             .add_source(File::from(app_cfg).required(false))
             .add_source(File::from(env_cfg).required(false))

@@ -20,8 +20,10 @@ pub mod test_client;
 
 #[doc(inline)]
 pub use predawn_core::*;
-#[doc(inline)]
-pub use predawn_macro::{controller, ToParameters, ToSchema};
+pub use predawn_macro::{
+    controller, MultiRequestMediaType, MultiResponseMediaType, ToParameters, ToSchema,
+};
+pub use predawn_schema::component_id;
 #[cfg_attr(docsrs, doc(cfg(feature = "schemars")))]
 #[cfg(feature = "schemars")]
 #[doc(inline)]
@@ -31,10 +33,9 @@ pub use predawn_schema::ToSchema;
 
 #[doc(hidden)]
 pub mod __internal {
+    pub use async_trait;
     pub use http;
     pub use indexmap;
     pub use paste;
-    pub use predawn_core;
-    pub use predawn_schema;
     pub use rudi;
 }

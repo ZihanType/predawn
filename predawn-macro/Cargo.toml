@@ -28,6 +28,13 @@ syn = { workspace = true, features = [
     "printing",
     "full",
 ] }
+http = { workspace = true, features = ["std"] }
+
+[dev-dependencies]
+http = { workspace = true }
+predawn = { workspace = true, features = ["auto-register"] }
+serde = { workspace = true }
+thiserror = { workspace = true }
 
 [features]
 default = ["auto-register"]
