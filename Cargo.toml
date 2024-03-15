@@ -42,7 +42,7 @@ tokio = { version = "1", default-features = false }
 thiserror = { version = "1", default-features = false }
 http-body = { version = "1", default-features = false }
 http-body-util = { version = "0.1", default-features = false }
-sync_wrapper = { version = "0.1", default-features = false }
+sync_wrapper = { version = "1", default-features = false }
 matchit = { version = "0.8", default-features = false }
 hyper-util = { version = "0.1", default-features = false }
 tracing = { version = "0.1", default-features = false }
