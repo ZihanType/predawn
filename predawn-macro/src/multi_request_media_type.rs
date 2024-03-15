@@ -76,7 +76,8 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         # use std::format;
         # use std::vec::Vec;
         # use std::string::String;
-        # use predawn::media_type::MultiRequestMediaType;
+        # use predawn::MultiRequestMediaType;
+        # use predawn::media_type::InvalidContentType;
         # use predawn::openapi::{self, Components, MediaType, Parameter};
         # use predawn::__internal::indexmap::IndexMap;
         # use predawn::__internal::async_trait::async_trait;
@@ -107,12 +108,10 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
 
                 #(#from_request_bodies)*
 
-                let values = [#(#media_type_exprs,)*].into_iter().map(|expr| format!("`{}`", expr)).collect::<Vec<_>>().join(", ");
-
-                Err(#from_request_error::from(InvalidContentType(format!(
-                    "expected request header `{}` to be one of {}.",
-                    CONTENT_TYPE, values
-                ))))
+                Err(#from_request_error::from(InvalidContentType {
+                    actual: content_type.into(),
+                    expected: [#(#media_type_exprs,)*].into(),
+                }))
             }
 
             fn parameters(_: &mut Components) -> Option<Vec<Parameter>> {

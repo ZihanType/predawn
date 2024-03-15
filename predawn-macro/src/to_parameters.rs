@@ -59,7 +59,8 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
 
     let expand = quote_use! {
         # use std::vec::Vec;
-        # use predawn::openapi::{ToParameters, ParameterData, Components};
+        # use predawn::openapi::{ParameterData, Components};
+        # use predawn::ToParameters;
 
         impl #impl_generics ToParameters for #ident #ty_generics #where_clause {
             fn parameters(components: &mut Components) -> Vec<ParameterData> {

@@ -21,7 +21,7 @@ impl Plugin for OpenAPIJson {
         self: Arc<Self>,
         cx: &mut Context,
     ) -> (NormalizedPath, HashMap<Method, Arc<dyn Handler>>) {
-        let json_path = cx.resolve::<OpenAPIConfig>().normalized_json_path();
+        let json_path = cx.resolve::<OpenAPIConfig>().json_path;
 
         let json = serde_json::to_string_pretty(&cx.get_single::<OpenAPI>())
             .expect("`OpenAPI` serialize failed");

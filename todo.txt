@@ -1,12 +1,12 @@
-matchit
-
-SingleResponse          派生宏 自动实现 SingleResponse          IntoResponse
-MultiResponse           派生宏 自动实现 MultiResponse           IntoResponse
+SingleResponse       derive macro implement    SingleResponse   IntoResponse
+MultiResponse        derive macro implement    MultiResponse    IntoResponse
 
 controller: condition, skip
 
 ToSchema / ToParameter / MultiRequestMediaType / MultiResponseMediaType:
 default, description, example, deprecated, actual_type
+
+update references in doc comments by search `https://docs.rs`
 
 Tag
 SecuritySchema
@@ -25,5 +25,6 @@ Listener trait
 end-to-end test-helper edition 2
 startup message
 handle .unwrap()
+validate
 
 docs, docs, docs

@@ -54,7 +54,7 @@ impl Plugin for SwaggerUI {
         self: Arc<Self>,
         cx: &mut Context,
     ) -> (NormalizedPath, HashMap<Method, Arc<dyn Handler>>) {
-        super::create_route(cx, |c| c.normalized_swagger_ui_path(), self.as_html())
+        super::create_route(cx, |c| c.swagger_ui_path, self.as_html())
     }
 }
 

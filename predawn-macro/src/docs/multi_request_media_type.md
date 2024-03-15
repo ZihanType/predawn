@@ -44,7 +44,7 @@ impl ResponseError for ReadJsonOrFormError {
         match self {
             ReadJsonOrFormError::ReadJsonError(e) => e.as_status(),
             ReadJsonOrFormError::ReadFormError(e) => e.as_status(),
-            ReadJsonOrFormError::InvalidContentType(_) => StatusCode::UNSUPPORTED_MEDIA_TYPE,
+            ReadJsonOrFormError::InvalidContentType { .. } => StatusCode::UNSUPPORTED_MEDIA_TYPE,
         }
     }
 
@@ -91,12 +91,13 @@ where
         }
 
         // watch this.
-        Err(ReadJsonOrFormError::from(InvalidContentType(format!(
-            "expected request header `{}` to be one of `{}`, `{}`.",
-            CONTENT_TYPE,
-            <Json<T> as SingleMediaType>::MEDIA_TYPE,
-            <Form<T> as SingleMediaType>::MEDIA_TYPE,
-        ))))
+        Err(ReadJsonOrFormError::from(InvalidContentType {
+            actual: content_type.into(),
+            expected: vec![
+                <Json<T> as SingleMediaType>::MEDIA_TYPE,
+                <Form<T> as SingleMediaType>::MEDIA_TYPE,
+            ],
+        }))
     }
 
     ...

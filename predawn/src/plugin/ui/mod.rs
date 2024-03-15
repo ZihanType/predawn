@@ -32,7 +32,7 @@ pub(crate) fn json_path(cfg: &Config) -> NormalizedPath {
     let openapi_cfg = cfg.get::<OpenAPIConfig>().unwrap_or_default();
 
     let full_non_application_root_path = server_cfg.full_non_application_root_path();
-    let normalized_json_path = openapi_cfg.normalized_json_path();
+    let normalized_json_path = openapi_cfg.json_path;
 
     full_non_application_root_path.join(normalized_json_path)
 }

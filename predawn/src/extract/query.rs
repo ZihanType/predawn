@@ -5,11 +5,13 @@ use http::StatusCode;
 use predawn_core::{
     from_request::FromRequestHead,
     impl_deref,
-    openapi::{Components, Parameter, ToParameters},
+    openapi::{Components, Parameter},
     request::Head,
     response_error::ResponseError,
 };
 use serde::Deserialize;
+
+use crate::ToParameters;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Query<T>(pub T);

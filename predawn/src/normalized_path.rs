@@ -1,23 +1,21 @@
 use std::{fmt, ops::Deref};
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct NormalizedPath(String);
 
 impl NormalizedPath {
-    pub(crate) fn only_used_in_convert_path(path: String) -> Self {
-        NormalizedPath(path)
-    }
-
     pub fn new(path: &str) -> Self {
         if path.is_empty() || path == "/" {
             return Self("/".to_string());
         }
 
-        let mut new_path = String::new();
+        let segments = path.split('/');
 
-        for segment in path.split('/') {
+        let mut path = String::new();
+
+        for segment in segments {
             if segment.is_empty() {
                 continue;
             }
@@ -28,30 +26,28 @@ impl NormalizedPath {
                 continue;
             }
 
-            new_path.push('/');
-            new_path.push_str(segment);
+            path.push('/');
+            path.push_str(segment);
         }
 
-        if new_path.is_empty() {
-            new_path.push('/');
+        if path.is_empty() {
+            path.push('/');
         }
 
-        Self(new_path)
+        Self(path)
     }
 
     pub fn join(self, path: Self) -> Self {
-        let Self(prefix) = self;
-        let Self(path) = path;
+        let prefix = self;
+        let postfix = path;
 
-        Self(
-            if prefix == "/" {
-                path
-            } else if path == "/" {
-                prefix
-            } else {
-                format!("{}{}", prefix, path)
-            },
-        )
+        if prefix == "/" {
+            postfix
+        } else if postfix == "/" {
+            prefix
+        } else {
+            Self(format!("{}{}", prefix, postfix))
+        }
     }
 
     pub fn into_inner(self) -> String {
@@ -73,9 +69,33 @@ impl Deref for NormalizedPath {
     }
 }
 
+impl<'a> From<&'a str> for NormalizedPath {
+    fn from(path: &'a str) -> Self {
+        NormalizedPath::new(path)
+    }
+}
+
 impl From<NormalizedPath> for String {
     fn from(path: NormalizedPath) -> Self {
         path.0
+    }
+}
+
+impl Serialize for NormalizedPath {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.0.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for NormalizedPath {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        <String as Deserialize<'de>>::deserialize(deserializer).map(|s| NormalizedPath::new(&s))
     }
 }
 
@@ -136,8 +156,8 @@ mod tests {
 
     #[test]
     fn test_join_path() {
-        fn join(prefix: &str, path: &str) -> NormalizedPath {
-            NormalizedPath::new(prefix).join(NormalizedPath::new(path))
+        fn join<'a>(prefix: &'a str, postfix: &'a str) -> NormalizedPath {
+            NormalizedPath::new(prefix).join(NormalizedPath::new(postfix))
         }
 
         assert_eq!(join("", ""), "/");
@@ -145,6 +165,8 @@ mod tests {
         assert_eq!(join("", "/"), "/");
         assert_eq!(join("/", "/"), "/");
 
+        assert_eq!(join("/a", ""), "/a");
+        assert_eq!(join("", "/a"), "/a");
         assert_eq!(join("/a", "/"), "/a");
         assert_eq!(join("/", "/a"), "/a");
         assert_eq!(join("/a/", "/"), "/a");

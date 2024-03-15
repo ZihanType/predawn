@@ -41,7 +41,7 @@ impl Plugin for RapiDoc {
         self: Arc<Self>,
         cx: &mut Context,
     ) -> (NormalizedPath, HashMap<Method, Arc<dyn Handler>>) {
-        super::create_route(cx, |c| c.normalized_rapidoc_path(), self.as_html())
+        super::create_route(cx, |c| c.rapidoc_path, self.as_html())
     }
 }
 

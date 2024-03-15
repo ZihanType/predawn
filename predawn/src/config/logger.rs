@@ -1,14 +1,23 @@
 use std::fmt;
 
+use rudi::Singleton;
 use serde::{Deserialize, Serialize};
 
-use super::ConfigPrefix;
+use super::{Config, ConfigPrefix};
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct LoggerConfig {
     #[serde(default)]
     pub level: LogLevel,
+}
+
+#[Singleton]
+impl LoggerConfig {
+    #[di]
+    fn new(#[di(ref)] config: &Config) -> Self {
+        config.get().unwrap_or_default()
+    }
 }
 
 impl ConfigPrefix for LoggerConfig {

@@ -28,7 +28,7 @@ impl<T: SingleResponse> MultiResponse for T {
         map.insert(
             StatusCode::from_u16(T::STATUS_CODE).unwrap_or_else(|_| {
                 panic!(
-                    "<{} as SingleResponse>::STATUS_CODE is {}, which is not a valid status code",
+                    "`<{} as SingleResponse>::STATUS_CODE` is {}, which is not a valid status code",
                     std::any::type_name::<T>(),
                     T::STATUS_CODE
                 )
@@ -40,19 +40,11 @@ impl<T: SingleResponse> MultiResponse for T {
     }
 }
 
-macro_rules! simple_impl {
-    ($($ty:ty),+ $(,)?) => {
-        $(
-            impl SingleResponse for $ty {
-                fn response(_: &mut Components) -> openapi::Response {
-                    openapi::Response::default()
-                }
-            }
-        )+
-    };
+impl SingleResponse for () {
+    fn response(_: &mut Components) -> openapi::Response {
+        openapi::Response::default()
+    }
 }
-
-simple_impl![(), ResponseBody];
 
 macro_rules! some_impl {
     ($ty:ty; $($desc:tt)+) => {

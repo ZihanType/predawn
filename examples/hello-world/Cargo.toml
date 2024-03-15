@@ -10,7 +10,7 @@ include.workspace = true
 readme.workspace = true
 
 [dependencies]
-predawn = { workspace = true, features = ["auto-register"] }
+predawn = { workspace = true, features = ["auto-register", "tower-compat"] }
 
 http = { workspace = true }
 rudi = { workspace = true, features = [

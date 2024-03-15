@@ -8,7 +8,7 @@ use std::{
 
 use config::ConfigError;
 use predawn_core::{
-    openapi::{Components, Info, OpenAPI, Paths},
+    openapi::{self, Components, Info, OpenAPI, Paths},
     request::RequestBodyLimit,
 };
 use rudi::Context;
@@ -47,7 +47,13 @@ pub trait Hooks {
         }
     }
 
-    fn openapi_info() -> Info {
+    fn openapi_info(cx: &mut Context) -> Info {
+        let _cx = cx;
+        Default::default()
+    }
+
+    fn openapi_servers(cx: &mut Context) -> Vec<openapi::Server> {
+        let _cx = cx;
         Default::default()
     }
 
@@ -98,9 +104,9 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
     let config = H::load_config(&env).unwrap();
 
     let server_cfg = config.get::<ServerConfig>().unwrap_or_default();
-    let root_path = server_cfg.normalized_root_path();
-    let full_non_application_root_path = server_cfg.full_non_application_root_path();
     let request_body_limit = server_cfg.request_body_limit;
+    let root_path = server_cfg.root_path.clone();
+    let full_non_application_root_path = server_cfg.full_non_application_root_path();
 
     let mut cx = H::create_context(config, env).await;
 
@@ -115,7 +121,8 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
             c.insert_routes(&mut cx, &mut route_table, &mut paths, &mut components);
         });
 
-    let info = H::openapi_info();
+    let info = H::openapi_info(&mut cx);
+    let servers = H::openapi_servers(&mut cx);
 
     let paths = paths
         .into_iter()
@@ -125,6 +132,7 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
     let api = OpenAPI {
         openapi: "3.0.0".to_string(),
         info,
+        servers,
         paths: Paths {
             paths,
             ..Default::default()
@@ -139,7 +147,12 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
 
     for (path, map) in route_table {
         let path = root_path.clone().join(path);
-        router.insert(path, MethodRouter::from(map)).unwrap();
+
+        let err_msg = format!("failed to insert route `{}`", path);
+
+        router
+            .insert(path, MethodRouter::from(map))
+            .unwrap_or_else(|e| panic!("{}: {:?}", err_msg, e));
     }
 
     for p in cx.resolve_by_type_async::<Arc<dyn Plugin>>().await {
@@ -149,7 +162,11 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
 
         tracing::info!("registering plugin: {}", path);
 
-        router.insert(path, MethodRouter::from(map)).unwrap();
+        let err_msg = format!("failed to insert route `{}`", path);
+
+        router
+            .insert(path, MethodRouter::from(map))
+            .unwrap_or_else(|e| panic!("{}: {:?}", err_msg, e));
     }
 
     H::after_routes(&router);

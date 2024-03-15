@@ -1,7 +1,5 @@
 use std::{
     collections::{HashMap, HashSet},
-    error::Error as StdError,
-    fmt,
     sync::Arc,
 };
 
@@ -112,31 +110,18 @@ impl Handler for Router {
     }
 }
 
-#[derive(Debug)]
-pub struct MatchError(pub matchit::MatchError);
-
-impl fmt::Display for MatchError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(&self.0, f)
-    }
-}
-
-impl StdError for MatchError {
-    fn source(&self) -> Option<&(dyn StdError + 'static)> {
-        StdError::source(&self.0)
-    }
-}
+#[derive(Debug, thiserror::Error)]
+#[error("{0}")]
+pub struct MatchError(#[from] pub matchit::MatchError);
 
 impl ResponseError for MatchError {
     fn as_status(&self) -> StatusCode {
         match self.0 {
-            matchit::MatchError::MissingTrailingSlash => StatusCode::BAD_REQUEST,
-            matchit::MatchError::ExtraTrailingSlash => StatusCode::BAD_REQUEST,
             matchit::MatchError::NotFound => StatusCode::NOT_FOUND,
         }
     }
 
     fn status_codes() -> HashSet<StatusCode> {
-        [StatusCode::BAD_REQUEST, StatusCode::NOT_FOUND].into()
+        [StatusCode::NOT_FOUND].into()
     }
 }

@@ -52,6 +52,7 @@ pub fn multi_request_media_type(input: TokenStream) -> TokenStream {
         .into()
 }
 
+#[doc = include_str!("docs/multi_response_media_type.md")]
 #[proc_macro_derive(MultiResponseMediaType, attributes(multi_response_media_type))]
 pub fn multi_response_media_type(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);

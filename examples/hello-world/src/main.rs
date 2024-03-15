@@ -73,7 +73,7 @@ impl MyController {
         Json(multi_value)
     }
 
-    #[handler(paths = ["/:name/:age"], methods = [GET])]
+    #[handler(paths = ["/{name}/{age}"], methods = [GET])]
     async fn path_person(&self, Path(person): Path<Person>) -> Json<Person> {
         Json(person)
     }

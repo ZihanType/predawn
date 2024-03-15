@@ -51,8 +51,8 @@ impl IntoResponse for ResponseBody {
         Ok(Response::new(self))
     }
 
-    fn responses(components: &mut Components) -> Option<BTreeMap<StatusCode, openapi::Response>> {
-        Some(<ResponseBody as MultiResponse>::responses(components))
+    fn responses(_: &mut Components) -> Option<BTreeMap<StatusCode, openapi::Response>> {
+        None
     }
 }
 

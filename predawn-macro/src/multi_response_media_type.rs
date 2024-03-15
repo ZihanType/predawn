@@ -1,14 +1,14 @@
-use from_attr::{AttrsValue, FromAttr, PathValue};
+use from_attr::{AttrsValue, FromAttr};
 use http::StatusCode;
 use proc_macro2::TokenStream;
 use quote_use::quote_use;
-use syn::{spanned::Spanned, DeriveInput, Ident, Type, Variant};
+use syn::{spanned::Spanned, DeriveInput, Ident, LitInt, Type, Variant};
 
 #[derive(FromAttr)]
 #[attribute(idents = [multi_response_media_type])]
 struct EnumAttr {
     error: Type,
-    status_code: PathValue<u16>,
+    status_code: LitInt,
 }
 
 pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
@@ -22,11 +22,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
 
     let EnumAttr {
         error: into_response_error,
-        status_code:
-            PathValue {
-                path: status_code_span,
-                value: status_code_value,
-            },
+        status_code,
     } =
         match EnumAttr::from_attributes(&attrs) {
             Ok(Some(AttrsValue {
@@ -39,9 +35,11 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
             Err(AttrsValue { value: e, .. }) => return Err(e),
         };
 
+    let status_code_value = status_code.base10_parse()?;
+
     if StatusCode::from_u16(status_code_value).is_err() {
         return Err(syn::Error::new(
-            status_code_span,
+            status_code.span(),
             "it is not a valid status code",
         ));
     }
@@ -75,10 +73,11 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
     let expand = quote_use! {
         # use std::string::String;
         # use std::collections::BTreeMap;
-        # use predawn::media_type::MultiResponseMediaType;
+        # use predawn::MultiResponseMediaType;
         # use predawn::openapi::{self, Components, MediaType};
         # use predawn::__internal::indexmap::IndexMap;
-        # use predawn::response::{SingleResponse, Response, MultiResponse};
+        # use predawn::response::Response;
+        # use predawn::{SingleResponse, MultiResponse};
         # use predawn::into_response::IntoResponse;
         # use predawn::__internal::http::StatusCode;
 

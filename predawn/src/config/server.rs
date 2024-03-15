@@ -5,7 +5,7 @@ use rudi::Singleton;
 use serde::{Deserialize, Serialize};
 
 use super::{Config, ConfigPrefix};
-use crate::{normalized_path::NormalizedPath, path_util};
+use crate::normalized_path::NormalizedPath;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
@@ -15,9 +15,9 @@ pub struct ServerConfig {
     #[serde(default = "default_port")]
     pub port: u16,
     #[serde(default = "default_root_path")]
-    root_path: String,
+    pub root_path: NormalizedPath,
     #[serde(default = "default_non_application_root_path")]
-    non_application_root_path: String,
+    pub non_application_root_path: NormalizedPath,
     #[serde(default = "default_request_body_limit")]
     pub request_body_limit: usize,
 }
@@ -29,36 +29,8 @@ impl ServerConfig {
         config.get().unwrap_or_default()
     }
 
-    #[track_caller]
-    pub fn root_path(&self) -> &str {
-        let root_path = &self.root_path;
-        path_util::validate_path(root_path);
-        root_path
-    }
-
-    #[track_caller]
-    pub fn normalized_root_path(&self) -> NormalizedPath {
-        NormalizedPath::new(self.root_path())
-    }
-
-    #[track_caller]
-    pub fn non_application_root_path(&self) -> &str {
-        let non_application_root_path = &self.non_application_root_path;
-        path_util::validate_path(non_application_root_path);
-        non_application_root_path
-    }
-
-    #[track_caller]
-    pub fn normalized_non_application_root_path(&self) -> NormalizedPath {
-        NormalizedPath::new(self.non_application_root_path())
-    }
-
-    #[track_caller]
-    pub fn full_non_application_root_path(&self) -> NormalizedPath {
-        let normalized_root_path = self.normalized_root_path();
-        let normalized_non_application_root_path = self.normalized_non_application_root_path();
-
-        normalized_root_path.join(normalized_non_application_root_path)
+    pub fn full_non_application_root_path(self) -> NormalizedPath {
+        self.root_path.join(self.non_application_root_path)
     }
 }
 
@@ -70,11 +42,11 @@ fn default_port() -> u16 {
     9612
 }
 
-fn default_root_path() -> String {
+fn default_root_path() -> NormalizedPath {
     "/".into()
 }
 
-fn default_non_application_root_path() -> String {
+fn default_non_application_root_path() -> NormalizedPath {
     "/p".into()
 }
 

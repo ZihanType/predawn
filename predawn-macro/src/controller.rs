@@ -355,7 +355,7 @@ fn generate_single_fn_impl<'a>(
                     # use core::panic;
                     # use core::stringify;
 
-                    panic!("path: `{}`, method: `{}` already exists", route_path, stringify!(#uppercase_method));
+                    panic!("path: `{}`, method: `{}` already exists", path, stringify!(#uppercase_method));
                 };
 
                 let insert_handler_into_single_method = quote_use! {
@@ -383,31 +383,28 @@ fn generate_single_fn_impl<'a>(
 
             let convert_single_path = quote_use! {
                 # use core::convert::AsRef;
-                # use core::any::type_name;
-                # use core::stringify;
-                # use predawn::path_util::convert_path;
+                # use predawn::normalized_path::NormalizedPath;
 
-                let (oai_path, route_path) = convert_path(
-                    AsRef::<str>::as_ref(#controller_path),
-                    AsRef::<str>::as_ref(#method_path),
-                    type_name::<#self_ty>(),
-                    stringify!(#fn_name),
+                let path = NormalizedPath::join(
+                    NormalizedPath::new(AsRef::<str>::as_ref(#controller_path)),
+                    NormalizedPath::new(AsRef::<str>::as_ref(#method_path)),
                 );
             };
 
             let insert_handler_into_single_path = quote_use! {
                 # use std::clone::Clone;
 
-                let map = route_table.entry(Clone::clone(&route_path)).or_default();
+                let map = route_table.entry(Clone::clone(&path)).or_default();
                 #(#insert_handler_into_multi_method)*
             };
 
             let insert_operation_into_single_path = quote_use! {
                 # use core::default::Default;
+                # use std::clone::Clone;
                 # use predawn::openapi::ReferenceOr;
 
                 if let ReferenceOr::Item(path_item) = paths
-                    .entry(oai_path)
+                    .entry(Clone::clone(&path))
                     .or_insert_with(|| ReferenceOr::Item(Default::default()))
                 {
                     #(#insert_operation_into_multi_method)*
