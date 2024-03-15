@@ -31,8 +31,12 @@ syn = { workspace = true, features = [
 http = { workspace = true, features = ["std"] }
 
 [dev-dependencies]
+# cannot contain `workspace = true` to avoid circular references.
+predawn = { path = "../predawn", default-features = false, features = [
+    "auto-register",
+] }
+
 http = { workspace = true }
-predawn = { workspace = true, features = ["auto-register"] }
 serde = { workspace = true }
 thiserror = { workspace = true }
 
