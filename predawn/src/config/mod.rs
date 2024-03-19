@@ -80,14 +80,7 @@ impl Config {
     where
         T: ConfigPrefix + Deserialize<'de>,
     {
-        Self::inner_get(&self.inner)
-    }
-
-    fn inner_get<'de, T>(config: &config::Config) -> Result<T, ConfigError>
-    where
-        T: ConfigPrefix + Deserialize<'de>,
-    {
-        match config.get::<T>(T::PREFIX) {
+        match self.inner.get::<T>(T::PREFIX) {
             Ok(o) => Ok(o),
             Err(e) => {
                 let ConfigError::NotFound(_) = &e else {
