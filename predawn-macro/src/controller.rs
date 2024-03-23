@@ -170,12 +170,13 @@ fn generate_single_fn_impl<'a>(
     let fn_name = &f.sig.ident;
 
     let mut args = f.sig.inputs.iter();
+    let first = args.next();
+    let last = args.next_back();
 
     fn first_arg_err(span: Span) -> syn::Error {
         syn::Error::new(span, "the first argument of the method must be `&self`")
     }
 
-    let first = args.next();
     match first {
         Some(FnArg::Receiver(Receiver {
             reference: Some(_),
@@ -189,7 +190,51 @@ fn generate_single_fn_impl<'a>(
 
     let mut arg_idents = Vec::new();
 
-    let last = args.next_back();
+    let mut heads_from_request_head = Vec::new();
+    let mut heads_parameters = Vec::new();
+    let mut heads_error_responses = Vec::new();
+
+    args.filter_map(|arg| match arg {
+        FnArg::Typed(PatType { ty, .. }) => Some(ty),
+        _ => None,
+    })
+    .enumerate()
+    .for_each(|(idx, ty)| {
+        let arg = format_ident!("a{}", idx);
+        arg_idents.push(arg.clone());
+
+        let from_request_head = quote_use! {
+            # use predawn::from_request::FromRequestHead;
+
+            let #arg = <#ty as FromRequestHead>::from_request_head(&head).await?;
+        };
+
+        let parameters = quote_use! {
+            # use predawn::from_request::FromRequestHead;
+            # use predawn::openapi::transform_parameters;
+
+            if let Some(parameters) = <#ty as FromRequestHead>::parameters(components) {
+                operation
+                    .parameters
+                    .extend(transform_parameters(parameters));
+            }
+        };
+
+        let error_responses = quote_use! {
+            # use predawn::from_request::FromRequestHead;
+            # use predawn::response_error::ResponseError;
+            # use predawn::openapi::merge_responses;
+
+            merge_responses(
+                &mut responses,
+                <<#ty as FromRequestHead>::Error as ResponseError>::responses(components),
+            );
+        };
+
+        heads_from_request_head.push(from_request_head);
+        heads_parameters.push(parameters);
+        heads_error_responses.push(error_responses);
+    });
 
     let last_from_request;
     let last_parameters;
@@ -239,52 +284,6 @@ fn generate_single_fn_impl<'a>(
         last_request_body = TokenStream::new();
         last_error_responses = TokenStream::new();
     }
-
-    let mut heads_from_request_head = Vec::new();
-    let mut heads_parameters = Vec::new();
-    let mut heads_error_responses = Vec::new();
-
-    args.filter_map(|arg| match arg {
-        FnArg::Typed(PatType { ty, .. }) => Some(ty),
-        _ => None,
-    })
-    .enumerate()
-    .for_each(|(idx, ty)| {
-        let arg = format_ident!("a{}", idx);
-        arg_idents.push(arg.clone());
-
-        let from_request_head = quote_use! {
-            # use predawn::from_request::FromRequestHead;
-
-            let #arg = <#ty as FromRequestHead>::from_request_head(&head).await?;
-        };
-
-        let parameters = quote_use! {
-            # use predawn::from_request::FromRequestHead;
-            # use predawn::openapi::transform_parameters;
-
-            if let Some(parameters) = <#ty as FromRequestHead>::parameters(components) {
-                operation
-                    .parameters
-                    .extend(transform_parameters(parameters));
-            }
-        };
-
-        let error_responses = quote_use! {
-            # use predawn::from_request::FromRequestHead;
-            # use predawn::response_error::ResponseError;
-            # use predawn::openapi::merge_responses;
-
-            merge_responses(
-                &mut responses,
-                <<#ty as FromRequestHead>::Error as ResponseError>::responses(components),
-            );
-        };
-
-        heads_from_request_head.push(from_request_head);
-        heads_parameters.push(parameters);
-        heads_error_responses.push(error_responses);
-    });
 
     let return_ty = match &f.sig.output {
         ReturnType::Default => quote!(()),

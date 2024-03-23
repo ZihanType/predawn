@@ -96,8 +96,11 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
 
             fn response(components: &mut Components) -> openapi::Response {
                 openapi::Response {
+                    description: Default::default(),
+                    headers: Default::default(),
                     content: <Self as MultiResponseMediaType>::content(components),
-                    ..Default::default()
+                    links: Default::default(),
+                    extensions: Default::default(),
                 }
             }
         }

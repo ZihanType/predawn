@@ -7,6 +7,7 @@ use std::{
 use http::StatusCode;
 
 use crate::{
+    error::BoxError,
     openapi::{self, merge_responses, Components},
     response::Response,
     response_error::ResponseError,
@@ -73,5 +74,16 @@ where
         let mut responses = L::responses(components);
         merge_responses(&mut responses, R::responses(components));
         responses
+    }
+
+    #[doc(hidden)]
+    fn inner(self) -> BoxError
+    where
+        Self: Sized,
+    {
+        match self {
+            Either::Left(l) => Box::new(l),
+            Either::Right(r) => Box::new(r),
+        }
     }
 }

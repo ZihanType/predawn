@@ -55,7 +55,7 @@ mod private {
                     }
                     Err(error) => {
                         ::tracing::info!(
-                            status = %error.as_status(),
+                            status = %error.status(),
                             error = %error,
                             duration = ?duration,
                             "error"

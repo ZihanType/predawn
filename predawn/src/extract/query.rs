@@ -26,10 +26,10 @@ where
     type Error = QueryError;
 
     async fn from_request_head(head: &'a Head) -> Result<Self, Self::Error> {
-        let value =
-            serde_html_form::from_str(head.uri.query().unwrap_or_default()).map_err(QueryError)?;
-
-        Ok(Query(value))
+        match serde_html_form::from_str(head.uri.query().unwrap_or_default()) {
+            Ok(o) => Ok(Query(o)),
+            Err(e) => Err(QueryError(e)),
+        }
     }
 
     fn parameters(components: &mut Components) -> Option<Vec<Parameter>> {

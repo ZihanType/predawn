@@ -147,7 +147,7 @@ async fn handle_conn<H: Handler + Clone>(
                         handler
                             .call(Request::new(request, local_addr, remote_addr))
                             .await
-                            .unwrap_or_else(|e| e.as_response()),
+                            .unwrap_or_else(|e| e.response()),
                     )
                 }
             }),

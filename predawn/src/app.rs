@@ -1,6 +1,5 @@
 use std::{
     collections::{BTreeMap, HashMap},
-    future::Future,
     io,
     net::SocketAddr,
     sync::Arc,
@@ -37,14 +36,13 @@ pub trait Hooks {
             .init();
     }
 
-    fn create_context(config: Config, env: Environment) -> impl Future<Output = Context> {
-        async {
-            Context::options()
-                .singleton(config)
-                .singleton(env)
-                .auto_register_async()
-                .await
-        }
+    #[allow(async_fn_in_trait)]
+    async fn create_context(config: Config, env: Environment) -> Context {
+        Context::options()
+            .singleton(config)
+            .singleton(env)
+            .auto_register_async()
+            .await
     }
 
     fn openapi_info(cx: &mut Context) -> Info {
@@ -61,30 +59,25 @@ pub trait Hooks {
         let _router = router;
     }
 
-    fn before_run<H: Handler>(
-        cx: Context,
-        router: H,
-    ) -> impl Future<Output = (Context, impl Handler)> {
-        async { (cx, router) }
+    #[allow(async_fn_in_trait)]
+    async fn before_run<H: Handler>(cx: Context, router: H) -> (Context, impl Handler) {
+        (cx, router)
     }
 
-    fn start_server<H: Handler>(
-        cx: &mut Context,
-        router: H,
-    ) -> impl Future<Output = io::Result<()>> {
-        async {
-            let cfg = cx.resolve::<ServerConfig>();
+    #[allow(async_fn_in_trait)]
+    async fn start_server<H: Handler>(cx: &mut Context, router: H) -> io::Result<()> {
+        cx.just_create_single::<ServerConfig>();
+        let cfg = cx.get_single::<ServerConfig>();
 
-            let socket_addr = SocketAddr::new(cfg.ip, cfg.port);
+        let socket_addr = SocketAddr::new(cfg.ip, cfg.port);
 
-            let listener = TcpListener::bind(socket_addr).await?;
+        let listener = TcpListener::bind(socket_addr).await?;
 
-            Server::new(listener)
-                .run_with_graceful_shutdown(router, async {
-                    let _ = signal::ctrl_c().await;
-                })
-                .await
-        }
+        Server::new(listener)
+            .run_with_graceful_shutdown(router, async {
+                let _ = signal::ctrl_c().await;
+            })
+            .await
     }
 }
 

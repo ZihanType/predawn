@@ -120,9 +120,10 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
 
             fn request_body(components: &mut Components) -> Option<openapi::RequestBody> {
                 Some(openapi::RequestBody {
+                    description: Default::default(),
                     content: <Self as MultiRequestMediaType>::content(components),
                     required: true,
-                    ..Default::default()
+                    extensions: Default::default(),
                 })
             }
         }

@@ -6,27 +6,12 @@ use http::{
 use http_body_util::Limited;
 use hyper::body::Incoming;
 
-use crate::{body::RequestBody, impl_deref};
+use crate::{body::RequestBody, impl_deref, impl_display};
 
 pub const DEFAULT_REQUEST_BODY_LIMIT: usize = 2_097_152; // 2 mb
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct RequestBodyLimit(pub usize);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct LocalAddr(pub SocketAddr);
-
-impl_deref!(LocalAddr : SocketAddr);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct RemoteAddr(pub SocketAddr);
-
-impl_deref!(RemoteAddr : SocketAddr);
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct OriginalUri(pub Uri);
-
-impl_deref!(OriginalUri : Uri);
 
 #[derive(Debug)]
 pub struct Request {
@@ -111,9 +96,9 @@ impl fmt::Debug for Head {
             .field("uri", &self.uri)
             .field("version", &self.version)
             .field("headers", &self.headers)
-            .field("local_addr", &self.local_addr.0)
-            .field("remote_addr", &self.remote_addr.0)
-            .field("original_uri", &self.original_uri.0)
+            .field("local_addr", &self.local_addr)
+            .field("remote_addr", &self.remote_addr)
+            .field("original_uri", &self.original_uri)
             .finish()
     }
 }
@@ -125,15 +110,33 @@ impl Head {
             .and_then(|value| value.to_str().ok())
     }
 
-    pub fn local_addr(&self) -> SocketAddr {
-        self.local_addr.0
+    pub fn local_addr(&self) -> LocalAddr {
+        self.local_addr
     }
 
-    pub fn remote_addr(&self) -> SocketAddr {
-        self.remote_addr.0
+    pub fn remote_addr(&self) -> RemoteAddr {
+        self.remote_addr
     }
 
-    pub fn original_uri(&self) -> &Uri {
-        &self.original_uri.0
+    pub fn original_uri(&self) -> &OriginalUri {
+        &self.original_uri
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct LocalAddr(pub SocketAddr);
+
+impl_deref!(LocalAddr : SocketAddr);
+impl_display!(LocalAddr);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct RemoteAddr(pub SocketAddr);
+
+impl_deref!(RemoteAddr : SocketAddr);
+impl_display!(RemoteAddr);
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OriginalUri(pub Uri);
+
+impl_deref!(OriginalUri : Uri);
+impl_display!(OriginalUri);

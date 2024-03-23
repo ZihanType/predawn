@@ -36,3 +36,15 @@ macro_rules! impl_deref {
         }
     };
 }
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! impl_display {
+    ($ty:ty) => {
+        impl ::core::fmt::Display for $ty {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                ::core::fmt::Display::fmt(&self.0, f)
+            }
+        }
+    };
+}

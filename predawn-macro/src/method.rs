@@ -12,7 +12,6 @@ pub(crate) enum Method {
     Delete,
     Head,
     Trace,
-    Connect,
     Patch,
 }
 
@@ -33,7 +32,6 @@ impl Method {
             Method::Delete => parse_quote!(DELETE),
             Method::Head => parse_quote!(HEAD),
             Method::Trace => parse_quote!(TRACE),
-            Method::Connect => parse_quote!(CONNECT),
             Method::Patch => parse_quote!(PATCH),
         }
     }
@@ -47,13 +45,12 @@ impl Method {
             Method::Delete => parse_quote!(delete),
             Method::Head => parse_quote!(head),
             Method::Trace => parse_quote!(trace),
-            Method::Connect => parse_quote!(connect),
             Method::Patch => parse_quote!(patch),
         }
     }
 }
 
-pub(crate) const ENUM_METHODS: [Method; 9] = [
+pub(crate) const ENUM_METHODS: [Method; 8] = [
     Method::Options,
     Method::Get,
     Method::Post,
@@ -61,6 +58,5 @@ pub(crate) const ENUM_METHODS: [Method; 9] = [
     Method::Delete,
     Method::Head,
     Method::Trace,
-    Method::Connect,
     Method::Patch,
 ];

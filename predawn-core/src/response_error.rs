@@ -8,6 +8,7 @@ use http::{header::CONTENT_TYPE, HeaderValue, StatusCode};
 use mime::TEXT_PLAIN_UTF_8;
 
 use crate::{
+    error::BoxError,
     media_type::MultiResponseMediaType,
     openapi::{self, Components},
     response::Response,
@@ -43,6 +44,14 @@ pub trait ResponseError: Error + Send + Sync + 'static {
                 )
             })
             .collect()
+    }
+
+    #[doc(hidden)]
+    fn inner(self) -> BoxError
+    where
+        Self: Sized,
+    {
+        Box::new(self)
     }
 }
 
