@@ -106,5 +106,5 @@ where
 
 After all checks on `content_type` fail, the expected `content_type` is written to `InvalidContentType` and put into the custom error type, so it is required that the custom error type must implement the `From<InvalidContentType>` trait.
 
-[`MultiRequestMediaType`]: https://docs.rs/predawn/latest/predawn/media_type/trait.MultiRequestMediaType.html
+[`MultiRequestMediaType`]: https://docs.rs/predawn/latest/predawn/trait.MultiRequestMediaType.html
 [`FromRequest`]: https://docs.rs/predawn/latest/predawn/from_request/trait.FromRequest.html

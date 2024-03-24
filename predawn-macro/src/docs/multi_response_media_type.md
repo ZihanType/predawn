@@ -51,6 +51,6 @@ impl ResponseError for WriteJsonOrFormError {
 }
 ```
 
-[`MultiResponseMediaType`]: https://docs.rs/predawn/latest/predawn/media_type/trait.MultiResponseMediaType.html
-[`SingleResponse`]: https://docs.rs/predawn/latest/predawn/response/trait.SingleResponse.html
+[`MultiResponseMediaType`]: https://docs.rs/predawn/latest/predawn/trait.MultiResponseMediaType.html
+[`SingleResponse`]: https://docs.rs/predawn/latest/predawn/trait.SingleResponse.html
 [`IntoResponse`]: https://docs.rs/predawn/latest/predawn/into_response/trait.IntoResponse.html
