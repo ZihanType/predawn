@@ -1,9 +1,4 @@
-use std::{
-    collections::{BTreeMap, HashMap},
-    io,
-    net::SocketAddr,
-    sync::Arc,
-};
+use std::{collections::BTreeMap, io, net::SocketAddr, sync::Arc};
 
 use config::ConfigError;
 use predawn_core::{
@@ -29,7 +24,7 @@ pub trait Hooks {
     }
 
     fn init_logger(config: &Config) {
-        let cfg = config.get::<LoggerConfig>().unwrap_or_default();
+        let cfg = LoggerConfig::from(config);
 
         tracing_subscriber::fmt()
             .with_max_level(tracing::Level::from(cfg.level))
@@ -96,14 +91,14 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
 
     let config = H::load_config(&env).unwrap();
 
-    let server_cfg = config.get::<ServerConfig>().unwrap_or_default();
+    let server_cfg = ServerConfig::from(&config);
     let request_body_limit = server_cfg.request_body_limit;
     let root_path = server_cfg.root_path.clone();
     let full_non_application_root_path = server_cfg.full_non_application_root_path();
 
     let mut cx = H::create_context(config, env).await;
 
-    let mut route_table = HashMap::with_capacity(128);
+    let mut route_table = BTreeMap::new();
     let mut paths = BTreeMap::new();
     let mut components = Components::default();
 

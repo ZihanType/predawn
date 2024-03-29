@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use http::Method;
 use rudi::{Context, Singleton};
 
-use crate::{config::Config, handler::Handler, normalized_path::NormalizedPath, plugin::Plugin};
+use crate::{config::Config, handler::DynHandler, normalized_path::NormalizedPath, plugin::Plugin};
 
 const TEMPLATE: &str = r#"
 <!doctype html>
@@ -40,7 +40,7 @@ impl Plugin for RapiDoc {
     fn create_route(
         self: Arc<Self>,
         cx: &mut Context,
-    ) -> (NormalizedPath, HashMap<Method, Arc<dyn Handler>>) {
+    ) -> (NormalizedPath, HashMap<Method, DynHandler>) {
         super::create_route(cx, |c| c.rapidoc_path, self.as_html())
     }
 }

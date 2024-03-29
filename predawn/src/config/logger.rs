@@ -13,10 +13,11 @@ pub struct LoggerConfig {
 }
 
 #[Singleton]
-impl LoggerConfig {
+impl From<&Config> for LoggerConfig {
     #[di]
-    fn new(#[di(ref)] config: &Config) -> Self {
-        config.get().unwrap_or_default()
+    #[track_caller]
+    fn from(#[di(ref)] config: &Config) -> Self {
+        config.get().expect("failed to load `LoggerConfig`")
     }
 }
 
@@ -24,7 +25,7 @@ impl ConfigPrefix for LoggerConfig {
     const PREFIX: &'static str = "logger";
 }
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Copy, Clone, Serialize, Deserialize)]
 pub enum LogLevel {
     /// The "trace" level.
     #[serde(rename = "trace")]

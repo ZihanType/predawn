@@ -4,13 +4,12 @@ use serde::{Deserialize, Serialize};
 
 pub const PREDAWN_ENV: &str = "PREDAWN_ENV";
 
-#[derive(Debug, Default, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 pub enum Environment {
     #[serde(rename = "prod")]
     Prod,
 
     #[serde(rename = "dev")]
-    #[default]
     Dev,
 
     #[serde(rename = "test")]
@@ -24,7 +23,13 @@ impl Environment {
     pub fn resolve_from_env() -> Self {
         match env::var(PREDAWN_ENV) {
             Ok(e) => Self::from(e),
-            Err(_) => Self::default(),
+            Err(_) => {
+                if cfg!(debug_assertions) {
+                    Environment::Dev
+                } else {
+                    Environment::Prod
+                }
+            }
         }
     }
 

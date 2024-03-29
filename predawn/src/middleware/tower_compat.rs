@@ -44,7 +44,6 @@ mod private {
         task::{Context, Poll},
     };
 
-    use async_trait::async_trait;
     use futures_util::{future::BoxFuture, FutureExt};
     use predawn_core::{
         error::Error, into_response::IntoResponse, request::Request, response::Response,
@@ -75,7 +74,6 @@ mod private {
 
     pub struct ServiceToHandler<S>(pub Arc<Mutex<S>>);
 
-    #[async_trait]
     impl<S> Handler for ServiceToHandler<S>
     where
         S: Service<Request> + Send + Sync + 'static,

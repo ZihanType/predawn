@@ -11,7 +11,7 @@ pub type BoxError = Box<dyn StdError + Send + Sync>;
 pub struct Error {
     response: Response,
     inner: BoxError,
-    source_type_name: &'static str,
+    error_wrappers: Vec<&'static str>,
 }
 
 impl Error {
@@ -29,22 +29,22 @@ impl Error {
         self.inner.downcast_ref::<T>()
     }
 
-    pub fn downcast<T>(self) -> Result<T, Self>
+    pub fn downcast<T>(self) -> Result<(Response, T, Vec<&'static str>), Self>
     where
         T: StdError + 'static,
     {
         let Self {
             response,
             inner,
-            source_type_name,
+            error_wrappers,
         } = self;
 
         match inner.downcast() {
-            Ok(err) => Ok(*err),
+            Ok(err) => Ok((response, *err, error_wrappers)),
             Err(err) => Err(Self {
                 response,
                 inner: err,
-                source_type_name,
+                error_wrappers,
             }),
         }
     }
@@ -57,8 +57,8 @@ impl Error {
         self.response
     }
 
-    pub fn source_type_name(&self) -> &'static str {
-        self.source_type_name
+    pub fn error_wrappers(&self) -> &[&'static str] {
+        &self.error_wrappers
     }
 }
 
@@ -69,10 +69,13 @@ where
     fn from(value: T) -> Self {
         let response = value.as_response();
 
+        let mut error_wrappers = Vec::with_capacity(1); // at least one error
+        value.wrappers(&mut error_wrappers);
+
         Self {
             response,
             inner: value.inner(),
-            source_type_name: any::type_name::<T>(),
+            error_wrappers,
         }
     }
 }
@@ -87,7 +90,7 @@ impl From<(StatusCode, BoxError)> for Error {
                 Self {
                     response,
                     inner: e,
-                    source_type_name: any::type_name::<BoxError>(),
+                    error_wrappers: [any::type_name::<BoxError>()].into(),
                 }
             }
         }

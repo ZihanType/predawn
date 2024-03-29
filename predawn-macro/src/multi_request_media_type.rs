@@ -28,7 +28,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
             })) => enum_attr,
             Ok(None) => return Err(syn::Error::new(
                 ident.span(),
-                "must have `#[multi_request_media_type(error = SomeFromRequestError)]` attribute",
+                "missing `#[multi_request_media_type(error = SomeFromRequestError)]` attribute",
             )),
             Err(AttrsValue { value: e, .. }) => return Err(e),
         };
@@ -42,7 +42,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
     let mut errors = Vec::new();
 
     for variant in variants.into_iter() {
-        match handle_single_variant(variant, &ident) {
+        match handle_single_variant(variant, &ident, &from_request_error) {
             Ok((media_type_expr, content_body, from_request_body)) => {
                 media_type_exprs.push(media_type_expr);
                 content_bodies.push(content_body);
@@ -73,7 +73,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
     };
 
     let expand = quote_use! {
-        # use std::format;
+        # use core::convert::From;
         # use std::vec::Vec;
         # use std::string::String;
         # use predawn::MultiRequestMediaType;
@@ -108,9 +108,9 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
 
                 #(#from_request_bodies)*
 
-                Err(#from_request_error::from(InvalidContentType {
+                Err(<#from_request_error as From<_>>::from(InvalidContentType {
                     actual: content_type.into(),
-                    expected: [#(#media_type_exprs,)*].into(),
+                    expected: [#(#media_type_exprs,)*],
                 }))
             }
 
@@ -132,9 +132,10 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
     Ok(expand)
 }
 
-fn handle_single_variant(
+fn handle_single_variant<'a>(
     variant: Variant,
-    enum_ident: &Ident,
+    enum_ident: &'a Ident,
+    from_request_error: &'a Type,
 ) -> syn::Result<(TokenStream, TokenStream, TokenStream)> {
     let variant_span = variant.span();
 
@@ -163,13 +164,15 @@ fn handle_single_variant(
     };
 
     let from_request_body = quote_use! {
+        # use core::convert::From;
         # use predawn::media_type::SingleRequestMediaType;
         # use predawn::from_request::FromRequest;
 
         if <#ty as SingleRequestMediaType>::check_content_type(content_type) {
-            return Ok(#enum_ident::#variant_ident(
-                <#ty as FromRequest<'a>>::from_request(head, body).await?,
-            ));
+            return match <#ty as FromRequest<'a>>::from_request(head, body).await {
+                Ok(o) => Ok(#enum_ident::#variant_ident(o)),
+                Err(e) => Err(<#from_request_error as From<_>>::from(e)),
+            };
         }
     };
 

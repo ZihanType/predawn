@@ -8,7 +8,7 @@ use rudi::{Context, Singleton};
 use super::Plugin;
 use crate::{
     config::openapi::OpenAPIConfig,
-    handler::{handler_fn, Handler},
+    handler::{handler_fn, DynHandler},
     normalized_path::NormalizedPath,
 };
 
@@ -20,7 +20,7 @@ impl Plugin for OpenAPIJson {
     fn create_route(
         self: Arc<Self>,
         cx: &mut Context,
-    ) -> (NormalizedPath, HashMap<Method, Arc<dyn Handler>>) {
+    ) -> (NormalizedPath, HashMap<Method, DynHandler>) {
         let json_path = cx.resolve::<OpenAPIConfig>().json_path;
 
         let json = serde_json::to_string_pretty(&cx.get_single::<OpenAPI>())
@@ -41,7 +41,7 @@ impl Plugin for OpenAPIJson {
             }
         });
 
-        let handler: Arc<dyn Handler> = Arc::new(handler);
+        let handler = DynHandler::new(handler);
 
         map.insert(Method::GET, handler);
 

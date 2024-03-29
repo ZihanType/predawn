@@ -1,10 +1,17 @@
-SingleResponse       derive macro implement    SingleResponse   IntoResponse
-MultiResponse        derive macro implement    MultiResponse    IntoResponse
-
 controller: condition, skip
 
-ToSchema / ToParameter / MultiRequestMediaType / MultiResponseMediaType:
-default, description, example, deprecated, actual_type
+split FromRequest FromRequestHead IntoResponse
+
+ToSchema / ToParameter
+/ MultiRequestMediaType / MultiResponseMediaType
+/ SingleResponse / MultiResponse :
+
+default,
+flatten
+description,
+example,
+deprecated,
+actual_type
 
 update references in doc comments by search `https://docs.rs`
 

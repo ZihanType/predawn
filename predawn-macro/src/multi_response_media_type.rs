@@ -1,5 +1,4 @@
 use from_attr::{AttrsValue, FromAttr};
-use http::StatusCode;
 use proc_macro2::TokenStream;
 use quote_use::quote_use;
 use syn::{spanned::Spanned, DeriveInput, Ident, LitInt, Type, Variant};
@@ -8,7 +7,7 @@ use syn::{spanned::Spanned, DeriveInput, Ident, LitInt, Type, Variant};
 #[attribute(idents = [multi_response_media_type])]
 struct EnumAttr {
     error: Type,
-    status_code: LitInt,
+    status: Option<LitInt>,
 }
 
 pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
@@ -22,7 +21,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
 
     let EnumAttr {
         error: into_response_error,
-        status_code,
+        status: status_code,
     } =
         match EnumAttr::from_attributes(&attrs) {
             Ok(Some(AttrsValue {
@@ -30,19 +29,12 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
             })) => enum_attr,
             Ok(None) => return Err(syn::Error::new(
                 ident.span(),
-                "must have `#[multi_response_media_type(error = SomeIntoResponseError)]` attribute",
+                "missing `#[multi_response_media_type(error = SomeIntoResponseError)]` attribute",
             )),
             Err(AttrsValue { value: e, .. }) => return Err(e),
         };
 
-    let status_code_value = status_code.base10_parse()?;
-
-    if StatusCode::from_u16(status_code_value).is_err() {
-        return Err(syn::Error::new(
-            status_code.span(),
-            "it is not a valid status code",
-        ));
-    }
+    let status_code_value = crate::util::extract_status_code_value(status_code)?;
 
     let variants = crate::util::extract_variants(data, "MultiRequestMediaType")?;
 
@@ -52,7 +44,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
     let mut errors = Vec::new();
 
     for variant in variants.into_iter() {
-        match handle_single_variant(variant, &ident) {
+        match handle_single_variant(variant, &ident, &into_response_error) {
             Ok((content_body, into_response_arm)) => {
                 content_bodies.push(content_body);
                 into_response_arms.push(into_response_arm);
@@ -129,9 +121,10 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
     Ok(expand)
 }
 
-fn handle_single_variant(
+fn handle_single_variant<'a>(
     variant: Variant,
-    enum_ident: &Ident,
+    enum_ident: &'a Ident,
+    into_response_error: &'a Type,
 ) -> syn::Result<(TokenStream, TokenStream)> {
     let variant_span = variant.span();
 
@@ -154,9 +147,13 @@ fn handle_single_variant(
     };
 
     let into_response_arm = quote_use! {
+        # use core::convert::From;
         # use predawn::into_response::IntoResponse;
 
-        #enum_ident::#variant_ident(a) => <#ty as IntoResponse>::into_response(a)?,
+        #enum_ident::#variant_ident(a) => match <#ty as IntoResponse>::into_response(a) {
+            Ok(response) => response,
+            Err(e) => return Err(<#into_response_error as From<_>>::from(e)),
+        },
     };
 
     Ok((content_body, into_response_arm))

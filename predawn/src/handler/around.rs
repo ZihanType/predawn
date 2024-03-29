@@ -1,6 +1,5 @@
 use std::{future::Future, sync::Arc};
 
-use async_trait::async_trait;
 use predawn_core::{
     error::Error, into_response::IntoResponse, request::Request, response::Response,
 };
@@ -12,7 +11,6 @@ pub struct Around<H, F> {
     pub(crate) f: F,
 }
 
-#[async_trait]
 impl<H, F, Fut, R> Handler for Around<H, F>
 where
     H: Handler,

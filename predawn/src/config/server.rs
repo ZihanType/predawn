@@ -23,12 +23,15 @@ pub struct ServerConfig {
 }
 
 #[Singleton]
-impl ServerConfig {
+impl From<&Config> for ServerConfig {
     #[di]
-    fn new(#[di(ref)] config: &Config) -> Self {
-        config.get().unwrap_or_default()
+    #[track_caller]
+    fn from(#[di(ref)] config: &Config) -> Self {
+        config.get().expect("failed to load `ServerConfig`")
     }
+}
 
+impl ServerConfig {
     pub fn full_non_application_root_path(self) -> NormalizedPath {
         self.root_path.join(self.non_application_root_path)
     }

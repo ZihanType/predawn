@@ -41,14 +41,13 @@ where
     type Error = ReadJsonError;
 
     async fn from_request(head: &'a Head, body: RequestBody) -> Result<Self, Self::Error> {
-        match head.content_type() {
-            Some(content_type)
-                if <Self as SingleRequestMediaType>::check_content_type(content_type) =>
-            {
-                let bytes = Bytes::from_request(head, body).await?;
-                Self::from_bytes(&bytes)
-            }
-            _ => Err(ReadJsonError::InvalidJsonContentType),
+        let content_type = head.content_type().unwrap_or_default();
+
+        if <Self as SingleRequestMediaType>::check_content_type(content_type) {
+            let bytes = Bytes::from_request(head, body).await?;
+            Self::from_bytes(&bytes)
+        } else {
+            Err(ReadJsonError::InvalidJsonContentType)
         }
     }
 

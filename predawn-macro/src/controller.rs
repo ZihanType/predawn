@@ -88,10 +88,10 @@ pub(crate) fn generate(impl_attr: ImplAttr, mut item_impl: ItemImpl) -> syn::Res
     let expand = quote_use! {
         # use std::string::String;
         # use std::sync::Arc;
-        # use std::collections::HashMap;
+        # use std::collections::{BTreeMap, HashMap};
         # use std::collections::BTreeMap;
         # use predawn::controller::Controller;
-        # use predawn::handler::Handler;
+        # use predawn::handler::{Handler, DynHandler};
         # use predawn::normalized_path::NormalizedPath;
         # use predawn::__internal::http::Method;
         # use predawn::__internal::rudi::Context;
@@ -101,7 +101,7 @@ pub(crate) fn generate(impl_attr: ImplAttr, mut item_impl: ItemImpl) -> syn::Res
             fn insert_routes(
                 self: Arc<Self>,
                 cx: &mut Context,
-                route_table: &mut HashMap<NormalizedPath, HashMap<Method, Arc<dyn Handler>>>,
+                route_table: &mut BTreeMap<NormalizedPath, HashMap<Method, DynHandler>>,
                 paths: &mut BTreeMap<NormalizedPath, ReferenceOr<PathItem>>,
                 components: &mut Components,
             ) {
@@ -422,7 +422,7 @@ fn generate_single_fn_impl<'a>(
 
     let create_handler = quote_use! {
         # use std::sync::Arc;
-        # use predawn::handler::handler_fn;
+        # use predawn::handler::{DynHandler, handler_fn};
 
         let #fn_name = {
             let this = this.clone();
@@ -444,7 +444,7 @@ fn generate_single_fn_impl<'a>(
             #add_method_middleware
             #add_controller_middleware
 
-            Arc::new(handler)
+            DynHandler::new(handler)
         };
     };
 

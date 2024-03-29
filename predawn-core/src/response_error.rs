@@ -14,7 +14,7 @@ use crate::{
     response::Response,
 };
 
-pub trait ResponseError: Error + Send + Sync + 'static {
+pub trait ResponseError: Error + Send + Sync + Sized + 'static {
     fn as_status(&self) -> StatusCode;
 
     fn status_codes() -> HashSet<StatusCode>;
@@ -47,11 +47,13 @@ pub trait ResponseError: Error + Send + Sync + 'static {
     }
 
     #[doc(hidden)]
-    fn inner(self) -> BoxError
-    where
-        Self: Sized,
-    {
+    fn inner(self) -> BoxError {
         Box::new(self)
+    }
+
+    #[doc(hidden)]
+    fn wrappers(&self, errors: &mut Vec<&'static str>) {
+        errors.push(std::any::type_name::<Self>());
     }
 }
 

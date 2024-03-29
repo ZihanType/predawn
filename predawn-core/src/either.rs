@@ -77,13 +77,20 @@ where
     }
 
     #[doc(hidden)]
-    fn inner(self) -> BoxError
-    where
-        Self: Sized,
-    {
+    fn inner(self) -> BoxError {
         match self {
-            Either::Left(l) => Box::new(l),
-            Either::Right(r) => Box::new(r),
+            Either::Left(l) => l.inner(),
+            Either::Right(r) => r.inner(),
+        }
+    }
+
+    #[doc(hidden)]
+    fn wrappers(&self, errors: &mut Vec<&'static str>) {
+        errors.push(std::any::type_name::<Self>());
+
+        match self {
+            Either::Left(l) => l.wrappers(errors),
+            Either::Right(r) => r.wrappers(errors),
         }
     }
 }

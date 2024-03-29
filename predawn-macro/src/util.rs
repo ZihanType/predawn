@@ -1,7 +1,8 @@
+use http::StatusCode;
 use proc_macro2::Span;
 use syn::{
     punctuated::Punctuated, spanned::Spanned, Data, DataEnum, DataStruct, DataUnion, Fields,
-    FieldsNamed, FieldsUnnamed, Token, Type, Variant,
+    FieldsNamed, FieldsUnnamed, LitInt, Token, Type, Variant,
 };
 
 pub(crate) fn extract_variants(
@@ -56,7 +57,7 @@ pub(crate) fn extract_single_unnamed_field_type_from_variant(
             };
 
             if let Some(e) = unnamed
-                .map(|field| syn::Error::new(field.span(), "variant only have one field"))
+                .map(|field| syn::Error::new(field.span(), "only have one field"))
                 .reduce(|mut a, b| {
                     a.combine(b);
                     a
@@ -73,4 +74,24 @@ pub(crate) fn extract_single_unnamed_field_type_from_variant(
         )),
         Fields::Unit => Err(syn::Error::new(variant_span, "only support unnamed fields")),
     }
+}
+
+pub(crate) fn extract_status_code_value(status_code: Option<LitInt>) -> syn::Result<u16> {
+    let status_code_value = match status_code {
+        None => 200,
+        Some(status_code) => {
+            let status_code_value = status_code.base10_parse()?;
+
+            if StatusCode::from_u16(status_code_value).is_err() {
+                return Err(syn::Error::new(
+                    status_code.span(),
+                    "it is not a valid status code",
+                ));
+            }
+
+            status_code_value
+        }
+    };
+
+    Ok(status_code_value)
 }

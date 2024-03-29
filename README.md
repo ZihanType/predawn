@@ -6,6 +6,45 @@
 `predawn` is a Rust web framework like `Spring Boot`.
 
 ```rust
+use predawn::{
+    app::{run_app, Hooks},
+    controller,
+};
+use rudi::Singleton;
+
+struct App;
+
+impl Hooks for App {}
+
+#[tokio::main]
+async fn main() {
+    run_app::<App>().await;
+}
+
+#[derive(Clone)]
+#[Singleton]
+struct Controller;
+
+#[controller]
+impl Controller {
+    #[handler(paths = ["/"], methods = [post])]
+    async fn hello(&self, name: String) -> String {
+        format!("Hello {name}")
+    }
+}
+```
+
+## Features
+
+- Built-in OpenAPI support.
+- Automatic dependency injection.
+- Programmable configuration.
+
+More examples can be found in the [examples](./examples/) directories.
+
+## More complex example
+
+```rust
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -61,14 +100,6 @@ impl Controller {
     }
 }
 ```
-
-## Features
-
-- Built-in OpenAPI support.
-- Automatic dependency injection.
-- Programmable configuration.
-
-More examples can be found in the [examples](./examples/) directories.
 
 ## Credits
 

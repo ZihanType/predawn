@@ -22,7 +22,7 @@ hyper = { workspace = true, features = ["server", "http1", "http2"] }
 thiserror = { workspace = true }
 bytes = { workspace = true }
 http = { workspace = true }
-futures-util = { workspace = true }
+futures-util = { workspace = true, features = ["alloc"] }
 async-trait = { workspace = true }
 matchit = { workspace = true }
 tokio = { workspace = true, features = ["macros", "signal"] }
@@ -48,7 +48,7 @@ tower = { workspace = true, optional = true }
 [features]
 default = ["auto-register"]
 auto-register = ["rudi/auto-register", "predawn-macro/auto-register"]
-tower-compat = ["dep:tower", "futures-util/alloc"]
+tower-compat = ["dep:tower"]
 schemars = ["predawn-schema/schemars"]
 
 [package.metadata.docs.rs]

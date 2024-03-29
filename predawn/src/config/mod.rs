@@ -53,21 +53,19 @@ impl Config {
         let env_cfg = path.join(format!("app-{}.toml", env));
         let env = config::Environment::default().separator("_");
 
-        tracing::info!("trying to load configuration from `{}`", app_cfg.display());
-        if !app_cfg.exists() {
-            tracing::info!("`{}` does not exist", app_cfg.display());
+        let mut builder = config::Config::builder();
+
+        for cfg in [app_cfg, env_cfg].into_iter() {
+            tracing::info!("try to load config `{}`", cfg.display());
+
+            if cfg.exists() {
+                builder = builder.add_source(File::from(cfg))
+            } else {
+                tracing::info!("not found config `{}`", cfg.display());
+            }
         }
 
-        tracing::info!("trying to load configuration from `{}`", env_cfg.display());
-        if !env_cfg.exists() {
-            tracing::info!("`{}` does not exist", env_cfg.display());
-        }
-
-        let config = config::Config::builder()
-            .add_source(File::from(app_cfg).required(false))
-            .add_source(File::from(env_cfg).required(false))
-            .add_source(env)
-            .build()?;
+        let config = builder.add_source(env).build()?;
 
         Ok(Self { inner: config })
     }

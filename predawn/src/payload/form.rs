@@ -64,18 +64,17 @@ where
     type Error = ReadFormError;
 
     async fn from_request(head: &'a Head, body: RequestBody) -> Result<Self, Self::Error> {
-        match head.content_type() {
-            Some(content_type)
-                if <Self as SingleRequestMediaType>::check_content_type(content_type) =>
-            {
-                let bytes = Bytes::from_request(head, body).await?;
+        let content_type = head.content_type().unwrap_or_default();
 
-                match serde_html_form::from_bytes::<T>(&bytes) {
-                    Ok(value) => Ok(Form(value)),
-                    Err(err) => Err(ReadFormError::FormDeserializeError(err)),
-                }
+        if <Self as SingleRequestMediaType>::check_content_type(content_type) {
+            let bytes = Bytes::from_request(head, body).await?;
+
+            match serde_html_form::from_bytes::<T>(&bytes) {
+                Ok(value) => Ok(Form(value)),
+                Err(err) => Err(ReadFormError::FormDeserializeError(err)),
             }
-            _ => Err(ReadFormError::InvalidFormContentType),
+        } else {
+            Err(ReadFormError::InvalidFormContentType)
         }
     }
 

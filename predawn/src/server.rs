@@ -50,10 +50,7 @@ impl Server {
 
         info!("listening {}", local_addr);
 
-        let (signal_sender, signal_receiver) = {
-            let (sender, receiver) = watch::channel(());
-            (Arc::new(sender), receiver)
-        };
+        let (signal_sender, signal_receiver) = watch::channel(());
 
         tokio::spawn(async move {
             signal.await;
@@ -128,7 +125,7 @@ async fn handle_conn<H: Handler + Clone>(
     tcp_stream: TcpStream,
     local_addr: SocketAddr,
     remote_addr: SocketAddr,
-    signal_sender: Arc<Sender<()>>,
+    signal_sender: Sender<()>,
     close_receiver: Receiver<()>,
     handler: H,
 ) {

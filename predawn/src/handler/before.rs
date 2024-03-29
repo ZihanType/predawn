@@ -1,6 +1,5 @@
 use std::future::Future;
 
-use async_trait::async_trait;
 use predawn_core::{error::Error, request::Request, response::Response};
 
 use crate::handler::Handler;
@@ -10,7 +9,6 @@ pub struct Before<H, F> {
     pub(crate) f: F,
 }
 
-#[async_trait]
 impl<H, F, Fut> Handler for Before<H, F>
 where
     H: Handler,

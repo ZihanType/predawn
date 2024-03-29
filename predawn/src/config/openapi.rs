@@ -16,10 +16,11 @@ pub struct OpenAPIConfig {
 }
 
 #[Singleton]
-impl OpenAPIConfig {
+impl From<&Config> for OpenAPIConfig {
     #[di]
-    fn new(#[di(ref)] config: &Config) -> Self {
-        config.get().unwrap_or_default()
+    #[track_caller]
+    fn from(#[di(ref)] config: &Config) -> Self {
+        config.get().expect("failed to load `OpenAPIConfig`")
     }
 }
 

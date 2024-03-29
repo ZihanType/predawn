@@ -16,7 +16,6 @@ impl<H: Handler> Middleware<H> for Tracing {
 mod private {
     use std::time::Instant;
 
-    use async_trait::async_trait;
     use predawn_core::{error::Error, request::Request, response::Response};
     use tracing::Instrument;
 
@@ -26,7 +25,6 @@ mod private {
         pub inner: H,
     }
 
-    #[async_trait]
     impl<H: Handler> Handler for TracingHandler<H> {
         async fn call(&self, req: Request) -> Result<Response, Error> {
             let head = &req.head;
@@ -56,8 +54,8 @@ mod private {
                     Err(error) => {
                         ::tracing::info!(
                             status = %error.status(),
-                            error = %error,
                             duration = ?duration,
+                            error = %error,
                             "error"
                         )
                     }

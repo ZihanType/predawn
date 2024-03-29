@@ -1,24 +1,24 @@
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
+use std::collections::{HashMap, HashSet};
 
-use async_trait::async_trait;
+use futures_util::{future::Either, Future, FutureExt};
 use http::{Method, StatusCode};
 use matchit::{InsertError, Match};
 use predawn_core::{
     error::Error, request::Request, response::Response, response_error::ResponseError,
 };
 
-use crate::{handler::Handler, path_params::PathParams};
+use crate::{
+    handler::{DynHandler, Handler},
+    path_params::PathParams,
+};
 
 #[derive(Default)]
 pub struct MethodRouter {
-    methods: HashMap<Method, Arc<dyn Handler>>,
+    methods: HashMap<Method, DynHandler>,
 }
 
-impl From<HashMap<Method, Arc<dyn Handler>>> for MethodRouter {
-    fn from(methods: HashMap<Method, Arc<dyn Handler>>) -> Self {
+impl From<HashMap<Method, DynHandler>> for MethodRouter {
+    fn from(methods: HashMap<Method, DynHandler>) -> Self {
         Self { methods }
     }
 }
@@ -37,23 +37,28 @@ impl ResponseError for MethodNotAllowedError {
     }
 }
 
-#[async_trait]
 impl Handler for MethodRouter {
-    async fn call(&self, mut req: Request) -> Result<Response, Error> {
+    fn call(&self, mut req: Request) -> impl Future<Output = Result<Response, Error>> + Send {
         let method = &mut req.head.method;
 
         match self.methods.get(method) {
-            Some(handler) => handler.call(req).await,
-            None => {
+            Some(handler) => Either::Left(handler.call(req)),
+            None => Either::Right(
                 if *method == Method::HEAD {
                     *method = Method::GET;
-                    let mut response = self.call(req).await?;
-                    response.body_mut().clear();
-                    return Ok(response);
-                }
 
-                Err(MethodNotAllowedError.into())
-            }
+                    Either::Left(
+                        async move {
+                            let mut response = self.call(req).await?;
+                            response.body_mut().clear();
+                            Ok(response)
+                        }
+                        .boxed(),
+                    )
+                } else {
+                    Either::Right(async { Err(MethodNotAllowedError.into()) })
+                },
+            ),
         }
     }
 }
@@ -95,7 +100,6 @@ impl Router {
     }
 }
 
-#[async_trait]
 impl Handler for Router {
     async fn call(&self, mut req: Request) -> Result<Response, Error> {
         let head = &mut req.head;

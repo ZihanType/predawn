@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use predawn_core::{error::Error, request::Request, response::Response};
 
 use crate::handler::Handler;
@@ -8,7 +7,6 @@ pub struct InspectAllError<H, F> {
     pub(crate) f: F,
 }
 
-#[async_trait]
 impl<H, F> Handler for InspectAllError<H, F>
 where
     H: Handler,

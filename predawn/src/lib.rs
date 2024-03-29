@@ -7,6 +7,7 @@ pub mod controller;
 pub mod environment;
 pub mod extract;
 pub mod handler;
+mod macros;
 pub mod media_type;
 pub mod middleware;
 pub mod normalized_path;
@@ -18,6 +19,7 @@ pub mod response;
 pub mod route;
 pub mod server;
 pub mod test_client;
+pub mod to_header_value;
 mod to_parameters;
 
 pub use predawn_core::{
@@ -28,7 +30,8 @@ pub use predawn_core::{
     response_error,
 };
 pub use predawn_macro::{
-    controller, MultiRequestMediaType, MultiResponseMediaType, ToParameters, ToSchema,
+    controller, MultiRequestMediaType, MultiResponse, MultiResponseMediaType, SingleResponse,
+    ToParameters, ToSchema,
 };
 #[cfg_attr(docsrs, doc(cfg(feature = "schemars")))]
 #[cfg(feature = "schemars")]

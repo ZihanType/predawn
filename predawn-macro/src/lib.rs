@@ -1,8 +1,10 @@
 mod controller;
 mod method;
 mod multi_request_media_type;
+mod multi_response;
 mod multi_response_media_type;
 mod serde_attr;
+mod single_response;
 mod to_parameters;
 mod to_schema;
 mod util;
@@ -58,6 +60,26 @@ pub fn multi_response_media_type(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
     multi_response_media_type::generate(input)
+        .unwrap_or_else(|e| e.to_compile_error())
+        .into()
+}
+
+#[doc = include_str!("docs/single_response.md")]
+#[proc_macro_derive(SingleResponse, attributes(single_response, header))]
+pub fn single_response(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+
+    single_response::generate(input)
+        .unwrap_or_else(|e| e.to_compile_error())
+        .into()
+}
+
+#[doc = include_str!("docs/multi_response.md")]
+#[proc_macro_derive(MultiResponse, attributes(multi_response, status))]
+pub fn multi_response(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+
+    multi_response::generate(input)
         .unwrap_or_else(|e| e.to_compile_error())
         .into()
 }
