@@ -48,23 +48,20 @@ pub trait MultiResponseMediaType {
     fn content(components: &mut Components) -> IndexMap<String, MediaType>;
 }
 
-macro_rules! content_impl {
-    ($ty:ty) => {
-        fn content(components: &mut Components) -> IndexMap<String, MediaType> {
-            let mut map = IndexMap::with_capacity(1);
-            map.insert(<$ty>::MEDIA_TYPE.to_string(), <$ty>::media_type(components));
-            map
+macro_rules! default_impl {
+    ($bound:ident, $trait:ident) => {
+        impl<T: $bound> $trait for T {
+            fn content(components: &mut Components) -> IndexMap<String, MediaType> {
+                let mut map = IndexMap::with_capacity(1);
+                map.insert(T::MEDIA_TYPE.to_string(), T::media_type(components));
+                map
+            }
         }
     };
 }
 
-impl<T: SingleRequestMediaType> MultiRequestMediaType for T {
-    content_impl!(T);
-}
-
-impl<T: SingleResponseMediaType> MultiResponseMediaType for T {
-    content_impl!(T);
-}
+default_impl!(SingleRequestMediaType, MultiRequestMediaType);
+default_impl!(SingleResponseMediaType, MultiResponseMediaType);
 
 macro_rules! impl_for_str {
     ($($ty:ty),+ $(,)?) => {
