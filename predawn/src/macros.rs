@@ -99,15 +99,15 @@ macro_rules! define_from_request_error {
             }
 
             #[doc(hidden)]
-            fn wrappers(&self, errors: &mut ::std::vec::Vec<&'static str>) {
-                errors.push(::std::any::type_name::<Self>());
+            fn wrappers(&self, type_names: &mut ::std::vec::Vec<&'static str>) {
+                type_names.push(::std::any::type_name::<Self>());
 
                 match self {
                     $(
-                        $name::$error(e) => <$error as $crate::response_error::ResponseError>::wrappers(e, errors),
+                        $name::$error(e) => <$error as $crate::response_error::ResponseError>::wrappers(e, type_names),
                     )+
 
-                    $name::InvalidContentType(e) => errors.push(::std::any::type_name_of_val(e)),
+                    $name::InvalidContentType(e) => type_names.push(::std::any::type_name_of_val(e)),
                 }
             }
         }
@@ -190,12 +190,12 @@ macro_rules! define_into_response_error {
             }
 
             #[doc(hidden)]
-            fn wrappers(&self, errors: &mut ::std::vec::Vec<&'static str>) {
-                errors.push(::std::any::type_name::<Self>());
+            fn wrappers(&self, type_names: &mut ::std::vec::Vec<&'static str>) {
+                type_names.push(::std::any::type_name::<Self>());
 
                 match self {
                     $(
-                        $name::$error(e) => <$error as $crate::response_error::ResponseError>::wrappers(e, errors),
+                        $name::$error(e) => <$error as $crate::response_error::ResponseError>::wrappers(e, type_names),
                     )+
                 }
             }

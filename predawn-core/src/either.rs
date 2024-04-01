@@ -85,12 +85,12 @@ where
     }
 
     #[doc(hidden)]
-    fn wrappers(&self, errors: &mut Vec<&'static str>) {
-        errors.push(std::any::type_name::<Self>());
+    fn wrappers(&self, type_name: &mut Vec<&'static str>) {
+        type_name.push(std::any::type_name::<Self>());
 
         match self {
-            Either::Left(l) => l.wrappers(errors),
-            Either::Right(r) => r.wrappers(errors),
+            Either::Left(l) => l.wrappers(type_name),
+            Either::Right(r) => r.wrappers(type_name),
         }
     }
 }

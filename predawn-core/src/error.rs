@@ -1,4 +1,4 @@
-use std::{any, error::Error as StdError, fmt};
+use std::{error::Error as StdError, fmt};
 
 use http::StatusCode;
 
@@ -11,7 +11,7 @@ pub type BoxError = Box<dyn StdError + Send + Sync>;
 pub struct Error {
     response: Response,
     inner: BoxError,
-    error_wrappers: Vec<&'static str>,
+    wrappers: Vec<&'static str>,
 }
 
 impl Error {
@@ -36,15 +36,15 @@ impl Error {
         let Self {
             response,
             inner,
-            error_wrappers,
+            wrappers,
         } = self;
 
         match inner.downcast() {
-            Ok(err) => Ok((response, *err, error_wrappers)),
+            Ok(err) => Ok((response, *err, wrappers)),
             Err(err) => Err(Self {
                 response,
                 inner: err,
-                error_wrappers,
+                wrappers,
             }),
         }
     }
@@ -57,8 +57,8 @@ impl Error {
         self.response
     }
 
-    pub fn error_wrappers(&self) -> &[&'static str] {
-        &self.error_wrappers
+    pub fn wrappers(&self) -> &[&'static str] {
+        &self.wrappers
     }
 }
 
@@ -66,16 +66,16 @@ impl<T> From<T> for Error
 where
     T: ResponseError,
 {
-    fn from(value: T) -> Self {
-        let response = value.as_response();
+    fn from(error: T) -> Self {
+        let response = error.as_response();
 
-        let mut error_wrappers = Vec::with_capacity(1); // at least one error
-        value.wrappers(&mut error_wrappers);
+        let mut type_names = Vec::with_capacity(1); // at least one error
+        error.wrappers(&mut type_names);
 
         Self {
             response,
-            inner: value.inner(),
-            error_wrappers,
+            inner: error.inner(),
+            wrappers: type_names,
         }
     }
 }
@@ -90,7 +90,7 @@ impl From<(StatusCode, BoxError)> for Error {
                 Self {
                     response,
                     inner: e,
-                    error_wrappers: [any::type_name::<BoxError>()].into(),
+                    wrappers: [std::any::type_name::<BoxError>()].into(),
                 }
             }
         }

@@ -52,8 +52,8 @@ pub trait ResponseError: Error + Send + Sync + Sized + 'static {
     }
 
     #[doc(hidden)]
-    fn wrappers(&self, errors: &mut Vec<&'static str>) {
-        errors.push(std::any::type_name::<Self>());
+    fn wrappers(&self, type_names: &mut Vec<&'static str>) {
+        type_names.push(std::any::type_name::<Self>());
     }
 }
 
