@@ -138,6 +138,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         # use std::collections::BTreeMap;
         # use predawn::{SingleResponse, MultiResponse};
         # use predawn::into_response::IntoResponse;
+        # use predawn::api_response::ApiResponse;
         # use predawn::response::Response;
         # use predawn::openapi::{self, Components};
         # use predawn::__internal::indexmap::IndexMap;
@@ -173,10 +174,10 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
 
                 Ok(response)
             }
+        }
 
-            fn responses(
-                components: &mut Components,
-            ) -> Option<BTreeMap<StatusCode, openapi::Response>> {
+        impl #impl_generics ApiResponse for #ident #ty_generics #where_clause {
+            fn responses(components: &mut Components) -> Option<BTreeMap<StatusCode, openapi::Response>> {
                 Some(<Self as MultiResponse>::responses(components))
             }
         }
@@ -191,6 +192,7 @@ fn generate_unit(struct_ident: &Ident, status_code_value: u16) -> TokenStream {
         # use std::collections::BTreeMap;
         # use predawn::{SingleResponse, MultiResponse};
         # use predawn::into_response::IntoResponse;
+        # use predawn::api_response::ApiResponse;
         # use predawn::response::Response;
         # use predawn::openapi::{self, Components};
         # use predawn::__internal::http::StatusCode;
@@ -213,11 +215,11 @@ fn generate_unit(struct_ident: &Ident, status_code_value: u16) -> TokenStream {
 
                 Ok(response)
             }
+        }
 
-            fn responses(
-                components: &mut Components,
-            ) -> Option<BTreeMap<StatusCode, openapi::Response>> {
-                Some(<() as MultiResponse>::responses(components))
+        impl ApiResponse for #struct_ident {
+            fn responses(components: &mut Components) -> Option<BTreeMap<StatusCode, openapi::Response>> {
+                Some(<Self as MultiResponse>::responses(components))
             }
         }
     }

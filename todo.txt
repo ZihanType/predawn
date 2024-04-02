@@ -1,7 +1,5 @@
 controller: condition, skip
 
-split FromRequest FromRequestHead IntoResponse
-
 ToSchema / ToParameter
 / MultiRequestMediaType / MultiResponseMediaType
 / SingleResponse / MultiResponse :
@@ -15,6 +13,7 @@ actual_type
 
 update references in doc comments by search `https://docs.rs`
 
+service attribute macro
 Tag
 SecuritySchema
 operation id

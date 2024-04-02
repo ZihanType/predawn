@@ -1,6 +1,6 @@
 Define a single response with headers and body.
 
-This macro will generate 2 implementations, [`SingleResponse`] and [`IntoResponse`].
+This macro will generate 3 implementations, [`SingleResponse`], [`IntoResponse`] and [`ApiResponse`].
 
 ## Example
 
@@ -43,3 +43,4 @@ Details: [HeaderName](https://docs.rs/http/latest/http/header/struct.HeaderName.
 
 [`SingleResponse`]: https://docs.rs/predawn/latest/predawn/trait.SingleResponse.html
 [`IntoResponse`]: https://docs.rs/predawn/latest/predawn/into_response/trait.IntoResponse.html
+[`ApiResponse`]: https://docs.rs/predawn/latest/predawn/api_response/trait.ApiResponse.html

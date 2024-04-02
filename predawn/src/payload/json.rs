@@ -3,7 +3,6 @@ use std::{
     convert::Infallible,
 };
 
-use async_trait::async_trait;
 use bytes::{BufMut, Bytes, BytesMut};
 use http::{
     header::{HeaderValue, CONTENT_TYPE},
@@ -11,15 +10,17 @@ use http::{
 };
 use mime::{APPLICATION, JSON};
 use predawn_core::{
+    api_request::ApiRequest,
+    api_response::ApiResponse,
     body::RequestBody,
     from_request::{FromRequest, ReadBytesError},
     impl_deref,
     into_response::IntoResponse,
     media_type::{
-        has_media_type, MultiRequestMediaType, MultiResponseMediaType, SingleMediaType,
-        SingleRequestMediaType, SingleResponseMediaType,
+        has_media_type, MediaType, MultiRequestMediaType, MultiResponseMediaType, RequestMediaType,
+        ResponseMediaType, SingleMediaType,
     },
-    openapi::{self, Components, MediaType, Parameter},
+    openapi::{self, Components, Parameter},
     request::Head,
     response::{MultiResponse, Response, SingleResponse},
     response_error::ResponseError,
@@ -33,31 +34,31 @@ pub struct Json<T>(pub T);
 
 impl_deref!(Json);
 
-#[async_trait]
 impl<'a, T> FromRequest<'a> for Json<T>
 where
-    T: DeserializeOwned + ToSchema,
+    T: DeserializeOwned,
 {
     type Error = ReadJsonError;
 
     async fn from_request(head: &'a Head, body: RequestBody) -> Result<Self, Self::Error> {
         let content_type = head.content_type().unwrap_or_default();
 
-        if <Self as SingleRequestMediaType>::check_content_type(content_type) {
+        if <Self as RequestMediaType>::check_content_type(content_type) {
             let bytes = Bytes::from_request(head, body).await?;
             Self::from_bytes(&bytes)
         } else {
             Err(ReadJsonError::InvalidJsonContentType)
         }
     }
+}
 
+impl<T: ToSchema> ApiRequest for Json<T> {
     fn parameters(_: &mut Components) -> Option<Vec<Parameter>> {
         None
     }
 
     fn request_body(components: &mut Components) -> Option<openapi::RequestBody> {
         Some(openapi::RequestBody {
-            description: Some("Extract JSON from request body".to_owned()),
             content: <Self as MultiRequestMediaType>::content(components),
             required: true,
             ..Default::default()
@@ -67,7 +68,7 @@ where
 
 #[derive(Debug, thiserror::Error)]
 pub enum ReadJsonError {
-    #[error("expected request with `{}: {}`", CONTENT_TYPE, <Json<bool> as SingleMediaType>::MEDIA_TYPE)]
+    #[error("expected request with `{}: {}`", CONTENT_TYPE, <Json<()> as MediaType>::MEDIA_TYPE)]
     InvalidJsonContentType,
     #[error("{0}")]
     ReadBytesError(#[from] ReadBytesError),
@@ -141,7 +142,7 @@ impl ResponseError for WriteJsonError {
 
 impl<T> IntoResponse for Json<T>
 where
-    T: Serialize + ToSchema,
+    T: Serialize,
 {
     type Error = WriteJsonError;
 
@@ -157,7 +158,7 @@ where
 
                 response.headers_mut().insert(
                     CONTENT_TYPE,
-                    HeaderValue::from_static(<Self as SingleMediaType>::MEDIA_TYPE),
+                    HeaderValue::from_static(<Self as MediaType>::MEDIA_TYPE),
                 );
 
                 Ok(response)
@@ -165,24 +166,19 @@ where
             Err(err) => Err(WriteJsonError(err)),
         }
     }
+}
 
+impl<T: ToSchema> ApiResponse for Json<T> {
     fn responses(components: &mut Components) -> Option<BTreeMap<StatusCode, openapi::Response>> {
         Some(<Self as MultiResponse>::responses(components))
     }
 }
 
-impl<T: ToSchema> SingleMediaType for Json<T> {
+impl<T> MediaType for Json<T> {
     const MEDIA_TYPE: &'static str = "application/json";
-
-    fn media_type(components: &mut Components) -> MediaType {
-        MediaType {
-            schema: Some(T::schema_ref(components)),
-            ..Default::default()
-        }
-    }
 }
 
-impl<T: ToSchema> SingleRequestMediaType for Json<T> {
+impl<T> RequestMediaType for Json<T> {
     fn check_content_type(content_type: &str) -> bool {
         has_media_type(
             content_type,
@@ -194,7 +190,16 @@ impl<T: ToSchema> SingleRequestMediaType for Json<T> {
     }
 }
 
-impl<T: ToSchema> SingleResponseMediaType for Json<T> {}
+impl<T> ResponseMediaType for Json<T> {}
+
+impl<T: ToSchema> SingleMediaType for Json<T> {
+    fn media_type(components: &mut Components) -> openapi::MediaType {
+        openapi::MediaType {
+            schema: Some(T::schema_ref(components)),
+            ..Default::default()
+        }
+    }
+}
 
 impl<T: ToSchema> SingleResponse for Json<T> {
     fn response(components: &mut Components) -> openapi::Response {

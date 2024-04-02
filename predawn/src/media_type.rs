@@ -1,6 +1,7 @@
 use http::header::CONTENT_TYPE;
 pub use predawn_core::media_type::{
-    has_media_type, SingleMediaType, SingleRequestMediaType, SingleResponseMediaType,
+    assert_response_media_type, has_media_type, MediaType, RequestMediaType, ResponseMediaType,
+    SingleMediaType,
 };
 
 #[derive(Debug, thiserror::Error)]

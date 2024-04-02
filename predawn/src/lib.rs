@@ -23,7 +23,7 @@ pub mod to_header_value;
 mod to_parameters;
 
 pub use predawn_core::{
-    body, either, error, from_request, into_response,
+    api_request, api_response, body, either, error, from_request, into_response,
     media_type::{MultiRequestMediaType, MultiResponseMediaType},
     request,
     response::{MultiResponse, SingleResponse},
@@ -41,7 +41,6 @@ pub use to_parameters::ToParameters;
 
 #[doc(hidden)]
 pub mod __internal {
-    pub use async_trait;
     pub use http;
     pub use indexmap;
     pub use paste;

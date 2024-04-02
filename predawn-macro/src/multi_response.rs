@@ -68,6 +68,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         # use predawn::openapi::{self, Components};
         # use predawn::response::Response;
         # use predawn::into_response::IntoResponse;
+        # use predawn::api_response::ApiResponse;
         # use predawn::__internal::http::StatusCode;
 
         impl #impl_generics MultiResponse for #ident #ty_generics #where_clause {
@@ -92,7 +93,9 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
 
                 Ok(response)
             }
+        }
 
+        impl #impl_generics ApiResponse for #ident #ty_generics #where_clause {
             fn responses(components: &mut Components) -> Option<BTreeMap<StatusCode, openapi::Response>> {
                 Some(<Self as MultiResponse>::responses(components))
             }

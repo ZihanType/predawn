@@ -23,7 +23,6 @@ thiserror = { workspace = true }
 bytes = { workspace = true }
 http = { workspace = true }
 futures-util = { workspace = true, features = ["alloc"] }
-async-trait = { workspace = true }
 matchit = { workspace = true }
 tokio = { workspace = true, features = ["macros", "signal"] }
 hyper-util = { workspace = true, features = ["tokio", "server", "server-auto"] }

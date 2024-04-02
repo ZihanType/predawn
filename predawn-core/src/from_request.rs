@@ -1,155 +1,86 @@
-use std::{collections::HashSet, convert::Infallible, string::FromUtf8Error};
+use std::{collections::HashSet, convert::Infallible, future::Future, string::FromUtf8Error};
 
-use async_trait::async_trait;
 use bytes::Bytes;
+use futures_util::FutureExt;
 use http::{HeaderMap, Method, StatusCode, Uri, Version};
 use http_body_util::{BodyExt, LengthLimitError};
 
 use crate::{
     body::RequestBody,
     error::BoxError,
-    media_type::MultiRequestMediaType,
-    openapi::{self, Components, Parameter},
+    private::{ViaRequest, ViaRequestHead},
     request::{Head, LocalAddr, OriginalUri, RemoteAddr},
     response_error::ResponseError,
 };
 
-mod private {
-    #[derive(Debug, Clone, Copy)]
-    pub enum ViaHead {}
-
-    #[derive(Debug, Clone, Copy)]
-    pub enum ViaRequest {}
-}
-
-// TODO: remove #[async_trait] when https://github.com/rust-lang/rust/issues/100013 is resolved
-#[async_trait]
 pub trait FromRequestHead<'a>: Sized {
     type Error: ResponseError;
 
-    async fn from_request_head(head: &'a Head) -> Result<Self, Self::Error>;
-
-    fn parameters(components: &mut Components) -> Option<Vec<Parameter>>;
+    fn from_request_head(head: &'a Head) -> impl Future<Output = Result<Self, Self::Error>> + Send;
 }
 
-// TODO: remove #[async_trait] when https://github.com/rust-lang/rust/issues/100013 is resolved
-#[async_trait]
-pub trait FromRequest<'a, M = private::ViaRequest>: Sized {
+pub trait FromRequest<'a, M = ViaRequest>: Sized {
     type Error: ResponseError;
 
-    async fn from_request(head: &'a Head, body: RequestBody) -> Result<Self, Self::Error>;
-
-    fn parameters(components: &mut Components) -> Option<Vec<Parameter>>;
-
-    fn request_body(components: &mut Components) -> Option<openapi::RequestBody>;
+    fn from_request(
+        head: &'a Head,
+        body: RequestBody,
+    ) -> impl Future<Output = Result<Self, Self::Error>> + Send;
 }
 
-#[async_trait]
-impl<'a, T: FromRequestHead<'a>> FromRequest<'a, private::ViaHead> for T {
+impl<'a, T> FromRequest<'a, ViaRequestHead> for T
+where
+    T: FromRequestHead<'a>,
+{
     type Error = T::Error;
 
     async fn from_request(head: &'a Head, _: RequestBody) -> Result<Self, Self::Error> {
-        T::from_request_head(head).await
-    }
-
-    fn parameters(components: &mut Components) -> Option<Vec<Parameter>> {
-        T::parameters(components)
-    }
-
-    fn request_body(_: &mut Components) -> Option<openapi::RequestBody> {
-        None
+        // TODO: remove boxed when https://github.com/rust-lang/rust/issues/100013 is resolved
+        T::from_request_head(head).boxed().await
     }
 }
 
-macro_rules! optional_parameters {
-    ($ty:ty) => {
-        fn parameters(components: &mut Components) -> Option<Vec<Parameter>> {
-            let mut parameters = <$ty>::parameters(components)?;
-
-            parameters.iter_mut().for_each(|parameter| match parameter {
-                Parameter::Query { parameter_data, .. } => parameter_data.required = false,
-                Parameter::Header { parameter_data, .. } => parameter_data.required = false,
-                Parameter::Path { parameter_data, .. } => parameter_data.required = false,
-                Parameter::Cookie { parameter_data, .. } => parameter_data.required = false,
-            });
-
-            Some(parameters)
-        }
-    };
-}
-
-#[async_trait]
 impl<'a, T: FromRequestHead<'a>> FromRequestHead<'a> for Option<T> {
     type Error = Infallible;
 
-    optional_parameters!(T);
-
     async fn from_request_head(head: &'a Head) -> Result<Self, Self::Error> {
-        Ok(T::from_request_head(head).await.ok())
+        // TODO: remove boxed when https://github.com/rust-lang/rust/issues/100013 is resolved
+        Ok(T::from_request_head(head).boxed().await.ok())
     }
 }
 
-#[async_trait]
 impl<'a, T: FromRequest<'a>> FromRequest<'a> for Option<T> {
     type Error = Infallible;
 
-    optional_parameters!(T);
-
     async fn from_request(head: &'a Head, body: RequestBody) -> Result<Self, Self::Error> {
-        Ok(T::from_request(head, body).await.ok())
-    }
-
-    fn request_body(components: &mut Components) -> Option<openapi::RequestBody> {
-        let mut request_body = T::request_body(components)?;
-        request_body.required = false;
-        Some(request_body)
+        // TODO: remove boxed when https://github.com/rust-lang/rust/issues/100013 is resolved
+        Ok(T::from_request(head, body).boxed().await.ok())
     }
 }
 
-#[async_trait]
 impl<'a, T: FromRequestHead<'a>> FromRequestHead<'a> for Result<T, T::Error> {
     type Error = Infallible;
 
     async fn from_request_head(head: &'a Head) -> Result<Self, Self::Error> {
-        Ok(T::from_request_head(head).await)
-    }
-
-    fn parameters(components: &mut Components) -> Option<Vec<Parameter>> {
-        T::parameters(components)
+        // TODO: remove boxed when https://github.com/rust-lang/rust/issues/100013 is resolved
+        Ok(T::from_request_head(head).boxed().await)
     }
 }
 
-#[async_trait]
 impl<'a, T: FromRequest<'a>> FromRequest<'a> for Result<T, T::Error> {
     type Error = Infallible;
 
     async fn from_request(head: &'a Head, body: RequestBody) -> Result<Self, Self::Error> {
-        Ok(T::from_request(head, body).await)
-    }
-
-    fn parameters(components: &mut Components) -> Option<Vec<Parameter>> {
-        T::parameters(components)
-    }
-
-    fn request_body(components: &mut Components) -> Option<openapi::RequestBody> {
-        T::request_body(components)
+        // TODO: remove boxed when https://github.com/rust-lang/rust/issues/100013 is resolved
+        Ok(T::from_request(head, body).boxed().await)
     }
 }
 
-#[async_trait]
 impl<'a> FromRequest<'a> for RequestBody {
     type Error = Infallible;
 
     async fn from_request(_: &'a Head, body: RequestBody) -> Result<Self, Self::Error> {
         Ok(body)
-    }
-
-    fn parameters(_: &mut Components) -> Option<Vec<Parameter>> {
-        None
-    }
-
-    fn request_body(components: &mut Components) -> Option<openapi::RequestBody> {
-        Bytes::request_body(components)
     }
 }
 
@@ -174,7 +105,6 @@ impl ResponseError for ReadBytesError {
     }
 }
 
-#[async_trait]
 impl<'a> FromRequest<'a> for Bytes {
     type Error = ReadBytesError;
 
@@ -187,35 +117,13 @@ impl<'a> FromRequest<'a> for Bytes {
             },
         }
     }
-
-    fn parameters(_: &mut Components) -> Option<Vec<Parameter>> {
-        None
-    }
-
-    fn request_body(components: &mut Components) -> Option<openapi::RequestBody> {
-        Some(openapi::RequestBody {
-            description: Some("Extract binary from request body".to_owned()),
-            content: <Bytes as MultiRequestMediaType>::content(components),
-            required: true,
-            ..Default::default()
-        })
-    }
 }
 
-#[async_trait]
 impl<'a> FromRequest<'a> for Vec<u8> {
     type Error = ReadBytesError;
 
     async fn from_request(head: &'a Head, body: RequestBody) -> Result<Self, Self::Error> {
         Ok(Bytes::from_request(head, body).await?.into())
-    }
-
-    fn parameters(_: &mut Components) -> Option<Vec<Parameter>> {
-        None
-    }
-
-    fn request_body(components: &mut Components) -> Option<openapi::RequestBody> {
-        Bytes::request_body(components)
     }
 }
 
@@ -242,7 +150,6 @@ impl ResponseError for ReadStringError {
     }
 }
 
-#[async_trait]
 impl<'a> FromRequest<'a> for String {
     type Error = ReadStringError;
 
@@ -255,46 +162,23 @@ impl<'a> FromRequest<'a> for String {
 
         Ok(string)
     }
-
-    fn parameters(_: &mut Components) -> Option<Vec<Parameter>> {
-        None
-    }
-
-    fn request_body(components: &mut Components) -> Option<openapi::RequestBody> {
-        Some(openapi::RequestBody {
-            description: Some("Extract text from request body".to_owned()),
-            content: <String as MultiRequestMediaType>::content(components),
-            required: true,
-            ..Default::default()
-        })
-    }
 }
 
 macro_rules! impl_from_request_head_for_cloneable {
     ($ty:ty; $($field:ident)?) => {
-        #[async_trait]
         impl<'a> FromRequestHead<'a> for &'a $ty {
             type Error = Infallible;
 
             async fn from_request_head(head: &'a Head) -> Result<Self, Self::Error> {
                 Ok(&head $(.$field)?)
             }
-
-            fn parameters(_: &mut Components) -> Option<Vec<Parameter>> {
-                None
-            }
         }
 
-        #[async_trait]
         impl<'a> FromRequestHead<'a> for $ty {
             type Error = Infallible;
 
             async fn from_request_head(head: &'a Head) -> Result<Self, Self::Error> {
                 Ok(Clone::clone(&head $(.$field)?))
-            }
-
-            fn parameters(_: &mut Components) -> Option<Vec<Parameter>> {
-                None
             }
         }
     };
@@ -302,16 +186,11 @@ macro_rules! impl_from_request_head_for_cloneable {
 
 macro_rules! impl_from_request_head_for_copyable {
     ($ty:ty; $($field:ident)?) => {
-        #[async_trait]
         impl<'a> FromRequestHead<'a> for $ty {
             type Error = Infallible;
 
             async fn from_request_head(head: &'a Head) -> Result<Self, Self::Error> {
                 Ok(head $(.$field)?)
-            }
-
-            fn parameters(_: &mut Components) -> Option<Vec<Parameter>> {
-                None
             }
         }
     };

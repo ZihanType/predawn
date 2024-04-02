@@ -21,17 +21,18 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
 
     let EnumAttr {
         error: from_request_error,
-    } =
-        match EnumAttr::from_attributes(&attrs) {
-            Ok(Some(AttrsValue {
-                value: enum_attr, ..
-            })) => enum_attr,
-            Ok(None) => return Err(syn::Error::new(
+    } = match EnumAttr::from_attributes(&attrs) {
+        Ok(Some(AttrsValue {
+            value: enum_attr, ..
+        })) => enum_attr,
+        Ok(None) => {
+            return Err(syn::Error::new(
                 ident.span(),
                 "missing `#[multi_request_media_type(error = SomeFromRequestError)]` attribute",
-            )),
-            Err(AttrsValue { value: e, .. }) => return Err(e),
-        };
+            ))
+        }
+        Err(AttrsValue { value: e, .. }) => return Err(e),
+    };
 
     let variants = crate::util::extract_variants(data, "MultiRequestMediaType")?;
 
@@ -78,32 +79,26 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         # use std::string::String;
         # use predawn::MultiRequestMediaType;
         # use predawn::media_type::InvalidContentType;
-        # use predawn::openapi::{self, Components, MediaType, Parameter};
+        # use predawn::openapi::{self, Components, Parameter};
         # use predawn::__internal::indexmap::IndexMap;
-        # use predawn::__internal::async_trait::async_trait;
         # use predawn::__internal::http::header::CONTENT_TYPE;
         # use predawn::from_request::FromRequest;
+        # use predawn::api_request::ApiRequest;
         # use predawn::request::Head;
         # use predawn::body::RequestBody;
 
         impl #impl_generics MultiRequestMediaType for #ident #ty_generics #where_clause {
-            fn content(
-                components: &mut Components,
-            ) -> IndexMap<String, MediaType> {
+            fn content(components: &mut Components) -> IndexMap<String, openapi::MediaType> {
                 let mut map = IndexMap::with_capacity(#variants_size);
                 #(#content_bodies)*
                 map
             }
         }
 
-        #[async_trait]
         impl #impl_generics FromRequest<'a> for #ident #ty_generics #where_clause {
             type Error = #from_request_error;
 
-            async fn from_request(
-                head: &'a Head,
-                body: RequestBody,
-            ) -> Result<Self, Self::Error> {
+            async fn from_request(head: &'a Head, body: RequestBody) -> Result<Self, Self::Error> {
                 let content_type = head.content_type().unwrap_or_default();
 
                 #(#from_request_bodies)*
@@ -113,7 +108,9 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
                     expected: [#(#media_type_exprs,)*],
                 }))
             }
+        }
 
+        impl #impl_generics ApiRequest for #ident #ty_generics #where_clause {
             fn parameters(_: &mut Components) -> Option<Vec<Parameter>> {
                 None
             }
@@ -148,9 +145,9 @@ fn handle_single_variant<'a>(
     let ty = crate::util::extract_single_unnamed_field_type_from_variant(fields, variant_span)?;
 
     let media_type_expr = quote_use! {
-        # use predawn::media_type::SingleMediaType;
+        # use predawn::media_type::MediaType;
 
-        <#ty as SingleMediaType>::MEDIA_TYPE
+        <#ty as MediaType>::MEDIA_TYPE
     };
 
     let content_body = quote_use! {
@@ -165,11 +162,11 @@ fn handle_single_variant<'a>(
 
     let from_request_body = quote_use! {
         # use core::convert::From;
-        # use predawn::media_type::SingleRequestMediaType;
+        # use predawn::media_type::RequestMediaType;
         # use predawn::from_request::FromRequest;
 
-        if <#ty as SingleRequestMediaType>::check_content_type(content_type) {
-            return match <#ty as FromRequest<'a>>::from_request(head, body).await {
+        if <#ty as RequestMediaType>::check_content_type(content_type) {
+            return match <#ty as FromRequest<_>>::from_request(head, body).await {
                 Ok(o) => Ok(#enum_ident::#variant_ident(o)),
                 Err(e) => Err(<#from_request_error as From<_>>::from(e)),
             };

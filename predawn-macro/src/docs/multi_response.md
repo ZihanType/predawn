@@ -1,6 +1,6 @@
 Define a multiple response.
 
-This macro will generate 2 implementations, [`MultiResponse`] and [`IntoResponse`].
+This macro will generate 3 implementations, [`MultiResponse`], [`IntoResponse`] and [`ApiResponse`].
 
 ## Example
 
@@ -44,3 +44,4 @@ define_into_response_error! {
 
 [`MultiResponse`]: https://docs.rs/predawn/latest/predawn/trait.MultiResponse.html
 [`IntoResponse`]: https://docs.rs/predawn/latest/predawn/into_response/trait.IntoResponse.html
+[`ApiResponse`]: https://docs.rs/predawn/latest/predawn/api_response/trait.ApiResponse.html

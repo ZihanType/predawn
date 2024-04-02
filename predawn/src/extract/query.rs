@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
-use async_trait::async_trait;
 use http::StatusCode;
 use predawn_core::{
+    api_request::ApiRequestHead,
     from_request::FromRequestHead,
     impl_deref,
     openapi::{Components, Parameter},
@@ -18,10 +18,9 @@ pub struct Query<T>(pub T);
 
 impl_deref!(Query);
 
-#[async_trait]
 impl<'a, T> FromRequestHead<'a> for Query<T>
 where
-    T: Deserialize<'a> + ToParameters,
+    T: Deserialize<'a>,
 {
     type Error = QueryError;
 
@@ -31,7 +30,9 @@ where
             Err(e) => Err(QueryError(e)),
         }
     }
+}
 
+impl<T: ToParameters> ApiRequestHead for Query<T> {
     fn parameters(components: &mut Components) -> Option<Vec<Parameter>> {
         Some(
             <T as ToParameters>::parameters(components)

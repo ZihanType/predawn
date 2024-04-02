@@ -1,6 +1,6 @@
 Define a single request body with multiple media types.
 
-This macro will generate 2 implementations, [`MultiRequestMediaType`] and [`FromRequest`].
+This macro will generate 3 implementations, [`MultiRequestMediaType`], [`FromRequest`] and [`ApiRequest`].
 
 ## Example
 
@@ -33,3 +33,4 @@ define_from_request_error! {
 
 [`MultiRequestMediaType`]: https://docs.rs/predawn/latest/predawn/trait.MultiRequestMediaType.html
 [`FromRequest`]: https://docs.rs/predawn/latest/predawn/from_request/trait.FromRequest.html
+[`ApiRequest`]: https://docs.rs/predawn/latest/predawn/api_request/trait.ApiRequest.html

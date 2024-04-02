@@ -66,17 +66,16 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         # use std::string::String;
         # use std::collections::BTreeMap;
         # use predawn::MultiResponseMediaType;
-        # use predawn::openapi::{self, Components, MediaType};
+        # use predawn::openapi::{self, Components};
         # use predawn::__internal::indexmap::IndexMap;
         # use predawn::response::Response;
         # use predawn::{SingleResponse, MultiResponse};
         # use predawn::into_response::IntoResponse;
+        # use predawn::api_response::ApiResponse;
         # use predawn::__internal::http::StatusCode;
 
         impl #impl_generics MultiResponseMediaType for #ident #ty_generics #where_clause {
-            fn content(
-                components: &mut Components,
-            ) -> IndexMap<String, MediaType> {
+            fn content(components: &mut Components) -> IndexMap<String, openapi::MediaType> {
                 let mut map = IndexMap::with_capacity(#variants_size);
                 #(#content_bodies)*
                 map
@@ -109,10 +108,10 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
 
                 Ok(response)
             }
+        }
 
-            fn responses(
-                components: &mut Components,
-            ) -> Option<BTreeMap<StatusCode, openapi::Response>> {
+        impl #impl_generics ApiResponse for #ident #ty_generics #where_clause {
+            fn responses(components: &mut Components) -> Option<BTreeMap<StatusCode, openapi::Response>> {
                 Some(<Self as MultiResponse>::responses(components))
             }
         }
@@ -138,21 +137,26 @@ fn handle_single_variant<'a>(
 
     let content_body = quote_use! {
         # use std::string::ToString;
-        # use predawn::media_type::SingleMediaType;
+        # use predawn::media_type::{MediaType, SingleMediaType};
 
         map.insert(
-            ToString::to_string(<#ty as SingleMediaType>::MEDIA_TYPE),
+            ToString::to_string(<#ty as MediaType>::MEDIA_TYPE),
             <#ty as SingleMediaType>::media_type(components),
         );
     };
 
     let into_response_arm = quote_use! {
         # use core::convert::From;
+        # use predawn::media_type::assert_response_media_type;
         # use predawn::into_response::IntoResponse;
 
-        #enum_ident::#variant_ident(a) => match <#ty as IntoResponse>::into_response(a) {
-            Ok(response) => response,
-            Err(e) => return Err(<#into_response_error as From<_>>::from(e)),
+        #enum_ident::#variant_ident(a) => {
+            assert_response_media_type::<#ty>();
+
+            match <#ty as IntoResponse>::into_response(a) {
+                Ok(response) => response,
+                Err(e) => return Err(<#into_response_error as From<_>>::from(e)),
+            }
         },
     };
 

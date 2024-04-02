@@ -1,8 +1,8 @@
 use std::{collections::HashSet, fmt::Display, str::Utf8Error};
 
-use async_trait::async_trait;
 use http::StatusCode;
 use predawn_core::{
+    api_request::ApiRequestHead,
     from_request::FromRequestHead,
     impl_deref,
     openapi::{Components, Parameter},
@@ -20,10 +20,9 @@ pub struct Path<T>(pub T);
 
 impl_deref!(Path);
 
-#[async_trait]
 impl<'a, T> FromRequestHead<'a> for Path<T>
 where
-    T: Deserialize<'a> + ToParameters,
+    T: Deserialize<'a>,
 {
     type Error = PathError;
 
@@ -44,7 +43,9 @@ where
 
         T::deserialize(de::PathDeserializer::new(params)).map(Path)
     }
+}
 
+impl<T: ToParameters> ApiRequestHead for Path<T> {
     fn parameters(components: &mut Components) -> Option<Vec<Parameter>> {
         Some(
             <T as ToParameters>::parameters(components)

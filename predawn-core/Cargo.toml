@@ -16,9 +16,8 @@ readme.workspace = true
 [dependencies]
 predawn-schema = { workspace = true }
 
-async-trait = { workspace = true }
 bytes = { workspace = true }
-futures-util = { workspace = true }
+futures-util = { workspace = true, features = ["alloc"] }
 hyper = { workspace = true }
 http = { workspace = true }
 http-body = { workspace = true }

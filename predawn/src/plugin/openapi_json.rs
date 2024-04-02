@@ -1,8 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
-use http::{header::CONTENT_TYPE, HeaderValue, Method};
-use mime::APPLICATION_JSON;
-use predawn_core::{openapi::OpenAPI, response::Response};
+use http::Method;
+use predawn_core::openapi::OpenAPI;
 use rudi::{Context, Singleton};
 
 use super::Plugin;
@@ -10,6 +9,7 @@ use crate::{
     config::openapi::OpenAPIConfig,
     handler::{handler_fn, DynHandler},
     normalized_path::NormalizedPath,
+    payload::json::Json,
 };
 
 #[derive(Clone, Copy)]
@@ -22,23 +22,13 @@ impl Plugin for OpenAPIJson {
         cx: &mut Context,
     ) -> (NormalizedPath, HashMap<Method, DynHandler>) {
         let json_path = cx.resolve::<OpenAPIConfig>().json_path;
-
-        let json = serde_json::to_string_pretty(&cx.get_single::<OpenAPI>())
-            .expect("`OpenAPI` serialize failed");
+        let api = cx.resolve::<OpenAPI>();
 
         let mut map = HashMap::with_capacity(1);
 
         let handler = handler_fn(move |_| {
-            let json = json.clone();
-
-            async move {
-                let mut response = Response::new(json.into());
-                response.headers_mut().insert(
-                    CONTENT_TYPE,
-                    HeaderValue::from_static(APPLICATION_JSON.as_ref()),
-                );
-                Ok(response)
-            }
+            let api = api.clone();
+            async move { Ok(Json(api)) }
         });
 
         let handler = DynHandler::new(handler);

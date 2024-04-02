@@ -210,10 +210,10 @@ fn generate_single_fn_impl<'a>(
         };
 
         let parameters = quote_use! {
-            # use predawn::from_request::FromRequestHead;
+            # use predawn::api_request::ApiRequestHead;
             # use predawn::openapi::transform_parameters;
 
-            if let Some(parameters) = <#ty as FromRequestHead>::parameters(components) {
+            if let Some(parameters) = <#ty as ApiRequestHead>::parameters(components) {
                 operation
                     .parameters
                     .extend(transform_parameters(parameters));
@@ -251,10 +251,10 @@ fn generate_single_fn_impl<'a>(
         };
 
         last_parameters = quote_use! {
-            # use predawn::from_request::FromRequest;
+            # use predawn::api_request::ApiRequest;
             # use predawn::openapi::transform_parameters;
 
-            if let Some(parameters) = <#ty as FromRequest<_>>::parameters(components) {
+            if let Some(parameters) = <#ty as ApiRequest<_>>::parameters(components) {
                 operation
                     .parameters
                     .extend(transform_parameters(parameters));
@@ -262,10 +262,10 @@ fn generate_single_fn_impl<'a>(
         };
 
         last_request_body = quote_use! {
-            # use predawn::from_request::FromRequest;
+            # use predawn::api_request::ApiRequest;
             # use predawn::openapi::transform_request_body;
 
-            operation.request_body = transform_request_body(<#ty as FromRequest<_>>::request_body(components));
+            operation.request_body = transform_request_body(<#ty as ApiRequest<_>>::request_body(components));
         };
 
         last_error_responses = quote_use! {
@@ -302,10 +302,10 @@ fn generate_single_fn_impl<'a>(
     };
 
     let return_responses = quote_use! {
-        # use predawn::into_response::IntoResponse;
+        # use predawn::api_response::ApiResponse;
         # use predawn::openapi::merge_responses;
 
-        if let Some(new) = <#return_ty as IntoResponse>::responses(components) {
+        if let Some(new) = <#return_ty as ApiResponse>::responses(components) {
             merge_responses(&mut responses, new);
         }
     };

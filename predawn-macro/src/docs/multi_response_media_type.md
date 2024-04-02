@@ -1,6 +1,6 @@
 Define a single response body with multiple media types.
 
-This macro will generate 3 implementations, [`MultiResponseMediaType`], [`SingleResponse`] and [`IntoResponse`].
+This macro will generate 4 implementations, [`MultiResponseMediaType`], [`SingleResponse`], [`IntoResponse`] and [`ApiResponse`].
 
 ## Example
 
@@ -35,3 +35,4 @@ define_into_response_error! {
 [`MultiResponseMediaType`]: https://docs.rs/predawn/latest/predawn/trait.MultiResponseMediaType.html
 [`SingleResponse`]: https://docs.rs/predawn/latest/predawn/trait.SingleResponse.html
 [`IntoResponse`]: https://docs.rs/predawn/latest/predawn/into_response/trait.IntoResponse.html
+[`ApiResponse`]: https://docs.rs/predawn/latest/predawn/api_response/trait.ApiResponse.html
