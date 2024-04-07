@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex};
 
-use predawn_core::{error::Error, into_response::IntoResponse, request::Request};
+use hyper::body::Incoming;
+use predawn_core::{error::Error, into_response::IntoResponse};
 use tower::{Layer, Service};
 
 use self::private::{HandlerToService, ServiceToHandler};
@@ -24,10 +25,10 @@ impl<H, L> Middleware<H> for TowerCompatMiddleware<L>
 where
     H: Handler,
     L: Layer<HandlerToService<H>>,
-    L::Service: Service<Request> + Send + Sync + 'static,
-    <L::Service as Service<Request>>::Future: Send,
-    <L::Service as Service<Request>>::Response: IntoResponse,
-    <L::Service as Service<Request>>::Error: Into<Error>,
+    L::Service: Service<http::Request<Incoming>> + Send + Sync + 'static,
+    <L::Service as Service<http::Request<Incoming>>>::Future: Send,
+    <L::Service as Service<http::Request<Incoming>>>::Response: IntoResponse,
+    <L::Service as Service<http::Request<Incoming>>>::Error: Into<Error>,
 {
     type Output = ServiceToHandler<L::Service>;
 
@@ -45,6 +46,7 @@ mod private {
     };
 
     use futures_util::{future::BoxFuture, FutureExt};
+    use hyper::body::Incoming;
     use predawn_core::{
         error::Error, into_response::IntoResponse, request::Request, response::Response,
     };
@@ -54,7 +56,7 @@ mod private {
 
     pub struct HandlerToService<H>(pub Arc<H>);
 
-    impl<H> Service<Request> for HandlerToService<H>
+    impl<H> Service<http::Request<Incoming>> for HandlerToService<H>
     where
         H: Handler,
     {
@@ -66,8 +68,11 @@ mod private {
             Poll::Ready(Ok(()))
         }
 
-        fn call(&mut self, req: Request) -> Self::Future {
+        fn call(&mut self, req: http::Request<Incoming>) -> Self::Future {
             let handler = self.0.clone();
+
+            let req = Request::try_from(req).expect("not found some element in request extensions");
+
             async move { handler.call(req).await }.boxed()
         }
     }
@@ -76,7 +81,7 @@ mod private {
 
     impl<S> Handler for ServiceToHandler<S>
     where
-        S: Service<Request> + Send + Sync + 'static,
+        S: Service<http::Request<Incoming>> + Send + Sync + 'static,
         S::Response: IntoResponse,
         S::Error: Into<Error>,
         S::Future: Send,
@@ -88,7 +93,10 @@ mod private {
                 .await
                 .map_err(Into::into)?;
 
-            let fut = svc.lock().unwrap().call(req);
+            let fut = svc
+                .lock()
+                .unwrap()
+                .call(http::Request::<Incoming>::from(req));
 
             Ok(fut.await.map_err(Into::into)?.into_response()?)
         }

@@ -1,6 +1,7 @@
 use std::{error::Error as StdError, fmt};
 
-use http::StatusCode;
+use http::{header::CONTENT_TYPE, HeaderValue, StatusCode};
+use mime::TEXT_PLAIN_UTF_8;
 
 use crate::{response::Response, response_error::ResponseError};
 
@@ -85,7 +86,14 @@ impl From<(StatusCode, BoxError)> for Error {
         match error.downcast::<Self>() {
             Ok(o) => *o,
             Err(e) => {
-                let response = Response::builder().status(status).body(().into()).unwrap();
+                let response = Response::builder()
+                    .status(status)
+                    .header(
+                        CONTENT_TYPE,
+                        HeaderValue::from_static(TEXT_PLAIN_UTF_8.as_ref()),
+                    )
+                    .body(e.to_string().into())
+                    .unwrap();
 
                 Self {
                     response,

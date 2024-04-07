@@ -44,7 +44,7 @@ fn create_map(html: String) -> HashMap<Method, DynHandler> {
         let html = html.clone();
 
         async move {
-            let mut response = Response::new(html.into());
+            let mut response: Response = Response::new(html.into());
             response.headers_mut().insert(
                 CONTENT_TYPE,
                 HeaderValue::from_static(TEXT_HTML_UTF_8.as_ref()),

@@ -140,3 +140,90 @@ pub struct OriginalUri(pub Uri);
 
 impl_deref!(OriginalUri : Uri);
 impl_display!(OriginalUri);
+
+impl From<Request> for http::Request<Incoming> {
+    fn from(request: Request) -> Self {
+        let Request {
+            head:
+                Head {
+                    method,
+                    uri,
+                    version,
+                    headers,
+                    extensions,
+                    local_addr,
+                    remote_addr,
+                    original_uri,
+                },
+            body,
+        } = request;
+
+        let mut req = http::Request::new(body);
+
+        *req.method_mut() = method;
+        *req.uri_mut() = uri;
+        *req.version_mut() = version;
+        *req.headers_mut() = headers;
+        *req.extensions_mut() = extensions;
+
+        req.extensions_mut().insert(local_addr);
+        req.extensions_mut().insert(remote_addr);
+        req.extensions_mut().insert(original_uri);
+
+        req
+    }
+}
+
+impl TryFrom<http::Request<Incoming>> for Request {
+    type Error = ConvertRequestError;
+
+    fn try_from(request: http::Request<Incoming>) -> Result<Self, Self::Error> {
+        let (
+            Parts {
+                method,
+                uri,
+                version,
+                headers,
+                mut extensions,
+                ..
+            },
+            body,
+        ) = request.into_parts();
+
+        let local_addr = extensions
+            .remove::<LocalAddr>()
+            .ok_or(ConvertRequestError::NotFoundLocalAddr)?;
+
+        let remote_addr = extensions
+            .remove::<RemoteAddr>()
+            .ok_or(ConvertRequestError::NotFoundRemoteAddr)?;
+
+        let original_uri = extensions
+            .remove::<OriginalUri>()
+            .ok_or(ConvertRequestError::NotFoundOriginalUri)?;
+
+        Ok(Self {
+            head: Head {
+                method,
+                uri,
+                version,
+                headers,
+                extensions,
+                local_addr,
+                remote_addr,
+                original_uri,
+            },
+            body,
+        })
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ConvertRequestError {
+    #[error("not found local address in request extensions")]
+    NotFoundLocalAddr,
+    #[error("not found remote address in request extensions")]
+    NotFoundRemoteAddr,
+    #[error("not found original uri in request extensions")]
+    NotFoundOriginalUri,
+}

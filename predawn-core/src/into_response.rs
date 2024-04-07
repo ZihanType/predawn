@@ -4,7 +4,7 @@ use bytes::{Bytes, BytesMut};
 use http::{header::CONTENT_TYPE, HeaderValue, StatusCode};
 
 use crate::{
-    body::ResponseBody, either::Either, media_type::MediaType, response::Response,
+    body::ResponseBody, either::Either, error::BoxError, media_type::MediaType, response::Response,
     response_error::ResponseError,
 };
 
@@ -14,11 +14,15 @@ pub trait IntoResponse {
     fn into_response(self) -> Result<Response, Self::Error>;
 }
 
-impl IntoResponse for Response {
+impl<B> IntoResponse for Response<B>
+where
+    B: http_body::Body<Data = Bytes> + Send + 'static,
+    B::Error: Into<BoxError>,
+{
     type Error = Infallible;
 
     fn into_response(self) -> Result<Response, Self::Error> {
-        Ok(self)
+        Ok(self.map(ResponseBody::new))
     }
 }
 

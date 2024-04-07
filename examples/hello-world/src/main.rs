@@ -14,6 +14,7 @@ use predawn::{
 use rudi::{Context, Singleton};
 use serde::{Deserialize, Serialize};
 use tower::limit::RateLimitLayer;
+use tower_http::compression::CompressionLayer;
 
 struct App;
 
@@ -21,7 +22,11 @@ impl Hooks for App {
     async fn before_run<H: Handler>(mut cx: Context, router: H) -> (Context, impl Handler) {
         let t = cx.resolve::<Tracing>();
 
-        (cx, router.with(t))
+        let router = router
+            .with(CompressionLayer::new().zstd(true).compat())
+            .with(t);
+
+        (cx, router)
     }
 
     fn after_routes(router: &predawn::route::Router) {

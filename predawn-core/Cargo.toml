@@ -23,7 +23,6 @@ http = { workspace = true }
 http-body = { workspace = true }
 http-body-util = { workspace = true }
 thiserror = { workspace = true }
-sync_wrapper = { workspace = true }
 mime = { workspace = true }
 openapiv3 = { workspace = true }
 indexmap = { workspace = true, features = ["std"] }

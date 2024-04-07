@@ -1,37 +1,34 @@
 use std::{
     borrow::Cow,
     convert::Infallible,
-    fmt,
     pin::Pin,
     task::{Context, Poll},
 };
 
 use bytes::{Bytes, BytesMut};
-use futures_util::{Stream, TryStream, TryStreamExt};
+use futures_util::{TryStream, TryStreamExt};
 use http_body::SizeHint;
-use http_body_util::{Full, Limited};
+use http_body_util::{combinators::UnsyncBoxBody, BodyExt, Empty, Full, Limited, StreamBody};
 use hyper::body::{Frame, Incoming};
-use sync_wrapper::SyncWrapper;
 
 use crate::error::BoxError;
 
 pub type RequestBody = Limited<Incoming>;
 
-pub struct ResponseBody {
-    kind: Kind,
-}
-
-enum Kind {
-    Single(Full<Bytes>),
-    #[allow(clippy::type_complexity)]
-    Stream(SyncWrapper<Pin<Box<dyn Stream<Item = Result<Bytes, BoxError>> + Send>>>),
-}
+#[derive(Debug)]
+pub struct ResponseBody(UnsyncBoxBody<Bytes, BoxError>);
 
 impl ResponseBody {
+    pub fn new<B>(body: B) -> Self
+    where
+        B: http_body::Body<Data = Bytes> + Send + 'static,
+        B::Error: Into<BoxError>,
+    {
+        Self(body.map_err(Into::into).boxed_unsync())
+    }
+
     pub fn empty() -> Self {
-        Self {
-            kind: Kind::Single(Full::default()),
-        }
+        Self::new(Empty::new())
     }
 
     pub fn from_stream<S>(stream: S) -> Self
@@ -40,11 +37,9 @@ impl ResponseBody {
         S::Ok: Into<Bytes>,
         S::Error: Into<BoxError>,
     {
-        Self {
-            kind: Kind::Stream(SyncWrapper::new(Box::pin(
-                stream.map_ok(Into::into).map_err(Into::into),
-            ))),
-        }
+        Self::new(StreamBody::new(
+            stream.map_ok(|data| Frame::data(data.into())),
+        ))
     }
 
     pub fn clear(&mut self) {
@@ -62,58 +57,28 @@ impl http_body::Body for ResponseBody {
     type Data = Bytes;
     type Error = BoxError;
 
+    #[inline]
     fn poll_frame(
-        self: Pin<&mut Self>,
+        mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
-        match self.get_mut().kind {
-            Kind::Single(ref mut single) => Pin::new(single)
-                .poll_frame(cx)
-                .map_err(|a: Infallible| match a {}),
-            Kind::Stream(ref mut stream) => {
-                stream.get_mut().as_mut().poll_next(cx).map_ok(Frame::data)
-            }
-        }
+        Pin::new(&mut self.0).poll_frame(cx)
     }
 
+    #[inline]
     fn is_end_stream(&self) -> bool {
-        match self.kind {
-            Kind::Single(ref single) => single.is_end_stream(),
-            Kind::Stream(_) => false,
-        }
+        self.0.is_end_stream()
     }
 
+    #[inline]
     fn size_hint(&self) -> SizeHint {
-        match self.kind {
-            Kind::Single(ref single) => single.size_hint(),
-            Kind::Stream(_) => SizeHint::default(),
-        }
-    }
-}
-
-impl fmt::Debug for ResponseBody {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        #[derive(Debug)]
-        struct Single;
-        #[derive(Debug)]
-        struct Stream;
-
-        let mut builder = f.debug_tuple("Body");
-
-        match self.kind {
-            Kind::Single(_) => builder.field(&Single),
-            Kind::Stream(_) => builder.field(&Stream),
-        };
-
-        builder.finish()
+        self.0.size_hint()
     }
 }
 
 impl From<Full<Bytes>> for ResponseBody {
-    fn from(value: Full<Bytes>) -> Self {
-        Self {
-            kind: Kind::Single(value),
-        }
+    fn from(full: Full<Bytes>) -> Self {
+        Self::new(full)
     }
 }
 

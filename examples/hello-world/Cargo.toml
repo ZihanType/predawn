@@ -23,3 +23,4 @@ tokio = { workspace = true, features = ["rt-multi-thread", "signal"] }
 tracing = { workspace = true }
 thiserror = { workspace = true }
 tower = { workspace = true, features = ["limit"] }
+tower-http = { workspace = true, features = ["compression-zstd"] }
