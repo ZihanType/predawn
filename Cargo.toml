@@ -9,7 +9,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.5.0"
+version = "0.6.0"
 edition = "2021"
 authors = ["zihan <ZihanType@proton.me>"]
 license = "MIT/Apache-2.0"
@@ -20,10 +20,10 @@ readme = "README.md"
 
 [workspace.dependencies]
 # self
-predawn = { version = "0.5.0", path = "./predawn", default-features = false }
-predawn-core = { version = "0.5.0", path = "./predawn-core", default-features = false }
-predawn-macro = { version = "0.5.0", path = "./predawn-macro", default-features = false }
-predawn-schema = { version = "0.5.0", path = "./predawn-schema", default-features = false }
+predawn = { version = "0.6.0", path = "./predawn", default-features = false }
+predawn-core = { version = "0.6.0", path = "./predawn-core", default-features = false }
+predawn-macro = { version = "0.6.0", path = "./predawn-macro", default-features = false }
+predawn-schema = { version = "0.6.0", path = "./predawn-schema", default-features = false }
 
 # dependencies
 from-attr = { version = "0.1", default-features = false }
