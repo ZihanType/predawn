@@ -1,2 +1,4 @@
-pub mod form;
-pub mod json;
+mod form;
+mod json;
+
+pub use self::{form::Form, json::Json};

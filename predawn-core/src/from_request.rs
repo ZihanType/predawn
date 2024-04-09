@@ -1,16 +1,15 @@
-use std::{collections::HashSet, convert::Infallible, future::Future, string::FromUtf8Error};
+use std::{convert::Infallible, future::Future};
 
 use bytes::Bytes;
 use futures_util::FutureExt;
-use http::{HeaderMap, Method, StatusCode, Uri, Version};
+use http::{HeaderMap, Method, Uri, Version};
 use http_body_util::{BodyExt, LengthLimitError};
 
 use crate::{
     body::RequestBody,
-    error::BoxError,
     private::{ViaRequest, ViaRequestHead},
-    request::{Head, LocalAddr, OriginalUri, RemoteAddr},
-    response_error::ResponseError,
+    request::{BodyLimit, Head, LocalAddr, OriginalUri, RemoteAddr},
+    response_error::{ReadBytesError, ReadStringError, RequestBodyLimitError, ResponseError},
 };
 
 pub trait FromRequestHead<'a>: Sized {
@@ -84,35 +83,19 @@ impl<'a> FromRequest<'a> for RequestBody {
     }
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum ReadBytesError {
-    #[error("failed to read bytes from request body: {0}")]
-    LengthLimitError(#[from] LengthLimitError),
-    #[error("failed to read bytes from request body: {0}")]
-    UnknownBodyError(#[from] BoxError),
-}
-
-impl ResponseError for ReadBytesError {
-    fn as_status(&self) -> StatusCode {
-        match self {
-            ReadBytesError::LengthLimitError(_) => StatusCode::PAYLOAD_TOO_LARGE,
-            ReadBytesError::UnknownBodyError(_) => StatusCode::BAD_REQUEST,
-        }
-    }
-
-    fn status_codes() -> HashSet<StatusCode> {
-        [StatusCode::PAYLOAD_TOO_LARGE, StatusCode::BAD_REQUEST].into()
-    }
-}
-
 impl<'a> FromRequest<'a> for Bytes {
     type Error = ReadBytesError;
 
-    async fn from_request(_: &'a Head, body: RequestBody) -> Result<Self, Self::Error> {
+    async fn from_request(head: &'a Head, body: RequestBody) -> Result<Self, Self::Error> {
         match body.collect().await {
             Ok(collected) => Ok(collected.to_bytes()),
             Err(err) => match err.downcast::<LengthLimitError>() {
-                Ok(err) => Err(ReadBytesError::LengthLimitError(*err)),
+                Ok(_) => Err(ReadBytesError::RequestBodyLimitError(
+                    RequestBodyLimitError {
+                        actual: head.content_length(),
+                        expected: head.body_limit.0,
+                    },
+                )),
                 Err(err) => Err(ReadBytesError::UnknownBodyError(err)),
             },
         }
@@ -124,29 +107,6 @@ impl<'a> FromRequest<'a> for Vec<u8> {
 
     async fn from_request(head: &'a Head, body: RequestBody) -> Result<Self, Self::Error> {
         Ok(Bytes::from_request(head, body).await?.into())
-    }
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum ReadStringError {
-    #[error("{0}")]
-    ReadBytes(#[from] ReadBytesError),
-    #[error("failed to convert bytes to string: {0}")]
-    InvalidUtf8(#[from] FromUtf8Error),
-}
-
-impl ResponseError for ReadStringError {
-    fn as_status(&self) -> StatusCode {
-        match self {
-            ReadStringError::ReadBytes(err) => err.as_status(),
-            ReadStringError::InvalidUtf8(_) => StatusCode::BAD_REQUEST,
-        }
-    }
-
-    fn status_codes() -> HashSet<StatusCode> {
-        let mut status_codes = ReadBytesError::status_codes();
-        status_codes.insert(StatusCode::BAD_REQUEST);
-        status_codes
     }
 }
 
@@ -205,3 +165,4 @@ impl_from_request_head_for_cloneable!(OriginalUri; original_uri);
 impl_from_request_head_for_copyable!(Version; version);
 impl_from_request_head_for_copyable!(LocalAddr; local_addr);
 impl_from_request_head_for_copyable!(RemoteAddr; remote_addr);
+impl_from_request_head_for_copyable!(BodyLimit; body_limit);

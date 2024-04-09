@@ -9,7 +9,7 @@ use crate::{
     config::openapi::OpenAPIConfig,
     handler::{handler_fn, DynHandler},
     normalized_path::NormalizedPath,
-    payload::json::Json,
+    payload::Json,
 };
 
 #[derive(Clone, Copy)]

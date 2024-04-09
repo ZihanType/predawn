@@ -1,17 +1,16 @@
 use std::{fmt, net::SocketAddr};
 
 use http::{
-    header::CONTENT_TYPE, request::Parts, Extensions, HeaderMap, HeaderValue, Method, Uri, Version,
+    header::{CONTENT_LENGTH, CONTENT_TYPE},
+    request::Parts,
+    Extensions, HeaderMap, HeaderValue, Method, Uri, Version,
 };
 use http_body_util::Limited;
 use hyper::body::Incoming;
 
 use crate::{body::RequestBody, impl_deref, impl_display};
 
-pub const DEFAULT_REQUEST_BODY_LIMIT: usize = 2_097_152; // 2 mb
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct RequestBodyLimit(pub usize);
+pub const DEFAULT_BODY_LIMIT: usize = 2_097_152; // 2 mb
 
 #[derive(Debug)]
 pub struct Request {
@@ -44,6 +43,7 @@ impl Request {
                 version,
                 headers,
                 extensions,
+                body_limit: BodyLimit(DEFAULT_BODY_LIMIT),
                 local_addr: LocalAddr(local_addr),
                 remote_addr: RemoteAddr(remote_addr),
                 original_uri: OriginalUri(uri),
@@ -55,10 +55,7 @@ impl Request {
     pub fn split(self) -> (Head, RequestBody) {
         let Self { head, body } = self;
 
-        let limit = match head.extensions.get::<RequestBodyLimit>() {
-            Some(RequestBodyLimit(limit)) => *limit,
-            None => DEFAULT_REQUEST_BODY_LIMIT,
-        };
+        let limit = head.body_limit.0;
 
         (head, Limited::new(body, limit))
     }
@@ -82,6 +79,8 @@ pub struct Head {
     /// The request's extensions
     pub extensions: Extensions,
 
+    pub body_limit: BodyLimit,
+
     pub(crate) local_addr: LocalAddr,
 
     pub(crate) remote_addr: RemoteAddr,
@@ -96,6 +95,8 @@ impl fmt::Debug for Head {
             .field("uri", &self.uri)
             .field("version", &self.version)
             .field("headers", &self.headers)
+            // .field("extensions", &self.extensions)
+            .field("body_limit", &self.body_limit)
             .field("local_addr", &self.local_addr)
             .field("remote_addr", &self.remote_addr)
             .field("original_uri", &self.original_uri)
@@ -110,6 +111,12 @@ impl Head {
             .and_then(|value| value.to_str().ok())
     }
 
+    pub fn content_length(&self) -> Option<usize> {
+        self.headers
+            .get(CONTENT_LENGTH)
+            .and_then(|value| value.to_str().ok()?.parse::<usize>().ok())
+    }
+
     pub fn local_addr(&self) -> LocalAddr {
         self.local_addr
     }
@@ -122,6 +129,12 @@ impl Head {
         &self.original_uri
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct BodyLimit(pub usize);
+
+impl_deref!(BodyLimit : usize);
+impl_display!(BodyLimit);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct LocalAddr(pub SocketAddr);
@@ -151,6 +164,7 @@ impl From<Request> for http::Request<Incoming> {
                     version,
                     headers,
                     extensions,
+                    body_limit,
                     local_addr,
                     remote_addr,
                     original_uri,
@@ -166,6 +180,7 @@ impl From<Request> for http::Request<Incoming> {
         *req.headers_mut() = headers;
         *req.extensions_mut() = extensions;
 
+        req.extensions_mut().insert(body_limit);
         req.extensions_mut().insert(local_addr);
         req.extensions_mut().insert(remote_addr);
         req.extensions_mut().insert(original_uri);
@@ -190,6 +205,10 @@ impl TryFrom<http::Request<Incoming>> for Request {
             body,
         ) = request.into_parts();
 
+        let body_limit = extensions
+            .remove::<BodyLimit>()
+            .ok_or(ConvertRequestError::NotFoundBodyLimit)?;
+
         let local_addr = extensions
             .remove::<LocalAddr>()
             .ok_or(ConvertRequestError::NotFoundLocalAddr)?;
@@ -209,6 +228,7 @@ impl TryFrom<http::Request<Incoming>> for Request {
                 version,
                 headers,
                 extensions,
+                body_limit,
                 local_addr,
                 remote_addr,
                 original_uri,
@@ -220,6 +240,8 @@ impl TryFrom<http::Request<Incoming>> for Request {
 
 #[derive(Debug, thiserror::Error)]
 pub enum ConvertRequestError {
+    #[error("not found body limit in request extensions")]
+    NotFoundBodyLimit,
     #[error("not found local address in request extensions")]
     NotFoundLocalAddr,
     #[error("not found remote address in request extensions")]

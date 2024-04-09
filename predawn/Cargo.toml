@@ -25,7 +25,12 @@ http = { workspace = true }
 futures-util = { workspace = true, features = ["alloc"] }
 matchit = { workspace = true }
 tokio = { workspace = true, features = ["macros", "signal"] }
-hyper-util = { workspace = true, features = ["tokio", "server", "server-auto"] }
+hyper-util = { workspace = true, features = [
+    "tokio",
+    "server",
+    "http1",
+    "http2",
+] }
 tracing = { workspace = true }
 rudi = { workspace = true, features = ["rudi-macro"] }
 paste = { workspace = true }

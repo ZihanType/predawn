@@ -1,4 +1,4 @@
-use std::{convert::Infallible, env, fmt, str::FromStr};
+use std::{env, fmt};
 
 use serde::{Deserialize, Serialize};
 
@@ -32,10 +32,6 @@ impl Environment {
             }
         }
     }
-
-    pub fn set_env(&self) {
-        env::set_var(PREDAWN_ENV, self.to_string());
-    }
 }
 
 impl fmt::Display for Environment {
@@ -49,22 +45,14 @@ impl fmt::Display for Environment {
     }
 }
 
-impl FromStr for Environment {
-    type Err = Infallible;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "prod" | "production" => Ok(Environment::Prod),
-            "dev" | "development" => Ok(Environment::Dev),
-            "test" => Ok(Environment::Test),
-            _ => Ok(Environment::Custom(s.to_string())),
-        }
-    }
-}
-
 impl From<String> for Environment {
-    fn from(value: String) -> Self {
-        Environment::from_str(&value).unwrap_or_else(|a: Infallible| match a {})
+    fn from(s: String) -> Self {
+        match s.to_lowercase().as_str() {
+            "prod" | "production" => Environment::Prod,
+            "dev" | "development" => Environment::Dev,
+            "test" => Environment::Test,
+            _ => Environment::Custom(s),
+        }
     }
 }
 

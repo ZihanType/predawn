@@ -7,10 +7,8 @@ This macro will generate 3 implementations, [`MultiRequestMediaType`], [`FromReq
 ```rust
 use predawn::{
     define_from_request_error,
-    payload::{
-        form::{Form, ReadFormError},
-        json::{Json, ReadJsonError},
-    },
+    payload::{Form, Json},
+    response_error::{ReadFormError, ReadJsonError},
     MultiRequestMediaType, ToSchema,
 };
 use serde::de::DeserializeOwned;

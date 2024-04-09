@@ -6,10 +6,9 @@ use std::collections::HashMap;
 use http::{header::CONTENT_TYPE, HeaderValue, Method};
 use mime::TEXT_HTML_UTF_8;
 use predawn_core::response::Response;
-pub use rapidoc::RapiDoc;
 use rudi::Context;
-pub use swagger_ui::SwaggerUI;
 
+pub use self::{rapidoc::RapiDoc, swagger_ui::SwaggerUI};
 use crate::{
     config::{openapi::OpenAPIConfig, server::ServerConfig, Config},
     handler::{handler_fn, DynHandler},

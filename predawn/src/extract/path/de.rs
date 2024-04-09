@@ -5,8 +5,7 @@ use serde::{
     forward_to_deserialize_any, Deserializer,
 };
 
-use super::PathError;
-use crate::path_params::PercentDecodedStr;
+use crate::{path_params::PercentDecodedStr, response_error::PathError};
 
 macro_rules! unsupported_type {
     ($trait_fn:ident) => {
@@ -237,8 +236,8 @@ macro_rules! parse_value {
             V: Visitor<'de>,
         {
             let v = self.value.parse().map_err(|_| PathError::ParseErrorAtKey {
-                key: self.key.to_string(),
-                value: self.value.as_str().to_owned(),
+                key: self.key.clone(),
+                value: self.value.clone().into_inner(),
                 expected_type: $ty,
             })?;
             visitor.$visit_fn(v)

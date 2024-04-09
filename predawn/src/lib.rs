@@ -16,6 +16,7 @@ mod path_params;
 pub mod payload;
 pub mod plugin;
 pub mod response;
+pub mod response_error;
 pub mod route;
 pub mod server;
 pub mod test_client;
@@ -27,7 +28,6 @@ pub use predawn_core::{
     media_type::{MultiRequestMediaType, MultiResponseMediaType},
     request,
     response::{MultiResponse, SingleResponse},
-    response_error,
 };
 pub use predawn_macro::{
     controller, MultiRequestMediaType, MultiResponse, MultiResponseMediaType, SingleResponse,
@@ -37,7 +37,8 @@ pub use predawn_macro::{
 #[cfg(feature = "schemars")]
 pub use predawn_schema::schemars_transform;
 pub use predawn_schema::{component_id, ToSchema};
-pub use to_parameters::ToParameters;
+
+pub use self::to_parameters::ToParameters;
 
 #[doc(hidden)]
 pub mod __internal {

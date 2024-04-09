@@ -1,4 +1,8 @@
-use self::private::TracingHandler;
+use std::time::Instant;
+
+use predawn_core::{error::Error, request::Request, response::Response};
+use tracing::Instrument;
+
 use super::Middleware;
 use crate::handler::Handler;
 
@@ -13,58 +17,49 @@ impl<H: Handler> Middleware<H> for Tracing {
     }
 }
 
-mod private {
-    use std::time::Instant;
+pub struct TracingHandler<H> {
+    inner: H,
+}
 
-    use predawn_core::{error::Error, request::Request, response::Response};
-    use tracing::Instrument;
+impl<H: Handler> Handler for TracingHandler<H> {
+    async fn call(&self, req: Request) -> Result<Response, Error> {
+        let head = &req.head;
 
-    use crate::handler::Handler;
+        let span = ::tracing::info_span!(
+            target: module_path!(),
+            "request",
+            remote_addr = %head.remote_addr(),
+            version = ?head.version,
+            method = %head.method,
+            uri = %head.original_uri(),
+        );
 
-    pub struct TracingHandler<H> {
-        pub inner: H,
-    }
+        async move {
+            let now = Instant::now();
+            let result = self.inner.call(req).await;
+            let duration = now.elapsed();
 
-    impl<H: Handler> Handler for TracingHandler<H> {
-        async fn call(&self, req: Request) -> Result<Response, Error> {
-            let head = &req.head;
+            match &result {
+                Ok(response) => {
+                    ::tracing::info!(
+                        status = %response.status(),
+                        duration = ?duration,
+                        "response"
+                    )
+                }
+                Err(error) => {
+                    ::tracing::info!(
+                        status = %error.status(),
+                        duration = ?duration,
+                        error = %error,
+                        "error"
+                    )
+                }
+            };
 
-            let span = ::tracing::info_span!(
-                target: module_path!(),
-                "request",
-                remote_addr = %head.remote_addr(),
-                version = ?head.version,
-                method = %head.method,
-                uri = %head.original_uri(),
-            );
-
-            async move {
-                let now = Instant::now();
-                let result = self.inner.call(req).await;
-                let duration = now.elapsed();
-
-                match &result {
-                    Ok(response) => {
-                        ::tracing::info!(
-                            status = %response.status(),
-                            duration = ?duration,
-                            "response"
-                        )
-                    }
-                    Err(error) => {
-                        ::tracing::info!(
-                            status = %error.status(),
-                            duration = ?duration,
-                            error = %error,
-                            "error"
-                        )
-                    }
-                };
-
-                result
-            }
-            .instrument(span)
-            .await
+            result
         }
+        .instrument(span)
+        .await
     }
 }

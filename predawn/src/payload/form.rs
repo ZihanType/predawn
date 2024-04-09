@@ -1,7 +1,4 @@
-use std::{
-    collections::{BTreeMap, HashSet},
-    convert::Infallible,
-};
+use std::{collections::BTreeMap, convert::Infallible};
 
 use bytes::Bytes;
 use http::{header::CONTENT_TYPE, HeaderValue, StatusCode};
@@ -10,7 +7,7 @@ use predawn_core::{
     api_request::ApiRequest,
     api_response::ApiResponse,
     body::RequestBody,
-    from_request::{FromRequest, ReadBytesError},
+    from_request::FromRequest,
     impl_deref,
     into_response::IntoResponse,
     media_type::{
@@ -20,42 +17,16 @@ use predawn_core::{
     openapi::{self, Components, Parameter},
     request::Head,
     response::{MultiResponse, Response, SingleResponse},
-    response_error::ResponseError,
 };
 use predawn_schema::ToSchema;
 use serde::{de::DeserializeOwned, Serialize};
+
+use crate::response_error::{ReadFormError, WriteFormError};
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Form<T>(pub T);
 
 impl_deref!(Form);
-
-#[derive(Debug, thiserror::Error)]
-pub enum ReadFormError {
-    #[error("{0}")]
-    ReadBytesError(#[from] ReadBytesError),
-    #[error("expected request with `{}: {}`", CONTENT_TYPE, <Form<()> as MediaType>::MEDIA_TYPE)]
-    InvalidFormContentType,
-    #[error("failed to deserialize form data: {0}")]
-    FormDeserializeError(#[from] serde_html_form::de::Error),
-}
-
-impl ResponseError for ReadFormError {
-    fn as_status(&self) -> StatusCode {
-        match self {
-            ReadFormError::ReadBytesError(e) => e.as_status(),
-            ReadFormError::InvalidFormContentType => StatusCode::UNSUPPORTED_MEDIA_TYPE,
-            ReadFormError::FormDeserializeError(_) => StatusCode::BAD_REQUEST,
-        }
-    }
-
-    fn status_codes() -> HashSet<StatusCode> {
-        let mut status_codes = ReadBytesError::status_codes();
-        status_codes.insert(StatusCode::UNSUPPORTED_MEDIA_TYPE);
-        status_codes.insert(StatusCode::BAD_REQUEST);
-        status_codes
-    }
-}
 
 impl<'a, T> FromRequest<'a> for Form<T>
 where
@@ -90,20 +61,6 @@ impl<T: ToSchema> ApiRequest for Form<T> {
             required: true,
             ..Default::default()
         })
-    }
-}
-
-#[derive(Debug, thiserror::Error)]
-#[error("failed to serialize form data: {0}")]
-pub struct WriteFormError(#[from] serde_html_form::ser::Error);
-
-impl ResponseError for WriteFormError {
-    fn as_status(&self) -> StatusCode {
-        StatusCode::INTERNAL_SERVER_ERROR
-    }
-
-    fn status_codes() -> HashSet<StatusCode> {
-        [StatusCode::INTERNAL_SERVER_ERROR].into()
     }
 }
 

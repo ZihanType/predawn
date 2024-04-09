@@ -13,6 +13,12 @@ pub trait ApiResponse {
     fn responses(components: &mut Components) -> Option<BTreeMap<StatusCode, openapi::Response>>;
 }
 
+impl<B> ApiResponse for Response<B> {
+    fn responses(_: &mut Components) -> Option<BTreeMap<StatusCode, openapi::Response>> {
+        None
+    }
+}
+
 macro_rules! none_response {
     ($($ty:ty),+ $(,)?) => {
         $(
@@ -25,13 +31,7 @@ macro_rules! none_response {
     };
 }
 
-none_response![
-    Response,
-    http::response::Parts,
-    ResponseBody,
-    StatusCode,
-    Infallible,
-];
+none_response![http::response::Parts, ResponseBody, StatusCode, Infallible];
 
 macro_rules! some_response {
     ($($ty:ty),+ $(,)?) => {

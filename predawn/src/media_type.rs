@@ -5,9 +5,9 @@ pub use predawn_core::media_type::{
 };
 
 #[derive(Debug, thiserror::Error)]
-#[error("invalid `{CONTENT_TYPE}`: expected one of {expected:?} but got {actual:?}")]
+#[error("invalid `{CONTENT_TYPE}`: expected one of {expected:?} but actual {actual:?}")]
 pub struct InvalidContentType<const N: usize> {
-    pub actual: String,
+    pub actual: Box<str>,
     pub expected: [&'static str; N],
 }
 
@@ -18,13 +18,13 @@ mod tests {
     #[test]
     fn test_invalid_content_type() {
         let err = InvalidContentType {
-            actual: "application/json".to_string(),
+            actual: "application/json".into(),
             expected: ["text/plain", "text/html"],
         };
 
         assert_eq!(
-            format!("{}", err),
-            "invalid `content-type`: expected one of [\"text/plain\", \"text/html\"] but got \"application/json\""
+            err.to_string(),
+            "invalid `content-type`: expected one of [\"text/plain\", \"text/html\"] but actual \"application/json\""
         );
     }
 }

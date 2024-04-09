@@ -7,10 +7,8 @@ This macro will generate 4 implementations, [`MultiResponseMediaType`], [`Single
 ```rust
 use predawn::{
     define_into_response_error,
-    payload::{
-        form::{Form, WriteFormError},
-        json::{Json, WriteJsonError},
-    },
+    payload::{Form, Json},
+    response_error::{WriteFormError, WriteJsonError},
     MultiResponseMediaType, ToSchema,
 };
 use serde::Serialize;

@@ -6,9 +6,8 @@ This macro will generate 3 implementations, [`MultiResponse`], [`IntoResponse`] 
 
 ```rust
 use predawn::{
-    define_into_response_error,
-    payload::json::{Json, WriteJsonError},
-    MultiResponse, SingleResponse, ToSchema,
+    define_into_response_error, payload::Json, response_error::WriteJsonError, MultiResponse,
+    SingleResponse, ToSchema,
 };
 use serde::Serialize;
 

@@ -86,7 +86,6 @@ pub(crate) fn generate(impl_attr: ImplAttr, mut item_impl: ItemImpl) -> syn::Res
     };
 
     let expand = quote_use! {
-        # use std::string::String;
         # use std::sync::Arc;
         # use std::collections::{BTreeMap, HashMap};
         # use std::collections::BTreeMap;
@@ -321,7 +320,7 @@ fn generate_single_fn_impl<'a>(
             quote_use! {
                 # use predawn::handler::assert_handler;
 
-                let handler = #middleware(handler, cx);
+                let handler = #middleware(cx, handler);
                 assert_handler(&handler);
             }
         }
@@ -333,7 +332,7 @@ fn generate_single_fn_impl<'a>(
             quote_use! {
                 # use predawn::handler::assert_handler;
 
-                let handler = #middleware(handler, cx);
+                let handler = #middleware(cx, handler);
                 assert_handler(&handler);
             }
         }

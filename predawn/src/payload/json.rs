@@ -1,7 +1,4 @@
-use std::{
-    collections::{BTreeMap, HashSet},
-    convert::Infallible,
-};
+use std::{collections::BTreeMap, convert::Infallible};
 
 use bytes::{BufMut, Bytes, BytesMut};
 use http::{
@@ -13,7 +10,7 @@ use predawn_core::{
     api_request::ApiRequest,
     api_response::ApiResponse,
     body::RequestBody,
-    from_request::{FromRequest, ReadBytesError},
+    from_request::FromRequest,
     impl_deref,
     into_response::IntoResponse,
     media_type::{
@@ -23,11 +20,12 @@ use predawn_core::{
     openapi::{self, Components, Parameter},
     request::Head,
     response::{MultiResponse, Response, SingleResponse},
-    response_error::ResponseError,
 };
 use predawn_schema::ToSchema;
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::error::Category;
+
+use crate::response_error::{ReadJsonError, WriteJsonError};
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Json<T>(pub T);
@@ -66,37 +64,6 @@ impl<T: ToSchema> ApiRequest for Json<T> {
     }
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum ReadJsonError {
-    #[error("expected request with `{}: {}`", CONTENT_TYPE, <Json<()> as MediaType>::MEDIA_TYPE)]
-    InvalidJsonContentType,
-    #[error("{0}")]
-    ReadBytesError(#[from] ReadBytesError),
-    #[error("input data that is semantically incorrect: {0}")]
-    JsonDataError(#[source] serde_path_to_error::Error<serde_json::Error>),
-    #[error("input that is not syntactically valid JSON: {0}")]
-    JsonSyntaxError(#[source] serde_path_to_error::Error<serde_json::Error>),
-}
-
-impl ResponseError for ReadJsonError {
-    fn as_status(&self) -> StatusCode {
-        match self {
-            ReadJsonError::InvalidJsonContentType => StatusCode::UNSUPPORTED_MEDIA_TYPE,
-            ReadJsonError::ReadBytesError(e) => e.as_status(),
-            ReadJsonError::JsonDataError(_) => StatusCode::UNPROCESSABLE_ENTITY,
-            ReadJsonError::JsonSyntaxError(_) => StatusCode::BAD_REQUEST,
-        }
-    }
-
-    fn status_codes() -> HashSet<StatusCode> {
-        let mut status_codes = ReadBytesError::status_codes();
-        status_codes.insert(StatusCode::UNSUPPORTED_MEDIA_TYPE);
-        status_codes.insert(StatusCode::UNPROCESSABLE_ENTITY);
-        status_codes.insert(StatusCode::BAD_REQUEST);
-        status_codes
-    }
-}
-
 impl<T> Json<T>
 where
     T: DeserializeOwned,
@@ -123,20 +90,6 @@ where
                 Err(error)
             }
         }
-    }
-}
-
-#[derive(Debug, thiserror::Error)]
-#[error("failed to serialize response as JSON: {0}")]
-pub struct WriteJsonError(#[from] serde_json::Error);
-
-impl ResponseError for WriteJsonError {
-    fn as_status(&self) -> StatusCode {
-        StatusCode::INTERNAL_SERVER_ERROR
-    }
-
-    fn status_codes() -> HashSet<StatusCode> {
-        [StatusCode::INTERNAL_SERVER_ERROR].into()
     }
 }
 

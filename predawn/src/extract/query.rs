@@ -1,17 +1,13 @@
-use std::collections::HashSet;
-
-use http::StatusCode;
 use predawn_core::{
     api_request::ApiRequestHead,
     from_request::FromRequestHead,
     impl_deref,
     openapi::{Components, Parameter},
     request::Head,
-    response_error::ResponseError,
 };
 use serde::Deserialize;
 
-use crate::ToParameters;
+use crate::{response_error::QueryError, ToParameters};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Query<T>(pub T);
@@ -45,19 +41,5 @@ impl<T: ToParameters> ApiRequestHead for Query<T> {
                 })
                 .collect(),
         )
-    }
-}
-
-#[derive(Debug, thiserror::Error)]
-#[error("failed to deserialize query data: {0}")]
-pub struct QueryError(#[from] serde_html_form::de::Error);
-
-impl ResponseError for QueryError {
-    fn as_status(&self) -> StatusCode {
-        StatusCode::BAD_REQUEST
-    }
-
-    fn status_codes() -> HashSet<StatusCode> {
-        [StatusCode::BAD_REQUEST].into()
     }
 }

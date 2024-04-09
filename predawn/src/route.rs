@@ -1,15 +1,14 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use futures_util::{future::Either, Future, FutureExt};
-use http::{Method, StatusCode};
+use http::Method;
 use matchit::{InsertError, Match};
-use predawn_core::{
-    error::Error, request::Request, response::Response, response_error::ResponseError,
-};
+use predawn_core::{error::Error, request::Request, response::Response};
 
 use crate::{
     handler::{DynHandler, Handler},
     path_params::PathParams,
+    response_error::{MatchError, MethodNotAllowedError},
 };
 
 #[derive(Default)]
@@ -20,20 +19,6 @@ pub struct MethodRouter {
 impl From<HashMap<Method, DynHandler>> for MethodRouter {
     fn from(methods: HashMap<Method, DynHandler>) -> Self {
         Self { methods }
-    }
-}
-
-#[derive(Debug, thiserror::Error)]
-#[error("method not allowed")]
-pub struct MethodNotAllowedError;
-
-impl ResponseError for MethodNotAllowedError {
-    fn as_status(&self) -> StatusCode {
-        StatusCode::METHOD_NOT_ALLOWED
-    }
-
-    fn status_codes() -> HashSet<StatusCode> {
-        [StatusCode::METHOD_NOT_ALLOWED].into()
     }
 }
 
@@ -66,7 +51,7 @@ impl Handler for MethodRouter {
 #[derive(Default)]
 pub struct Router {
     router: matchit::Router<MethodRouter>,
-    routes: Vec<(Box<str>, Vec<Method>)>,
+    routes: Vec<(Box<str>, Box<[Method]>)>,
 }
 
 impl Router {
@@ -79,9 +64,11 @@ impl Router {
             route: String,
             method_router: MethodRouter,
         ) -> Result<(), InsertError> {
-            let methods = method_router.methods.keys().cloned().collect::<Vec<_>>();
+            let methods = method_router.methods.keys().cloned().collect();
+
             router.router.insert(route.clone(), method_router)?;
-            router.routes.push((route.into_boxed_str(), methods));
+            router.routes.push((route.into(), methods));
+
             Ok(())
         }
 
@@ -95,7 +82,7 @@ impl Router {
         self.router.at(path)
     }
 
-    pub fn routes(&self) -> &[(Box<str>, Vec<Method>)] {
+    pub fn routes(&self) -> &[(Box<str>, Box<[Method]>)] {
         &self.routes
     }
 }
@@ -111,21 +98,5 @@ impl Handler for Router {
             .insert(matched.params);
 
         matched.value.call(req).await
-    }
-}
-
-#[derive(Debug, thiserror::Error)]
-#[error("{0}")]
-pub struct MatchError(#[from] pub matchit::MatchError);
-
-impl ResponseError for MatchError {
-    fn as_status(&self) -> StatusCode {
-        match self.0 {
-            matchit::MatchError::NotFound => StatusCode::NOT_FOUND,
-        }
-    }
-
-    fn status_codes() -> HashSet<StatusCode> {
-        [StatusCode::NOT_FOUND].into()
     }
 }

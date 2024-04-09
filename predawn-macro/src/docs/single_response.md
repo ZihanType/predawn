@@ -5,7 +5,7 @@ This macro will generate 3 implementations, [`SingleResponse`], [`IntoResponse`]
 ## Example
 
 ```rust
-use predawn::{payload::json::Json, SingleResponse, ToSchema};
+use predawn::{payload::Json, SingleResponse, ToSchema};
 use serde::Serialize;
 
 #[derive(SingleResponse)]

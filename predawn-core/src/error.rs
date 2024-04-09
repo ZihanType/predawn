@@ -12,7 +12,7 @@ pub type BoxError = Box<dyn StdError + Send + Sync>;
 pub struct Error {
     response: Response,
     inner: BoxError,
-    wrappers: Vec<&'static str>,
+    wrappers: Box<[&'static str]>,
 }
 
 impl Error {
@@ -30,7 +30,7 @@ impl Error {
         self.inner.downcast_ref::<T>()
     }
 
-    pub fn downcast<T>(self) -> Result<(Response, T, Vec<&'static str>), Self>
+    pub fn downcast<T>(self) -> Result<(Response, T, Box<[&'static str]>), Self>
     where
         T: StdError + 'static,
     {
@@ -76,7 +76,7 @@ where
         Self {
             response,
             inner: error.inner(),
-            wrappers: type_names,
+            wrappers: type_names.into(),
         }
     }
 }

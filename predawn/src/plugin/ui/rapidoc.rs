@@ -29,11 +29,11 @@ const TEMPLATE: &str = r#"
 
 #[derive(Clone, Debug)]
 pub struct RapiDoc {
-    description: String,
-    title: String,
-    keywords: Option<String>,
-    js_url: String,
-    spec_url: String,
+    description: Arc<str>,
+    title: Arc<str>,
+    keywords: Option<Arc<str>>,
+    js_url: Arc<str>,
+    spec_url: Arc<str>,
 }
 
 impl Plugin for RapiDoc {
@@ -63,13 +63,13 @@ fn RapiDocToPlugin(rapidoc: RapiDoc) -> Arc<dyn Plugin> {
 impl RapiDoc {
     pub fn new<T>(spec_url: T) -> Self
     where
-        T: Into<String>,
+        T: Into<Arc<str>>,
     {
         Self {
-            description: String::from("RapiDoc"),
-            title: String::from("RapiDoc"),
+            description: Arc::from("RapiDoc"),
+            title: Arc::from("RapiDoc"),
             keywords: None,
-            js_url: String::from("https://unpkg.com/rapidoc/dist/rapidoc-min.js"),
+            js_url: Arc::from("https://unpkg.com/rapidoc/dist/rapidoc-min.js"),
             spec_url: spec_url.into(),
         }
     }

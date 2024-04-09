@@ -6,7 +6,7 @@ use crate::{
     media_type::MultiRequestMediaType,
     openapi::{self, Components, Parameter},
     private::{ViaRequest, ViaRequestHead},
-    request::{Head, LocalAddr, OriginalUri, RemoteAddr},
+    request::{BodyLimit, Head, LocalAddr, OriginalUri, RemoteAddr},
 };
 
 pub trait ApiRequestHead {
@@ -96,7 +96,7 @@ macro_rules! none_request_head_for_owned {
     };
 }
 
-none_request_head_for_owned![Version, LocalAddr, RemoteAddr];
+none_request_head_for_owned![Version, LocalAddr, RemoteAddr, BodyLimit];
 
 macro_rules! optional_parameters {
     ($ty:ty) => {

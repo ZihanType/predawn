@@ -1,6 +1,6 @@
 use std::net::{IpAddr, Ipv4Addr};
 
-use predawn_core::request::DEFAULT_REQUEST_BODY_LIMIT;
+use predawn_core::request::DEFAULT_BODY_LIMIT;
 use rudi::Singleton;
 use serde::{Deserialize, Serialize};
 
@@ -54,7 +54,7 @@ fn default_non_application_root_path() -> NormalizedPath {
 }
 
 fn default_request_body_limit() -> usize {
-    DEFAULT_REQUEST_BODY_LIMIT
+    DEFAULT_BODY_LIMIT
 }
 
 impl Default for ServerConfig {

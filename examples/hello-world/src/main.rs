@@ -4,10 +4,10 @@ use http::StatusCode;
 use predawn::{
     app::{run_app, Hooks},
     controller,
-    extract::{path::Path, query::Query},
+    extract::{Path, Query},
     handler::{Handler, HandlerExt},
-    middleware::{tower_compat::TowerLayerCompatExt, tracing::Tracing},
-    payload::{form::Form, json::Json},
+    middleware::{TowerLayerCompatExt, Tracing},
+    payload::{Form, Json},
     response_error::ResponseError,
     ToParameters, ToSchema,
 };
@@ -84,13 +84,13 @@ impl MyController {
     }
 }
 
-fn add_middlewares<H: Handler>(handler: H, _: &mut Context) -> impl Handler {
+fn add_middlewares<H: Handler>(_: &mut Context, handler: H) -> impl Handler {
     handler
         .before(|req| async {
             println!("before: {:?}", req);
             Ok(req)
         })
-        .with(RateLimitLayer::new(1, Duration::from_secs(30)).compat())
+        .with(RateLimitLayer::new(1, Duration::from_secs(3)).compat())
 }
 
 #[Singleton]

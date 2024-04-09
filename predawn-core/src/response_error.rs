@@ -2,6 +2,8 @@ use std::{
     collections::{BTreeMap, HashSet},
     convert::Infallible,
     error::Error,
+    fmt,
+    string::FromUtf8Error,
 };
 
 use http::{header::CONTENT_TYPE, HeaderValue, StatusCode};
@@ -72,5 +74,90 @@ impl ResponseError for Infallible {
 
     fn responses(_: &mut Components) -> BTreeMap<StatusCode, openapi::Response> {
         BTreeMap::new()
+    }
+}
+
+#[derive(Debug)]
+pub struct RequestBodyLimitError {
+    pub actual: Option<usize>,
+    pub expected: usize,
+}
+
+impl fmt::Display for RequestBodyLimitError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.actual {
+            Some(actual) => {
+                write!(
+                    f,
+                    "payload too large: expected `{}` but actual `{}`",
+                    self.expected, actual
+                )
+            }
+            None => {
+                write!(
+                    f,
+                    "payload too large (no content length): expected `{}`",
+                    self.expected
+                )
+            }
+        }
+    }
+}
+
+impl Error for RequestBodyLimitError {}
+
+impl ResponseError for RequestBodyLimitError {
+    fn as_status(&self) -> StatusCode {
+        StatusCode::PAYLOAD_TOO_LARGE
+    }
+
+    fn status_codes() -> HashSet<StatusCode> {
+        [StatusCode::PAYLOAD_TOO_LARGE].into()
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ReadBytesError {
+    #[error("{0}")]
+    RequestBodyLimitError(#[from] RequestBodyLimitError),
+    #[error("failed to read bytes from request body: {0}")]
+    UnknownBodyError(#[from] BoxError),
+}
+
+impl ResponseError for ReadBytesError {
+    fn as_status(&self) -> StatusCode {
+        match self {
+            ReadBytesError::RequestBodyLimitError(e) => e.as_status(),
+            ReadBytesError::UnknownBodyError(_) => StatusCode::BAD_REQUEST,
+        }
+    }
+
+    fn status_codes() -> HashSet<StatusCode> {
+        let mut status_codes = RequestBodyLimitError::status_codes();
+        status_codes.insert(StatusCode::BAD_REQUEST);
+        status_codes
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ReadStringError {
+    #[error("{0}")]
+    ReadBytes(#[from] ReadBytesError),
+    #[error("failed to convert bytes to string: {0}")]
+    InvalidUtf8(#[from] FromUtf8Error),
+}
+
+impl ResponseError for ReadStringError {
+    fn as_status(&self) -> StatusCode {
+        match self {
+            ReadStringError::ReadBytes(e) => e.as_status(),
+            ReadStringError::InvalidUtf8(_) => StatusCode::BAD_REQUEST,
+        }
+    }
+
+    fn status_codes() -> HashSet<StatusCode> {
+        let mut status_codes = ReadBytesError::status_codes();
+        status_codes.insert(StatusCode::BAD_REQUEST);
+        status_codes
     }
 }

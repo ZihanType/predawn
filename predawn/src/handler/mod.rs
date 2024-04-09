@@ -13,7 +13,7 @@ use predawn_core::{
     either::Either, error::Error, into_response::IntoResponse, request::Request, response::Response,
 };
 
-use self::{
+pub use self::{
     after::After, around::Around, before::Before, catch_all_error::CatchAllError,
     catch_error::CatchError, inspect_all_error::InspectAllError, inspect_error::InspectError,
 };
@@ -159,7 +159,7 @@ pub trait HandlerExt: Handler + Sized {
 
     fn catch_error<F, Err, Fut, R>(self, f: F) -> CatchError<Self, F, Err>
     where
-        F: Fn(Err, Vec<&'static str>) -> Fut + Send + Sync + 'static,
+        F: Fn(Err, Box<[&'static str]>) -> Fut + Send + Sync + 'static,
         Err: std::error::Error + Send + Sync + 'static,
         Fut: Future<Output = R> + Send,
         R: IntoResponse,
