@@ -1,6 +1,7 @@
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 use http::Method;
+use indexmap::IndexMap;
 use predawn_core::openapi::OpenAPI;
 use rudi::{Context, Singleton};
 
@@ -20,11 +21,11 @@ impl Plugin for OpenAPIJson {
     fn create_route(
         self: Arc<Self>,
         cx: &mut Context,
-    ) -> (NormalizedPath, HashMap<Method, DynHandler>) {
+    ) -> (NormalizedPath, IndexMap<Method, DynHandler>) {
         let json_path = cx.resolve::<OpenAPIConfig>().json_path;
         let api = cx.resolve::<OpenAPI>();
 
-        let mut map = HashMap::with_capacity(1);
+        let mut map = IndexMap::with_capacity(1);
 
         let handler = handler_fn(move |_| {
             let api = api.clone();

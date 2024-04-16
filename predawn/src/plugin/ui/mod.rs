@@ -1,9 +1,8 @@
 mod rapidoc;
 mod swagger_ui;
 
-use std::collections::HashMap;
-
 use http::{header::CONTENT_TYPE, HeaderValue, Method};
+use indexmap::IndexMap;
 use mime::TEXT_HTML_UTF_8;
 use predawn_core::response::Response;
 use rudi::Context;
@@ -19,7 +18,7 @@ pub(crate) fn create_route<F>(
     cx: &mut Context,
     get_path: F,
     html: String,
-) -> (NormalizedPath, HashMap<Method, DynHandler>)
+) -> (NormalizedPath, IndexMap<Method, DynHandler>)
 where
     F: Fn(OpenAPIConfig) -> NormalizedPath,
 {
@@ -36,8 +35,8 @@ pub(crate) fn json_path(cfg: &Config) -> NormalizedPath {
     full_non_application_root_path.join(normalized_json_path)
 }
 
-fn create_map(html: String) -> HashMap<Method, DynHandler> {
-    let mut map = HashMap::with_capacity(1);
+fn create_map(html: String) -> IndexMap<Method, DynHandler> {
+    let mut map = IndexMap::with_capacity(1);
 
     let handler = handler_fn(move |_| {
         let html = html.clone();

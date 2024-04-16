@@ -1,6 +1,7 @@
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 use http::Method;
+use indexmap::IndexMap;
 use rudi::{Context, Singleton};
 
 use crate::{config::Config, handler::DynHandler, normalized_path::NormalizedPath, plugin::Plugin};
@@ -40,7 +41,7 @@ impl Plugin for RapiDoc {
     fn create_route(
         self: Arc<Self>,
         cx: &mut Context,
-    ) -> (NormalizedPath, HashMap<Method, DynHandler>) {
+    ) -> (NormalizedPath, IndexMap<Method, DynHandler>) {
         super::create_route(cx, |c| c.rapidoc_path, self.as_html())
     }
 }

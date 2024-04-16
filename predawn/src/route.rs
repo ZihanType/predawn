@@ -1,7 +1,6 @@
-use std::collections::HashMap;
-
 use futures_util::{future::Either, Future, FutureExt};
 use http::Method;
+use indexmap::IndexMap;
 use matchit::{InsertError, Match};
 use predawn_core::{error::Error, request::Request, response::Response};
 
@@ -13,11 +12,11 @@ use crate::{
 
 #[derive(Default)]
 pub struct MethodRouter {
-    methods: HashMap<Method, DynHandler>,
+    methods: IndexMap<Method, DynHandler>,
 }
 
-impl From<HashMap<Method, DynHandler>> for MethodRouter {
-    fn from(methods: HashMap<Method, DynHandler>) -> Self {
+impl From<IndexMap<Method, DynHandler>> for MethodRouter {
+    fn from(methods: IndexMap<Method, DynHandler>) -> Self {
         Self { methods }
     }
 }

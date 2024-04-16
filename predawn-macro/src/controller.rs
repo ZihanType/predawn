@@ -87,12 +87,13 @@ pub(crate) fn generate(impl_attr: ImplAttr, mut item_impl: ItemImpl) -> syn::Res
 
     let expand = quote_use! {
         # use std::sync::Arc;
-        # use std::collections::{BTreeMap, HashMap};
+        # use std::collections::BTreeMap;
         # use std::collections::BTreeMap;
         # use predawn::controller::Controller;
         # use predawn::handler::{Handler, DynHandler};
         # use predawn::normalized_path::NormalizedPath;
         # use predawn::__internal::http::Method;
+        # use predawn::__internal::indexmap::IndexMap;
         # use predawn::__internal::rudi::Context;
         # use predawn::openapi::{ReferenceOr, PathItem, Components};
 
@@ -100,7 +101,7 @@ pub(crate) fn generate(impl_attr: ImplAttr, mut item_impl: ItemImpl) -> syn::Res
             fn insert_routes(
                 self: Arc<Self>,
                 cx: &mut Context,
-                route_table: &mut BTreeMap<NormalizedPath, HashMap<Method, DynHandler>>,
+                route_table: &mut BTreeMap<NormalizedPath, IndexMap<Method, DynHandler>>,
                 paths: &mut BTreeMap<NormalizedPath, ReferenceOr<PathItem>>,
                 components: &mut Components,
             ) {
