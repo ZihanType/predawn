@@ -1,5 +1,3 @@
-IndexMap
-
 Tag
 SecuritySchema
 
