@@ -16,11 +16,36 @@ use hyper_util::{
 use predawn_core::{body::ResponseBody, request::Request};
 use tokio::{
     net::{TcpListener, TcpStream},
+    signal,
     sync::watch::{self, Receiver, Sender},
 };
 use tracing::{error, info, trace};
 
 use crate::handler::Handler;
+
+pub async fn shutdown_signal() {
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
+}
 
 pub struct Server {
     tcp_listener: TcpListener,
@@ -156,10 +181,7 @@ async fn handle_conn<H: Handler + Clone>(
 
         loop {
             tokio::select! {
-                result = conn.as_mut() => {
-                    if let Err(err) = result {
-                        error!("failed to serve connection: {err:#}");
-                    }
+                _ = conn.as_mut() => {
                     break;
                 }
                 _ = &mut signal_closed => {

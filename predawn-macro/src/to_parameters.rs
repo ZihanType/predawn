@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
 use quote_use::quote_use;
-use syn::{Data, DataEnum, DataStruct, DataUnion, DeriveInput, Field, Fields, FieldsNamed};
+use syn::{DeriveInput, Field};
 
 use crate::serde_attr::SerdeAttr;
 
@@ -12,29 +12,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         ..
     } = input;
 
-    let named = match data {
-        Data::Struct(DataStruct { fields, .. }) => match fields {
-            Fields::Named(FieldsNamed { named, .. }) => named,
-            Fields::Unnamed(_) | Fields::Unit => {
-                return Err(syn::Error::new_spanned(
-                    fields,
-                    "`ToParameters` can only be derived for structs with named fields",
-                ));
-            }
-        },
-        Data::Enum(DataEnum { enum_token, .. }) => {
-            return Err(syn::Error::new(
-                enum_token.span,
-                "`ToParameters` can only be derived for structs",
-            ));
-        }
-        Data::Union(DataUnion { union_token, .. }) => {
-            return Err(syn::Error::new(
-                union_token.span,
-                "`ToParameters` can only be derived for structs",
-            ));
-        }
-    };
+    let named = crate::util::extract_named_struct_fields(data, "ToParameters")?;
 
     let mut parameter_impls = Vec::new();
     let mut errors = Vec::new();

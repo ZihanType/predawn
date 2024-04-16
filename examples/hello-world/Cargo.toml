@@ -19,7 +19,7 @@ rudi = { workspace = true, features = [
     "tracing",
 ] }
 serde = { workspace = true, features = ["derive"] }
-tokio = { workspace = true, features = ["rt-multi-thread", "signal"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "signal", "fs"] }
 tracing = { workspace = true }
 thiserror = { workspace = true }
 tower = { workspace = true, features = ["limit"] }

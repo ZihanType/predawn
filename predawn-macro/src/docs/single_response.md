@@ -37,10 +37,13 @@ pub struct NamedResponse {
 
 ## Note
 
-> All custom header names are lower cased upon conversion to a `HeaderName` value. This avoids the overhead of dynamically doing lower case conversion during the hash code computation and the comparison operation.
+1. Only types that implement the [`ToHeaderValue`] trait can be annotated by `#[header = "xxx"]`.
 
-Details: [HeaderName](https://docs.rs/http/latest/http/header/struct.HeaderName.html)
+2. > All custom header names are lower cased upon conversion to a `HeaderName` value. This avoids the overhead of dynamically doing lower case conversion during the hash code computation and the comparison operation.
+
+   Details: [HeaderName](https://docs.rs/http/latest/http/header/struct.HeaderName.html)
 
 [`SingleResponse`]: https://docs.rs/predawn/latest/predawn/trait.SingleResponse.html
 [`IntoResponse`]: https://docs.rs/predawn/latest/predawn/into_response/trait.IntoResponse.html
 [`ApiResponse`]: https://docs.rs/predawn/latest/predawn/api_response/trait.ApiResponse.html
+[`ToHeaderValue`]: https://docs.rs/predawn/latest/predawn/response/trait.ToHeaderValue.html

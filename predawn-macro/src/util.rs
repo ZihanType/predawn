@@ -1,7 +1,7 @@
 use http::StatusCode;
 use proc_macro2::Span;
 use syn::{
-    punctuated::Punctuated, spanned::Spanned, Data, DataEnum, DataStruct, DataUnion, Fields,
+    punctuated::Punctuated, spanned::Spanned, Data, DataEnum, DataStruct, DataUnion, Field, Fields,
     FieldsNamed, FieldsUnnamed, LitInt, Token, Type, Variant,
 };
 
@@ -26,11 +26,34 @@ pub(crate) fn extract_variants(
         }
         Data::Struct(DataStruct { struct_token, .. }) => Err(syn::Error::new(
             struct_token.span,
-            format!("`{}` can only be derived for enums", derive_macro_name),
+            format!("`{derive_macro_name}` can only be derived for enums"),
         )),
         Data::Union(DataUnion { union_token, .. }) => Err(syn::Error::new(
             union_token.span,
-            format!("`{}` can only be derived for enums", derive_macro_name),
+            format!("`{derive_macro_name}` can only be derived for enums"),
+        )),
+    }
+}
+
+pub(crate) fn extract_named_struct_fields(
+    data: Data,
+    derive_macro_name: &'static str,
+) -> syn::Result<Punctuated<Field, Token![,]>> {
+    match data {
+        Data::Struct(DataStruct { fields, .. }) => match fields {
+            Fields::Named(FieldsNamed { named, .. }) => Ok(named),
+            Fields::Unnamed(_) | Fields::Unit => Err(syn::Error::new_spanned(
+                fields,
+                format!("`{derive_macro_name}` can only be derived for structs with named fields"),
+            )),
+        },
+        Data::Enum(DataEnum { enum_token, .. }) => Err(syn::Error::new(
+            enum_token.span,
+            format!("`{derive_macro_name}` can only be derived for structs"),
+        )),
+        Data::Union(DataUnion { union_token, .. }) => Err(syn::Error::new(
+            union_token.span,
+            format!("`{derive_macro_name}` can only be derived for structs"),
         )),
     }
 }

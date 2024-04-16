@@ -1,3 +1,6 @@
+Tag
+SecuritySchema
+
 controller: condition, skip
 
 ToSchema / ToParameter
@@ -14,13 +17,13 @@ actual_type
 update references in doc comments by search `https://docs.rs`
 
 service attribute macro
-Tag
-SecuritySchema
 operation id
 Extension
 TypedHeader
 Header
 Cookie
+Base64
+Html
 split controller trait
 more openapi ui
 more ToSchema impl

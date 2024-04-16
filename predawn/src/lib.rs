@@ -1,5 +1,7 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
+extern crate self as predawn;
+
 pub mod app;
 pub mod config;
 #[doc(hidden)]
@@ -20,8 +22,8 @@ pub mod response_error;
 pub mod route;
 pub mod server;
 pub mod test_client;
-pub mod to_header_value;
 mod to_parameters;
+pub(crate) mod util;
 
 pub use predawn_core::{
     api_request, api_response, body, either, error, from_request, into_response,

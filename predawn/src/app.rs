@@ -6,7 +6,7 @@ use predawn_core::{
     request::BodyLimit,
 };
 use rudi::Context;
-use tokio::{net::TcpListener, signal};
+use tokio::net::TcpListener;
 
 use crate::{
     config::{logger::LoggerConfig, server::ServerConfig, Config},
@@ -15,7 +15,7 @@ use crate::{
     handler::{Handler, HandlerExt},
     plugin::Plugin,
     route::{MethodRouter, Router},
-    server::Server,
+    server::{shutdown_signal, Server},
 };
 
 pub trait Hooks {
@@ -69,9 +69,7 @@ pub trait Hooks {
         let listener = TcpListener::bind(socket_addr).await?;
 
         Server::new(listener)
-            .run_with_graceful_shutdown(router, async {
-                let _ = signal::ctrl_c().await;
-            })
+            .run_with_graceful_shutdown(router, shutdown_signal())
             .await
     }
 }

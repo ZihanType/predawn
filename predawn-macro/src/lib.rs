@@ -3,6 +3,7 @@ mod method;
 mod multi_request_media_type;
 mod multi_response;
 mod multi_response_media_type;
+mod multipart;
 mod serde_attr;
 mod single_response;
 mod to_parameters;
@@ -80,6 +81,16 @@ pub fn multi_response(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
     multi_response::generate(input)
+        .unwrap_or_else(|e| e.to_compile_error())
+        .into()
+}
+
+#[doc = include_str!("docs/multipart.md")]
+#[proc_macro_derive(Multipart, attributes(multipart))]
+pub fn multipart(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+
+    multipart::generate(input)
         .unwrap_or_else(|e| e.to_compile_error())
         .into()
 }

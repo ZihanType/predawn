@@ -9,16 +9,16 @@ impl ToSchema for SystemTime {
         let mut ty = ObjectType::default();
 
         ty.properties.insert(
-            "seconds_since_epoch".to_string(),
+            "secs_since_epoch".to_string(),
             ReferenceOr::Item(Box::new(i64::schema())),
         );
         ty.properties.insert(
-            "nanoseconds_since_epoch".to_string(),
+            "nanos_since_epoch".to_string(),
             ReferenceOr::Item(Box::new(u32::schema())),
         );
 
-        ty.required.push("seconds_since_epoch".to_string());
-        ty.required.push("nanoseconds_since_epoch".to_string());
+        ty.required.push("secs_since_epoch".to_string());
+        ty.required.push("nanos_since_epoch".to_string());
 
         Schema {
             schema_data: SchemaData {
@@ -35,16 +35,16 @@ impl ToSchema for Duration {
         let mut ty = ObjectType::default();
 
         ty.properties.insert(
-            "seconds".to_string(),
+            "secs".to_string(),
             ReferenceOr::Item(Box::new(u64::schema())),
         );
         ty.properties.insert(
-            "nanoseconds".to_string(),
+            "nanos".to_string(),
             ReferenceOr::Item(Box::new(u32::schema())),
         );
 
-        ty.required.push("seconds".to_string());
-        ty.required.push("nanoseconds".to_string());
+        ty.required.push("secs".to_string());
+        ty.required.push("nanos".to_string());
 
         Schema {
             schema_data: SchemaData {

@@ -23,7 +23,6 @@ use predawn_core::{
 };
 use predawn_schema::ToSchema;
 use serde::{de::DeserializeOwned, Serialize};
-use serde_json::error::Category;
 
 use crate::response_error::{ReadJsonError, WriteJsonError};
 
@@ -43,7 +42,11 @@ where
 
         if <Self as RequestMediaType>::check_content_type(content_type) {
             let bytes = Bytes::from_request(head, body).await?;
-            Self::from_bytes(&bytes)
+
+            match crate::util::from_bytes(&bytes) {
+                Ok(o) => Ok(Json(o)),
+                Err(e) => Err(ReadJsonError::DeserializeJsonError(e)),
+            }
         } else {
             Err(ReadJsonError::InvalidJsonContentType)
         }
@@ -61,35 +64,6 @@ impl<T: ToSchema> ApiRequest for Json<T> {
             required: true,
             ..Default::default()
         })
-    }
-}
-
-impl<T> Json<T>
-where
-    T: DeserializeOwned,
-{
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, ReadJsonError> {
-        let deserializer = &mut serde_json::Deserializer::from_slice(bytes);
-
-        match serde_path_to_error::deserialize(deserializer) {
-            Ok(value) => Ok(Json(value)),
-            Err(err) => {
-                let error = match err.inner().classify() {
-                    Category::Data => ReadJsonError::JsonDataError(err),
-                    Category::Syntax | Category::Eof => ReadJsonError::JsonSyntaxError(err),
-                    Category::Io => {
-                        if cfg!(debug_assertions) {
-                            // we don't use `serde_json::from_reader` and instead always buffer
-                            // bodies first, so we shouldn't encounter any IO errors
-                            unreachable!()
-                        } else {
-                            ReadJsonError::JsonSyntaxError(err)
-                        }
-                    }
-                };
-                Err(error)
-            }
-        }
     }
 }
 

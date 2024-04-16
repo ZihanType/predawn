@@ -62,7 +62,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
 
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
-    let impl_generics = {
+    let impl_generics_with_lifetime = {
         let mut s = quote!(#impl_generics).to_string();
         match s.find('<') {
             Some(pos) => {
@@ -95,7 +95,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
             }
         }
 
-        impl #impl_generics FromRequest<'a> for #ident #ty_generics #where_clause {
+        impl #impl_generics_with_lifetime FromRequest<'a> for #ident #ty_generics #where_clause {
             type Error = #from_request_error;
 
             async fn from_request(head: &'a Head, body: RequestBody) -> Result<Self, Self::Error> {

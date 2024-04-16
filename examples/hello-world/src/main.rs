@@ -4,10 +4,14 @@ use http::StatusCode;
 use predawn::{
     app::{run_app, Hooks},
     controller,
-    extract::{Path, Query},
+    extract::{
+        multipart::{JsonField, Multipart, MultipartFile},
+        Path, Query,
+    },
     handler::{Handler, HandlerExt},
     middleware::{TowerLayerCompatExt, Tracing},
     payload::{Form, Json},
+    response::Attachment,
     response_error::ResponseError,
     ToParameters, ToSchema,
 };
@@ -82,6 +86,47 @@ impl MyController {
     async fn path_person(&self, Path(person): Path<Person>) -> Json<Person> {
         Json(person)
     }
+
+    #[handler(paths = ["/multipart"], methods = [POST])]
+    async fn multipart_person(&self, m: MultipartStruct) -> Json<Person> {
+        let MultipartStruct {
+            person: JsonField(person),
+            sex,
+            files,
+        } = m;
+
+        println!("sex: {sex}");
+
+        for file in files {
+            println!(
+                "file name: {}, content type: {}, file size: {}",
+                file.file_name(),
+                file.content_type(),
+                file.bytes().len(),
+            );
+        }
+
+        Json(person)
+    }
+
+    #[handler(paths = ["/download_from_memory"], methods = [GET])]
+    async fn download_from_memory(&self) -> Attachment<Json<Person>> {
+        let json = Json(Person {
+            name: Some("Alice".into()),
+            age: 18,
+        });
+
+        Attachment::new(json, "test.json")
+    }
+
+    #[handler(paths = ["/download_from_disk"], methods = [GET])]
+    async fn download_from_disk(&self) -> Attachment<Vec<u8>> {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("test.json");
+
+        let bytes = tokio::fs::read(path).await.unwrap();
+
+        Attachment::new(bytes, "test.json")
+    }
 }
 
 fn add_middlewares<H: Handler>(_: &mut Context, handler: H) -> impl Handler {
@@ -98,7 +143,7 @@ fn CreateMiddleware() -> Tracing {
     Tracing
 }
 
-#[derive(Serialize, Deserialize, ToSchema, ToParameters)]
+#[derive(Debug, Serialize, Deserialize, ToSchema, ToParameters, Multipart)]
 struct Person {
     name: Option<String>,
     age: u16,
@@ -108,6 +153,13 @@ struct Person {
 struct MultiValue {
     #[serde(rename = "value")]
     values: Vec<u16>,
+}
+
+#[derive(Debug, ToSchema, Multipart)]
+struct MultipartStruct {
+    person: JsonField<Person>,
+    sex: String,
+    files: Vec<MultipartFile>,
 }
 
 #[derive(Debug, thiserror::Error)]

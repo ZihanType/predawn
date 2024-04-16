@@ -312,7 +312,7 @@ fn generate_bodies<'a>(
     };
 
     let into_response_body = quote_use! {
-        # use predawn::to_header_value::{panic_on_err, panic_on_none, ToHeaderValue};
+        # use predawn::response::{panic_on_err, panic_on_none, ToHeaderValue};
         # use predawn::ToSchema;
         # use predawn::__internal::http::HeaderName;
 
