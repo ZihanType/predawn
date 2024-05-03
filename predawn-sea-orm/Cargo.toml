@@ -1,5 +1,7 @@
 [package]
 name = "predawn-sea-orm"
+description = "Sea Orm Integration for Predawn"
+keywords = ["sea-orm", "predawn", "middleware"]
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
