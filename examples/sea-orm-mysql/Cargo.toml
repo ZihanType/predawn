@@ -1,5 +1,5 @@
 [package]
-name = "hello-world"
+name = "sea-orm-mysql"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -10,17 +10,17 @@ include.workspace = true
 readme.workspace = true
 
 [dependencies]
-predawn = { workspace = true, features = ["auto-register", "tower-compat"] }
+predawn = { workspace = true, features = ["auto-register"] }
+predawn-sea-orm = { workspace = true, features = [
+    "mysql",
+    "runtime-tokio-rustls",
+] }
 
-http = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread"] }
 rudi = { workspace = true, features = [
     "rudi-macro",
     "auto-register",
     "tracing",
 ] }
+sea-orm = { workspace = true, features = ["macros"] }
 serde = { workspace = true, features = ["derive"] }
-tokio = { workspace = true, features = ["rt-multi-thread", "fs"] }
-tracing = { workspace = true }
-thiserror = { workspace = true }
-tower = { workspace = true, features = ["limit"] }
-tower-http = { workspace = true, features = ["compression-zstd"] }

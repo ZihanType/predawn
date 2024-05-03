@@ -11,8 +11,6 @@ repository.workspace = true
 include.workspace = true
 readme.workspace = true
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 predawn-core = { workspace = true }
 predawn-macro = { workspace = true }

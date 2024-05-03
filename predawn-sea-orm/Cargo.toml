@@ -1,0 +1,45 @@
+[package]
+name = "predawn-sea-orm"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+include.workspace = true
+readme.workspace = true
+
+[dependencies]
+predawn = { workspace = true, features = ["auto-register"] }
+
+async-trait = { workspace = true }
+sea-orm = { workspace = true }
+tokio = { workspace = true, features = ["rt"] }
+thiserror = { workspace = true }
+scc = { workspace = true }
+http = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+url = { workspace = true, features = ["serde"] }
+rudi = { workspace = true, features = ["rudi-macro"] }
+
+[features]
+
+# database
+
+mysql = ["sea-orm/sqlx-mysql"]
+postgres = ["sea-orm/sqlx-postgres"]
+sqlite = ["sea-orm/sqlx-sqlite"]
+
+# async runtime
+
+# async-std
+runtime-async-std-native-tls = ["sea-orm/runtime-async-std-native-tls"]
+runtime-async-std-rustls = ["sea-orm/runtime-async-std-rustls"]
+
+# tokio
+runtime-tokio-native-tls = ["sea-orm/runtime-tokio-native-tls"]
+runtime-tokio-rustls = ["sea-orm/runtime-tokio-rustls"]
+
+# actix
+runtime-actix-native-tls = ["sea-orm/runtime-actix-native-tls"]
+runtime-actix-rustls = ["sea-orm/runtime-actix-rustls"]
