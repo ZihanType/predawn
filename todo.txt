@@ -1,6 +1,3 @@
-1. controller macro: paths, methods default, refer to Spring Boot
-
-2.
 ```
 #[derive(Debug)]
 pub enum WriteJsonOrFormError<T: Serialize> {

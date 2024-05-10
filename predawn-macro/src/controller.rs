@@ -1,4 +1,4 @@
-use from_attr::{AttrsValue, FromAttr, PathValue};
+use from_attr::{AttrsValue, FromAttr};
 use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote};
 use quote_use::quote_use;
@@ -19,18 +19,10 @@ pub(crate) fn generate(impl_attr: ImplAttr, mut item_impl: ItemImpl) -> syn::Res
 
     let ImplAttr { paths, middleware } = impl_attr;
 
-    let paths = match paths {
-        Some(PathValue { path, value: paths }) => {
-            if paths.is_empty() {
-                return Err(syn::Error::new(
-                    path.span(),
-                    "`paths` argument cannot be empty",
-                ));
-            }
-
-            paths
-        }
-        None => default_paths(),
+    let paths = if !paths.is_empty() {
+        paths
+    } else {
+        default_paths()
     };
 
     let self_ty = &item_impl.self_ty;
@@ -136,35 +128,16 @@ fn generate_single_fn_impl<'a>(
         middleware,
     } = fn_attr;
 
-    let method_paths = match paths {
-        Some(PathValue { path, value: paths }) => {
-            if paths.is_empty() {
-                return Err(syn::Error::new(
-                    path.span(),
-                    "`paths` argument cannot be empty",
-                ));
-            }
-
-            paths
-        }
-        None => default_paths(),
+    let method_paths = if !paths.is_empty() {
+        paths
+    } else {
+        default_paths()
     };
 
-    let methods = match methods {
-        Some(PathValue {
-            path,
-            value: methods,
-        }) => {
-            if methods.is_empty() {
-                return Err(syn::Error::new(
-                    path.span(),
-                    "`methods` argument cannot be empty",
-                ));
-            }
-
-            methods
-        }
-        None => ENUM_METHODS.to_vec(),
+    let methods = if !methods.is_empty() {
+        methods
+    } else {
+        ENUM_METHODS.to_vec()
     };
 
     let fn_name = &f.sig.ident;
@@ -491,7 +464,7 @@ fn generate_single_fn_impl<'a>(
 #[derive(FromAttr)]
 #[attribute(idents = [controller])]
 pub(crate) struct ImplAttr {
-    paths: Option<PathValue<Vec<Expr>>>,
+    paths: Vec<Expr>,
 
     middleware: Option<Path>,
 }
@@ -499,15 +472,13 @@ pub(crate) struct ImplAttr {
 #[derive(FromAttr)]
 #[attribute(idents = [handler])]
 struct ImplFnAttr {
-    paths: Option<PathValue<Vec<Expr>>>,
+    paths: Vec<Expr>,
 
-    methods: Option<PathValue<Vec<Method>>>,
+    methods: Vec<Method>,
 
     middleware: Option<Path>,
 }
 
 fn default_paths() -> Vec<Expr> {
-    let mut paths = Vec::with_capacity(1);
-    paths.push(parse_quote!(""));
-    paths
+    vec![parse_quote!("")]
 }
