@@ -47,7 +47,7 @@ impl Plugin for RapiDoc {
 }
 
 fn condition(cx: &Context) -> bool {
-    cx.get_provider::<RapiDoc>().is_none()
+    !cx.contains_provider::<RapiDoc>()
 }
 
 #[Singleton(condition = condition)]

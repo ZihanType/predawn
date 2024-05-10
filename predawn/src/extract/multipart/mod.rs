@@ -3,6 +3,8 @@ mod json_field;
 mod multipart_file;
 mod parse_field;
 
+#[cfg_attr(docsrs, doc(cfg(feature = "macro")))]
+#[cfg(feature = "macro")]
 pub use predawn_macro::Multipart;
 
 #[doc(hidden)]

@@ -13,7 +13,7 @@ readme.workspace = true
 
 [dependencies]
 predawn-core = { workspace = true }
-predawn-macro = { workspace = true }
+predawn-macro = { workspace = true, optional = true }
 predawn-schema = { workspace = true }
 
 hyper = { workspace = true, features = ["server", "http1", "http2"] }
@@ -30,7 +30,7 @@ hyper-util = { workspace = true, features = [
     "http2",
 ] }
 tracing = { workspace = true }
-rudi = { workspace = true, features = ["rudi-macro"] }
+rudi = { workspace = true, features = ["rudi-macro", "auto-register"] }
 paste = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true, features = ["preserve_order"] }
@@ -50,8 +50,9 @@ multer = { workspace = true }
 tower = { workspace = true, optional = true }
 
 [features]
-default = ["auto-register"]
-auto-register = ["rudi/auto-register", "predawn-macro/auto-register"]
+default = ["macro", "auto-register"]
+auto-register = ["predawn-macro?/auto-register"]
+macro = ["dep:predawn-macro"]
 tower-compat = ["dep:tower"]
 schemars = ["predawn-schema/schemars"]
 

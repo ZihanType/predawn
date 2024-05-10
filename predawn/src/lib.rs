@@ -31,6 +31,8 @@ pub use predawn_core::{
     request,
     response::{MultiResponse, SingleResponse},
 };
+#[cfg_attr(docsrs, doc(cfg(feature = "macro")))]
+#[cfg(feature = "macro")]
 pub use predawn_macro::{
     controller, MultiRequestMediaType, MultiResponse, MultiResponseMediaType, SingleResponse,
     ToParameters, ToSchema,

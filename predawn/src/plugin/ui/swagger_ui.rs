@@ -60,7 +60,7 @@ impl Plugin for SwaggerUI {
 }
 
 fn condition(cx: &Context) -> bool {
-    cx.get_provider::<SwaggerUI>().is_none()
+    !cx.contains_provider::<SwaggerUI>()
 }
 
 #[Singleton(condition = condition)]

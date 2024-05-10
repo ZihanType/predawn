@@ -10,7 +10,7 @@ include.workspace = true
 readme.workspace = true
 
 [dependencies]
-predawn = { workspace = true, features = ["auto-register"] }
+predawn = { workspace = true, features = ["macro", "auto-register"] }
 predawn-sea-orm = { workspace = true, features = [
     "mysql",
     "runtime-tokio-rustls",

@@ -12,7 +12,7 @@ include.workspace = true
 readme.workspace = true
 
 [dependencies]
-predawn = { workspace = true, features = ["auto-register"] }
+predawn = { workspace = true }
 
 async-trait = { workspace = true }
 sea-orm = { workspace = true }

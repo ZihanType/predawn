@@ -1,32 +1,17 @@
-// predawn Cargo.toml
+1. attachment upload download
 
-```
-auto-register = ["rudi/auto-register", "predawn-macro/auto-register"]
-```
+2. controller macro: paths, methods default, refer to Spring Boot
 
-become
-
+3.
 ```
-auto-register = ["predawn-macro/auto-register"]
+#[derive(Debug)]
+pub enum WriteJsonOrFormError<T: Serialize> {
+    WriteJsonError(<Json<T> as IntoResponse>::Error),
+    WriteFormError(WriteFormError),
+}
 ```
-
-// predawn-sea-orm Cargo.toml
-
-```
-predawn = { workspace = true, features = ["auto-register"] }
-```
-
-become
-
-```
-predawn = { workspace = true }
-```
-
 
 preserve_order order json
-
-remove generic bound when defining compound type
-
 
 
 Tag
