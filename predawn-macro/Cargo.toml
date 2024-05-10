@@ -31,6 +31,7 @@ http = { workspace = true, features = ["std"] }
 [dev-dependencies]
 # cannot contain `workspace = true` to avoid circular dependencies.
 predawn = { path = "../predawn", default-features = false, features = [
+    "macro",
     "auto-register",
 ] }
 

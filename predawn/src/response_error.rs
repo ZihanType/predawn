@@ -1,6 +1,9 @@
 use std::{collections::HashSet, error::Error, fmt, str::Utf8Error, sync::Arc};
 
-use http::{header::CONTENT_TYPE, StatusCode};
+use http::{
+    header::{CONTENT_DISPOSITION, CONTENT_TYPE},
+    StatusCode,
+};
 use http_body_util::LengthLimitError;
 use predawn_core::media_type::MediaType;
 pub use predawn_core::response_error::*;
@@ -331,40 +334,40 @@ fn status_code_from_multer_error(err: &multer::Error) -> StatusCode {
 }
 
 #[derive(Debug)]
-pub enum AttachmentError<T> {
+pub enum DownloadError<T> {
     Inner(T),
     InvalidContentDisposition { file_name: Box<str> },
 }
 
-impl<T: fmt::Display> fmt::Display for AttachmentError<T> {
+impl<T: fmt::Display> fmt::Display for DownloadError<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            AttachmentError::Inner(e) => fmt::Display::fmt(e, f),
-            AttachmentError::InvalidContentDisposition { file_name } => {
+            DownloadError::Inner(e) => fmt::Display::fmt(e, f),
+            DownloadError::InvalidContentDisposition { file_name } => {
                 write!(
                     f,
-                    "invalid content disposition: `attachment; filename=\"{}\"`",
-                    file_name
+                    "invalid `{}` header value: `attachment; filename=\"{}\"`",
+                    CONTENT_DISPOSITION, file_name
                 )
             }
         }
     }
 }
 
-impl<T: Error + 'static> Error for AttachmentError<T> {
+impl<T: Error + 'static> Error for DownloadError<T> {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            AttachmentError::Inner(e) => Some(e),
-            AttachmentError::InvalidContentDisposition { .. } => None,
+            DownloadError::Inner(e) => Some(e),
+            DownloadError::InvalidContentDisposition { .. } => None,
         }
     }
 }
 
-impl<T: ResponseError> ResponseError for AttachmentError<T> {
+impl<T: ResponseError> ResponseError for DownloadError<T> {
     fn as_status(&self) -> StatusCode {
         match self {
-            AttachmentError::Inner(e) => e.as_status(),
-            AttachmentError::InvalidContentDisposition { .. } => StatusCode::INTERNAL_SERVER_ERROR,
+            DownloadError::Inner(e) => e.as_status(),
+            DownloadError::InvalidContentDisposition { .. } => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 

@@ -6,7 +6,7 @@ This macro will generate 5 implementations, [`FromRequest`], [`ApiRequest`], [`M
 
 ```rust
 use predawn::{
-    extract::multipart::{JsonField, Multipart, MultipartFile},
+    extract::multipart::{JsonField, Multipart, Upload},
     ToSchema,
 };
 use serde::Deserialize;
@@ -15,7 +15,7 @@ use serde::Deserialize;
 pub struct SomeMultipart {
     person: JsonField<Person>,
     message: String,
-    files: Vec<MultipartFile>,
+    files: Vec<Upload>,
 }
 
 #[derive(ToSchema, Deserialize)]

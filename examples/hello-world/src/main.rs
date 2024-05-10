@@ -5,13 +5,13 @@ use predawn::{
     app::{run_app, Hooks},
     controller,
     extract::{
-        multipart::{JsonField, Multipart, MultipartFile},
+        multipart::{JsonField, Multipart, Upload},
         Path, Query,
     },
     handler::{Handler, HandlerExt},
     middleware::{TowerLayerCompatExt, Tracing},
     payload::{Form, Json},
-    response::Attachment,
+    response::Download,
     response_error::ResponseError,
     ToParameters, ToSchema,
 };
@@ -110,22 +110,22 @@ impl MyController {
     }
 
     #[handler(paths = ["/download_from_memory"], methods = [GET])]
-    async fn download_from_memory(&self) -> Attachment<Json<Person>> {
+    async fn download_from_memory(&self) -> Download<Json<Person>> {
         let json = Json(Person {
             name: Some("Alice".into()),
             age: 18,
         });
 
-        Attachment::new(json, "test.json")
+        Download::attachment(json, "test.json")
     }
 
     #[handler(paths = ["/download_from_disk"], methods = [GET])]
-    async fn download_from_disk(&self) -> Attachment<Vec<u8>> {
+    async fn download_from_disk(&self) -> Download<Vec<u8>> {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("test.json");
 
         let bytes = tokio::fs::read(path).await.unwrap();
 
-        Attachment::new(bytes, "test.json")
+        Download::attachment(bytes, "test.json")
     }
 }
 
@@ -159,7 +159,7 @@ struct MultiValue {
 struct MultipartStruct {
     person: JsonField<Person>,
     sex: String,
-    files: Vec<MultipartFile>,
+    files: Vec<Upload>,
 }
 
 #[derive(Debug, thiserror::Error)]

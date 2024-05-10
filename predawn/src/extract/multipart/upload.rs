@@ -7,14 +7,14 @@ use super::ParseField;
 use crate::response_error::MultipartError;
 
 #[derive(Debug)]
-pub struct MultipartFile {
+pub struct Upload {
     field_name: &'static str,
     file_name: Box<str>,
     content_type: Box<str>,
     bytes: Bytes,
 }
 
-impl MultipartFile {
+impl Upload {
     /// Return the name of the parameter in the multipart form.
     #[inline]
     pub fn field_name(&self) -> &'static str {
@@ -44,13 +44,13 @@ impl MultipartFile {
     }
 }
 
-impl ToSchema for MultipartFile {
+impl ToSchema for Upload {
     fn schema() -> Schema {
-        crate::util::binary_schema("MultipartFile")
+        crate::util::binary_schema("Upload")
     }
 }
 
-impl ParseField for MultipartFile {
+impl ParseField for Upload {
     async fn parse_field(
         field: Field<'static>,
         name: &'static str,
@@ -68,7 +68,7 @@ impl ParseField for MultipartFile {
 
         let bytes = <Bytes as ParseField>::parse_field(field, name).await?;
 
-        Ok(MultipartFile {
+        Ok(Upload {
             field_name: name,
             file_name,
             content_type,

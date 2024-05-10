@@ -1,8 +1,6 @@
-1. attachment upload download
+1. controller macro: paths, methods default, refer to Spring Boot
 
-2. controller macro: paths, methods default, refer to Spring Boot
-
-3.
+2.
 ```
 #[derive(Debug)]
 pub enum WriteJsonOrFormError<T: Serialize> {
