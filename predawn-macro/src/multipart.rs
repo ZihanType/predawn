@@ -18,17 +18,17 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
     let mut struct_field_idents = Vec::new();
     let mut define_vars = Vec::new();
     let mut parse_fields = Vec::new();
-    let mut unwrap_vars = Vec::new();
+    let mut extract_vars = Vec::new();
     let mut errors = Vec::new();
 
     named
         .into_iter()
         .for_each(|field| match generate_single_field(field) {
-            Ok((struct_field, define_var, parse_field, unwrap_var)) => {
+            Ok((struct_field, define_var, parse_field, extract_var)) => {
                 struct_field_idents.push(struct_field);
                 define_vars.push(define_var);
                 parse_fields.push(parse_field);
-                unwrap_vars.push(unwrap_var);
+                extract_vars.push(extract_var);
             }
             Err(e) => errors.push(e),
         });
@@ -78,7 +78,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
                     #(#parse_fields)*
                 }
 
-                #(#unwrap_vars)*
+                #(#extract_vars)*
 
                 Ok(Self { #(#struct_field_idents),* })
             }
@@ -139,43 +139,26 @@ fn generate_single_field(
     let multipart_field = rename.unwrap_or_else(|| struct_field_ident.to_string());
 
     let define_var = quote_use! {
-        let mut #struct_field_ident = None;
+        # use core::default::Default;
+        # use predawn::extract::multipart::ParseField;
+
+        let mut #struct_field_ident = <<#ty as ParseField>::Holder as Default>::default();
     };
 
     let parse_field = quote_use! {
         # use predawn::extract::multipart::ParseField;
 
         if field.name() == Some(#multipart_field) {
-            let v = match #struct_field_ident {
-                Some(v) => {
-                    <#ty as ParseField>::parse_repeated_field(v, field, #multipart_field).await?
-                }
-                None => <#ty as ParseField>::parse_field(field, #multipart_field).await?,
-            };
-
-            #struct_field_ident = Some(v);
+            #struct_field_ident = <#ty as ParseField>::parse_field(#struct_field_ident, field, #multipart_field).await?;
             continue;
         }
     };
 
-    let unwrap_var = quote_use! {
+    let extract_var = quote_use! {
         # use predawn::extract::multipart::ParseField;
-        # use predawn::ToSchema;
-        # use predawn::response_error::MultipartError;
 
-        let #struct_field_ident = match #struct_field_ident {
-            Some(v) => v,
-            None => {
-                let e = MultipartError::MissingField { name: #multipart_field };
-
-                if <#ty as ToSchema>::REQUIRED {
-                    return Err(e);
-                }
-
-                <#ty as ParseField>::default().ok_or(e)?
-            }
-        };
+        let #struct_field_ident = <#ty as ParseField>::extract(#struct_field_ident, #multipart_field)?;
     };
 
-    Ok((struct_field_ident, define_var, parse_field, unwrap_var))
+    Ok((struct_field_ident, define_var, parse_field, extract_var))
 }

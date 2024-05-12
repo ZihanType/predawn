@@ -245,8 +245,8 @@ pub enum MultipartError {
         error: multer::Error,
     },
 
-    #[error("repeated field `{name}`")]
-    RepeatedField { name: &'static str },
+    #[error("duplicate field `{name}`")]
+    DuplicateField { name: &'static str },
 
     #[error("failed to parse field `{name}` with value {value:?} to a `{expected_type}`")]
     ParseErrorAtName {
@@ -270,6 +270,13 @@ pub enum MultipartError {
 
     #[error("missing content type for field `{name}`")]
     MissingContentType { name: &'static str },
+
+    #[error("incorrect number of fields for `{name}`: expected {expected} but actual {actual}")]
+    IncorrectNumberOfFields {
+        name: &'static str,
+        expected: usize,
+        actual: usize,
+    },
 }
 
 impl ResponseError for MultipartError {
@@ -278,12 +285,13 @@ impl ResponseError for MultipartError {
             MultipartError::InvalidMultipartContentType => StatusCode::UNSUPPORTED_MEDIA_TYPE,
             MultipartError::ByParseMultipart(e) => status_code_from_multer_error(e),
             MultipartError::ByParseField { error, .. } => status_code_from_multer_error(error),
-            MultipartError::RepeatedField { .. }
+            MultipartError::DuplicateField { .. }
             | MultipartError::ParseErrorAtName { .. }
             | MultipartError::MissingField { .. }
             | MultipartError::DeserializeJson { .. }
             | MultipartError::MissingFileName { .. }
-            | MultipartError::MissingContentType { .. } => StatusCode::BAD_REQUEST,
+            | MultipartError::MissingContentType { .. }
+            | MultipartError::IncorrectNumberOfFields { .. } => StatusCode::BAD_REQUEST,
         }
     }
 

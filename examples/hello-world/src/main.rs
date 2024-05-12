@@ -159,7 +159,7 @@ struct MultiValue {
 struct MultipartStruct {
     person: JsonField<Person>,
     sex: String,
-    files: Vec<Upload>,
+    files: [Upload; 2],
 }
 
 #[derive(Debug, thiserror::Error)]

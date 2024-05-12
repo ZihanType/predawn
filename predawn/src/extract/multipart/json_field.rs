@@ -19,13 +19,28 @@ impl<T: ToSchema> ToSchema for JsonField<T> {
 }
 
 impl<T: Send + DeserializeOwned> ParseField for JsonField<T> {
+    type Holder = Option<Self>;
+
     async fn parse_field(
+        holder: Self::Holder,
         field: Field<'static>,
         name: &'static str,
-    ) -> Result<Self, MultipartError> {
-        match crate::util::from_bytes(&<Bytes as ParseField>::parse_field(field, name).await?) {
-            Ok(o) => Ok(JsonField(o)),
+    ) -> Result<Self::Holder, MultipartError> {
+        if holder.is_some() {
+            return Err(MultipartError::DuplicateField { name });
+        }
+
+        let bytes = <Bytes as ParseField>::parse_field(None, field, name)
+            .await? // <- `Ok` here must be `Some`
+            .expect("unreachable: when it is `Ok`, it must be `Some`");
+
+        match crate::util::from_bytes(&bytes) {
+            Ok(o) => Ok(Some(JsonField(o))),
             Err(e) => Err(MultipartError::DeserializeJson { name, error: e }),
         }
+    }
+
+    fn extract(holder: Self::Holder, name: &'static str) -> Result<Self, MultipartError> {
+        holder.ok_or(MultipartError::MissingField { name })
     }
 }

@@ -1,10 +1,5 @@
-```
-#[derive(Debug)]
-pub enum WriteJsonOrFormError<T: Serialize> {
-    WriteJsonError(<Json<T> as IntoResponse>::Error),
-    WriteFormError(WriteFormError),
-}
-```
+1. component_id
+2. `Download` schema title
 
 preserve_order order json
 
