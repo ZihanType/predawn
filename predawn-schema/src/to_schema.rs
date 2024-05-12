@@ -17,10 +17,11 @@ pub trait ToSchema {
             reference: format!("#/components/schemas/{}", schema_id),
         };
 
-        components
-            .schemas
-            .entry(schema_id)
-            .or_insert_with(|| ReferenceOr::Item(Self::schema()));
+        if !components.schemas.contains_key(&schema_id) {
+            components
+                .schemas
+                .insert(schema_id, ReferenceOr::Item(Self::schema()));
+        }
 
         reference
     }
