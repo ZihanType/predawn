@@ -344,18 +344,18 @@ fn status_code_from_multer_error(err: &multer::Error) -> StatusCode {
 #[derive(Debug)]
 pub enum DownloadError<T> {
     Inner(T),
-    InvalidContentDisposition { file_name: Box<str> },
+    InvalidContentDisposition { value: Box<str> },
 }
 
 impl<T: fmt::Display> fmt::Display for DownloadError<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             DownloadError::Inner(e) => fmt::Display::fmt(e, f),
-            DownloadError::InvalidContentDisposition { file_name } => {
+            DownloadError::InvalidContentDisposition { value } => {
                 write!(
                     f,
-                    "invalid `{}` header value: `attachment; filename=\"{}\"`",
-                    CONTENT_DISPOSITION, file_name
+                    "invalid `{}` header value: `{}`",
+                    CONTENT_DISPOSITION, value
                 )
             }
         }

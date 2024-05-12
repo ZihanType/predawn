@@ -16,17 +16,41 @@ use predawn_schema::ToSchema;
 use crate::response_error::DownloadError;
 
 #[derive(Debug)]
+enum DownloadType {
+    Inline,
+    Attachment,
+}
+
+impl DownloadType {
+    fn as_str(&self) -> &'static str {
+        match self {
+            DownloadType::Inline => "inline",
+            DownloadType::Attachment => "attachment",
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct Download<T> {
     data: T,
-    file_name: Option<Box<str>>,
+    ty: DownloadType,
+    file_name: Box<str>,
 }
 
 impl<T> Download<T> {
-    pub fn inline(data: T) -> Self {
-        Download {
-            data,
-            file_name: None,
+    pub fn inline<N>(data: T, file_name: N) -> Self
+    where
+        N: Into<Box<str>>,
+    {
+        fn inner_inline<T>(data: T, file_name: Box<str>) -> Download<T> {
+            Download {
+                data,
+                ty: DownloadType::Inline,
+                file_name,
+            }
         }
+
+        inner_inline(data, file_name.into())
     }
 
     pub fn attachment<N>(data: T, file_name: N) -> Self
@@ -36,7 +60,8 @@ impl<T> Download<T> {
         fn inner_attachment<T>(data: T, file_name: Box<str>) -> Download<T> {
             Download {
                 data,
-                file_name: Some(file_name),
+                ty: DownloadType::Attachment,
+                file_name,
             }
         }
 
@@ -44,17 +69,16 @@ impl<T> Download<T> {
     }
 
     fn content_disposition<E>(
-        file_name: Option<Box<str>>,
+        ty: DownloadType,
+        file_name: Box<str>,
     ) -> Result<HeaderValue, DownloadError<E>> {
-        match file_name {
-            Some(file_name) => {
-                let content_disposition = format!("attachment; filename=\"{}\"", file_name);
+        let content_disposition = format!("{}; filename=\"{}\"", ty.as_str(), file_name);
 
-                HeaderValue::from_str(&content_disposition)
-                    .map_err(|_| DownloadError::InvalidContentDisposition { file_name })
+        HeaderValue::from_str(&content_disposition).map_err(|_| {
+            DownloadError::InvalidContentDisposition {
+                value: content_disposition.into(),
             }
-            None => Ok(HeaderValue::from_static("inline")),
-        }
+        })
     }
 }
 
@@ -62,7 +86,11 @@ impl<T: IntoResponse + MediaType> IntoResponse for Download<T> {
     type Error = DownloadError<T::Error>;
 
     fn into_response(self) -> Result<Response, Self::Error> {
-        let Download { data, file_name } = self;
+        let Download {
+            data,
+            ty,
+            file_name,
+        } = self;
 
         let mut response = data.into_response().map_err(DownloadError::Inner)?;
 
@@ -75,7 +103,7 @@ impl<T: IntoResponse + MediaType> IntoResponse for Download<T> {
 
         headers.insert(
             CONTENT_DISPOSITION,
-            Self::content_disposition::<T::Error>(file_name)?,
+            Self::content_disposition::<T::Error>(ty, file_name)?,
         );
 
         Ok(response)
