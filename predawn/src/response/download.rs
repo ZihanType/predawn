@@ -89,6 +89,16 @@ impl<T: MediaType + ResponseMediaType> ApiResponse for Download<T> {
 }
 
 impl<T> ToSchema for Download<T> {
+    fn name() -> String {
+        let type_name = std::any::type_name::<Self>();
+
+        type_name
+            .find('<')
+            .map_or(type_name, |end| &type_name[..end])
+            .replace("::", ".")
+            .to_string()
+    }
+
     fn schema() -> openapi::Schema {
         crate::util::binary_schema("Download")
     }

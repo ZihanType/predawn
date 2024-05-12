@@ -9,4 +9,4 @@ mod to_schema;
 #[cfg_attr(docsrs, doc(cfg(feature = "schemars")))]
 #[cfg(feature = "schemars")]
 pub use schemars_transform::schemars_transform;
-pub use to_schema::{component_id, ToSchema};
+pub use to_schema::ToSchema;

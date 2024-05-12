@@ -1,26 +1,23 @@
-use std::any;
-
 use openapiv3::{Components, ReferenceOr, Schema};
-
-#[doc(hidden)]
-pub fn component_id<T: ?Sized>() -> String {
-    any::type_name::<T>().replace("::", ".")
-}
 
 pub trait ToSchema {
     const REQUIRED: bool = true;
 
+    fn name() -> String {
+        std::any::type_name::<Self>().replace("::", ".")
+    }
+
     fn schema_ref(components: &mut Components) -> ReferenceOr<Schema> {
-        let schema_id = component_id::<Self>();
+        let name = Self::name();
 
         let reference = ReferenceOr::Reference {
-            reference: format!("#/components/schemas/{}", schema_id),
+            reference: format!("#/components/schemas/{}", name),
         };
 
-        if !components.schemas.contains_key(&schema_id) {
+        if !components.schemas.contains_key(&name) {
             components
                 .schemas
-                .insert(schema_id, ReferenceOr::Item(Self::schema()));
+                .insert(name, ReferenceOr::Item(Self::schema()));
         }
 
         reference

@@ -423,16 +423,17 @@ fn generate_single_fn_impl<'a>(
 
     let create_operation = quote_use! {
         # use core::stringify;
+        # use std::format;
+        # use std::any::type_name;
         # use std::collections::BTreeMap;
         # use predawn::openapi::Operation;
-        # use predawn::component_id;
         # use predawn::openapi::transform_responses;
 
         let mut operation = Operation::default();
 
         #last_request_body
 
-        operation.operation_id = Some(format!("{}.{}", component_id::<#self_ty>(), stringify!(#fn_name)));
+        operation.operation_id = Some(format!("{}::{}", type_name::<#self_ty>(), stringify!(#fn_name)));
 
         #(#heads_parameters)*
         #last_parameters

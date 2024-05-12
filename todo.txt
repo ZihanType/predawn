@@ -1,5 +1,5 @@
-1. component_id
-2. `Download` schema title
+1. `ToSchema` derive macro generate schema title
+2. `Download` inline file name
 
 preserve_order order json
 
@@ -23,7 +23,7 @@ actual_type
 update references in doc comments by search `https://docs.rs`
 
 service attribute macro
-operation id
+operation id [repeated]
 Extension
 TypedHeader
 Header

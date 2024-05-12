@@ -40,7 +40,7 @@ pub use predawn_macro::{
 #[cfg_attr(docsrs, doc(cfg(feature = "schemars")))]
 #[cfg(feature = "schemars")]
 pub use predawn_schema::schemars_transform;
-pub use predawn_schema::{component_id, ToSchema};
+pub use predawn_schema::ToSchema;
 
 pub use self::to_parameters::ToParameters;
 
