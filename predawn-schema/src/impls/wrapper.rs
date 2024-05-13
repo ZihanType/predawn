@@ -1,4 +1,4 @@
-use openapiv3::Schema;
+use openapiv3::{Components, Schema};
 
 use crate::ToSchema;
 
@@ -8,8 +8,8 @@ macro_rules! wrapper_impl {
         where
             T: ToSchema
         {
-            fn schema() -> Schema {
-                T::schema()
+            fn schema(components: &mut Components) -> Schema {
+                T::schema(components)
             }
         }
     };

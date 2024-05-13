@@ -42,10 +42,10 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
     let expand = quote_use! {
         # use core::default::Default;
         # use predawn::ToSchema;
-        # use predawn::openapi::{Schema, ObjectType, SchemaData, SchemaKind, Type};
+        # use predawn::openapi::{Components, Schema, ObjectType, SchemaData, SchemaKind, Type};
 
         impl #impl_generics ToSchema for #ident #ty_generics #where_clause {
-            fn schema() -> Schema {
+            fn schema(components: &mut Components) -> Schema {
                 let mut ty = ObjectType::default();
 
                 #(#properties)*
@@ -85,8 +85,9 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
         # use predawn::ToSchema;
         # use predawn::openapi::ReferenceOr;
 
+        // TODO: add description, default, example, etc.
         #[allow(unused_mut)]
-        let mut schema = <#ty as ToSchema>::schema();
+        let mut schema = <#ty as ToSchema>::schema(components);
 
         ty.properties
             .insert(ToString::to_string(#ident), ReferenceOr::Item(Box::new(schema)));
@@ -112,7 +113,7 @@ fn generate_schema_title(name: &str, generics: &Generics) -> TokenStream {
                 let extract_title = quote_use! {
                     # use predawn::ToSchema;
 
-                    let schema = <#ty as ToSchema>::schema();
+                    let schema = <#ty as ToSchema>::schema(components);
                     let title = schema.schema_data.title.as_deref().unwrap_or("Unknown");
                 };
 

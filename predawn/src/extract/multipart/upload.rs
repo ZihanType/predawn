@@ -1,6 +1,6 @@
 use bytes::Bytes;
 use multer::Field;
-use predawn_core::openapi::Schema;
+use predawn_core::openapi::{Components, Schema};
 use predawn_schema::ToSchema;
 
 use super::ParseField;
@@ -45,7 +45,7 @@ impl Upload {
 }
 
 impl ToSchema for Upload {
-    fn schema() -> Schema {
+    fn schema(_: &mut Components) -> Schema {
         crate::util::binary_schema("Upload")
     }
 }

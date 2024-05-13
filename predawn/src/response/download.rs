@@ -127,7 +127,7 @@ impl<T> ToSchema for Download<T> {
             .to_string()
     }
 
-    fn schema() -> openapi::Schema {
+    fn schema(_: &mut Components) -> openapi::Schema {
         crate::util::binary_schema("Download")
     }
 }

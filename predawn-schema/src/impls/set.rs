@@ -1,4 +1,4 @@
-use openapiv3::{ArrayType, ReferenceOr, Schema, SchemaData, SchemaKind, Type};
+use openapiv3::{ArrayType, Components, Schema, SchemaData, SchemaKind, Type};
 
 use crate::ToSchema;
 
@@ -8,13 +8,13 @@ macro_rules! set_impl {
         where
             T: ToSchema
         {
-            fn schema() -> Schema {
-                let elem = T::schema();
-                let title = elem.schema_data.title.as_deref().unwrap_or("Unknown");
+            fn schema(components: &mut Components) -> Schema {
+                let schema = T::schema(components);
+                let title = schema.schema_data.title.as_deref().unwrap_or("Unknown");
                 let title = format!("Set<{}>", title);
 
                 let ty = ArrayType {
-                    items: Some(ReferenceOr::Item(Box::new(elem))),
+                    items: Some(T::schema_ref_box(components)),
                     min_items: None,
                     max_items: None,
                     unique_items: true,

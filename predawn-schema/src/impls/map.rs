@@ -1,5 +1,5 @@
 use openapiv3::{
-    AdditionalProperties, ObjectType, ReferenceOr, Schema, SchemaData, SchemaKind, Type,
+    AdditionalProperties, Components, ObjectType, Schema, SchemaData, SchemaKind, Type,
 };
 
 use crate::ToSchema;
@@ -10,13 +10,13 @@ macro_rules! map_impl {
         where
             V: ToSchema
         {
-            fn schema() -> Schema {
-                let value = V::schema();
-                let title = value.schema_data.title.as_deref().unwrap_or("Unknown");
+            fn schema(components: &mut Components) -> Schema {
+                let schema = V::schema(components);
+                let title = schema.schema_data.title.as_deref().unwrap_or("Unknown");
                 let title = format!("Map<String, {}>", title);
 
                 let ty = ObjectType {
-                    additional_properties: Some(AdditionalProperties::Schema(Box::new(ReferenceOr::Item(value)))),
+                    additional_properties: Some(AdditionalProperties::Schema(Box::new(V::schema_ref(components)))),
                     ..Default::default()
                 };
 

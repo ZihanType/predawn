@@ -18,8 +18,8 @@ use macro_v::macro_v;
 macro_rules! forward_impl {
     ($left:ty => $right:ty) => {
         impl $crate::ToSchema for $left {
-            fn schema() -> ::openapiv3::Schema {
-                <$right as $crate::ToSchema>::schema()
+            fn schema(components: &mut ::openapiv3::Components) -> ::openapiv3::Schema {
+                <$right as $crate::ToSchema>::schema(components)
             }
         }
     };

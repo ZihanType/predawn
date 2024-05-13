@@ -1,6 +1,9 @@
 use bytes::Bytes;
 use multer::Field;
-use predawn_core::{impl_deref, openapi::Schema};
+use predawn_core::{
+    impl_deref,
+    openapi::{Components, Schema},
+};
 use predawn_schema::ToSchema;
 use serde::de::DeserializeOwned;
 
@@ -13,8 +16,8 @@ pub struct JsonField<T>(pub T);
 impl_deref!(JsonField);
 
 impl<T: ToSchema> ToSchema for JsonField<T> {
-    fn schema() -> Schema {
-        T::schema()
+    fn schema(components: &mut Components) -> Schema {
+        T::schema(components)
     }
 }
 

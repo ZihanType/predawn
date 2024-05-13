@@ -1,5 +1,5 @@
 use openapiv3::{
-    ArrayType, BooleanType, IntegerType, NumberType, ReferenceOr, Schema, SchemaData, SchemaKind,
+    ArrayType, BooleanType, Components, IntegerType, NumberType, Schema, SchemaData, SchemaKind,
     StringType, Type, VariantOrUnknownOrEmpty,
 };
 use paste::paste;
@@ -7,7 +7,7 @@ use paste::paste;
 use crate::ToSchema;
 
 impl ToSchema for bool {
-    fn schema() -> Schema {
+    fn schema(_: &mut Components) -> Schema {
         Schema {
             schema_data: SchemaData {
                 title: Some("bool".to_string()),
@@ -19,7 +19,7 @@ impl ToSchema for bool {
 }
 
 impl ToSchema for char {
-    fn schema() -> Schema {
+    fn schema(_: &mut Components) -> Schema {
         Schema {
             schema_data: SchemaData {
                 title: Some("char".to_string()),
@@ -37,7 +37,7 @@ impl ToSchema for char {
 macro_rules! simple_impl {
     ($ty:ty, $ty_variant:ident, $format:literal) => {
         impl ToSchema for $ty {
-            fn schema() -> Schema {
+            fn schema(_: &mut Components) -> Schema {
                 Schema {
                     schema_data: SchemaData {
                         title: Some(stringify!($ty).to_string()),
@@ -67,7 +67,7 @@ simple_impl!(isize, Integer, "int");
 macro_rules! unsigned_impl {
     ($ty:ty, $format:literal) => {
         impl ToSchema for $ty {
-            fn schema() -> Schema {
+            fn schema(_: &mut Components) -> Schema {
                 Schema {
                     schema_data: SchemaData {
                         title: Some(stringify!($ty).to_string()),
@@ -92,13 +92,13 @@ unsigned_impl!(u128, "uint128");
 unsigned_impl!(usize, "uint");
 
 impl<T: ToSchema, const N: usize> ToSchema for [T; N] {
-    fn schema() -> Schema {
-        let schema = T::schema();
+    fn schema(components: &mut Components) -> Schema {
+        let schema = T::schema(components);
         let title = schema.schema_data.title.as_deref().unwrap_or("Unknown");
         let title = format!("Array{}<{}>", N, title);
 
         let ty = ArrayType {
-            items: Some(ReferenceOr::Item(Box::new(schema))),
+            items: Some(T::schema_ref_box(components)),
             min_items: Some(N),
             max_items: Some(N),
             unique_items: false,

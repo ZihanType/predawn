@@ -4,7 +4,7 @@ use std::num::{
 };
 
 use openapiv3::{
-    AnySchema, IntegerType, ReferenceOr, Schema, SchemaData, SchemaKind, Type,
+    AnySchema, Components, IntegerType, ReferenceOr, Schema, SchemaData, SchemaKind, Type,
     VariantOrUnknownOrEmpty,
 };
 
@@ -13,7 +13,7 @@ use crate::ToSchema;
 macro_rules! nonzero_signed_impl {
     ($ty:ty, $format:literal) => {
         impl ToSchema for $ty {
-            fn schema() -> Schema {
+            fn schema(_: &mut Components) -> Schema {
                 Schema {
                     schema_data: SchemaData {
                         title: Some(stringify!($ty).to_string()),
@@ -49,7 +49,7 @@ nonzero_signed_impl!(NonZeroIsize, "int");
 macro_rules! nonzero_unsigned_impl {
     ($ty:ty, $format:literal) => {
         impl ToSchema for $ty {
-            fn schema() -> Schema {
+            fn schema(_: &mut Components) -> Schema {
                 Schema {
                     schema_data: SchemaData {
                         title: Some(stringify!($ty).to_string()),

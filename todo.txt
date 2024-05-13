@@ -1,4 +1,4 @@
-1. `ToSchema::schema` add `components` parameter
+1. `Controller` `ReferenceOr<PathItem>`
 
 preserve_order order json
 
