@@ -1,5 +1,4 @@
-1. `ToSchema` derive macro generate schema title
-2. `Download` inline file name
+1. `ToSchema::schema` add `components` parameter
 
 preserve_order order json
 
