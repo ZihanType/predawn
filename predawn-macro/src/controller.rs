@@ -87,14 +87,14 @@ pub(crate) fn generate(impl_attr: ImplAttr, mut item_impl: ItemImpl) -> syn::Res
         # use predawn::__internal::http::Method;
         # use predawn::__internal::indexmap::IndexMap;
         # use predawn::__internal::rudi::Context;
-        # use predawn::openapi::{ReferenceOr, PathItem, Components};
+        # use predawn::openapi::{PathItem, Components};
 
         impl Controller for #self_ty {
             fn insert_routes(
                 self: Arc<Self>,
                 cx: &mut Context,
                 route_table: &mut BTreeMap<NormalizedPath, IndexMap<Method, DynHandler>>,
-                paths: &mut BTreeMap<NormalizedPath, ReferenceOr<PathItem>>,
+                paths: &mut BTreeMap<NormalizedPath, PathItem>,
                 components: &mut Components,
             ) {
                 let this = self;
@@ -373,14 +373,9 @@ fn generate_single_fn_impl<'a>(
             let insert_operation_into_single_path = quote_use! {
                 # use core::default::Default;
                 # use std::clone::Clone;
-                # use predawn::openapi::ReferenceOr;
 
-                if let ReferenceOr::Item(path_item) = paths
-                    .entry(Clone::clone(&path))
-                    .or_insert_with(|| ReferenceOr::Item(Default::default()))
-                {
-                    #(#insert_operation_into_multi_method)*
-                }
+                let path_item = paths.entry(Clone::clone(&path)).or_default();
+                #(#insert_operation_into_multi_method)*
             };
 
             let insert_fn_into_single_path = quote! {

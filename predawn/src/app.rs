@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, io, net::SocketAddr, sync::Arc};
 
 use config::ConfigError;
 use predawn_core::{
-    openapi::{self, Components, Info, OpenAPI, Paths},
+    openapi::{self, Components, Info, OpenAPI, Paths, ReferenceOr},
     request::BodyLimit,
 };
 use rudi::Context;
@@ -112,7 +112,7 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
 
     let paths = paths
         .into_iter()
-        .map(|(k, v)| (root_path.clone().join(k).into(), v))
+        .map(|(k, v)| (root_path.clone().join(k).into(), ReferenceOr::Item(v)))
         .collect();
 
     let api = OpenAPI {

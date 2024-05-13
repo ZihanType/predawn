@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, sync::Arc};
 
 use http::Method;
 use indexmap::IndexMap;
-use predawn_core::openapi::{Components, PathItem, ReferenceOr};
+use predawn_core::openapi::{Components, PathItem};
 use rudi::Context;
 
 use crate::{handler::DynHandler, normalized_path::NormalizedPath};
@@ -13,7 +13,7 @@ pub trait Controller {
         self: Arc<Self>,
         cx: &'a mut Context,
         route_table: &'a mut BTreeMap<NormalizedPath, IndexMap<Method, DynHandler>>,
-        paths: &'a mut BTreeMap<NormalizedPath, ReferenceOr<PathItem>>,
+        paths: &'a mut BTreeMap<NormalizedPath, PathItem>,
         components: &'a mut Components,
     );
 }
