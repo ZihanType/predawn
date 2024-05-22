@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use predawn::{
     error::Error, handler::Handler, middleware::Middleware, request::Request, response::Response,
 };
@@ -35,7 +37,7 @@ pub struct SeaOrmHandler<H> {
 
 impl<H: Handler> Handler for SeaOrmHandler<H> {
     async fn call(&self, req: Request) -> Result<Response, Error> {
-        let data_sources = self.data_sources.clone();
+        let data_sources = Arc::new(self.data_sources.clone());
 
         let result = DATA_SOURCES
             .scope(data_sources.clone(), async { self.inner.call(req).await })

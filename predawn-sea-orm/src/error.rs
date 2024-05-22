@@ -17,10 +17,12 @@ pub enum Error {
 
     #[error("not set data sources in the current context")]
     NotSetDataSourcesError,
-    #[error("data source `{name}` has no transaction to commit")]
-    NoTransactionToCommit { name: Arc<str> },
-    #[error("data source `{name}` has no transaction to rollback")]
-    NoTransactionToRollback { name: Arc<str> },
+
+    #[error("data source `{name}` no transactions to commit")]
+    NoTransactionsToCommit { name: Arc<str> },
+
+    #[error("data source `{name}` no transactions to rollback")]
+    NoTransactionsToRollback { name: Arc<str> },
 }
 
 impl ResponseError for Error {

@@ -9,7 +9,7 @@ mod transaction;
 pub(crate) const DEFAULT_DATA_SOURCE_NAME: &str = "default";
 
 tokio::task_local! {
-    pub(crate) static DATA_SOURCES: DataSources;
+    pub(crate) static DATA_SOURCES: std::sync::Arc<DataSources>;
 }
 
 pub use self::{

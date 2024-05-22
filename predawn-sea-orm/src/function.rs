@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{DataSources, Error, Transaction, DATA_SOURCES, DEFAULT_DATA_SOURCE_NAME};
 
 pub async fn default_txn() -> Result<Transaction, Error> {
@@ -20,8 +22,8 @@ pub async fn rollback(name: &str) -> Result<(), Error> {
     data_sources()?.rollback(name).await
 }
 
-pub fn data_sources() -> Result<DataSources, Error> {
+pub fn data_sources() -> Result<Arc<DataSources>, Error> {
     DATA_SOURCES
-        .try_with(DataSources::clone)
+        .try_with(Arc::clone)
         .map_err(|_| Error::NotSetDataSourcesError)
 }

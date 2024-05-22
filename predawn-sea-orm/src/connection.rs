@@ -4,7 +4,7 @@ use sea_orm::{DatabaseConnection, TransactionTrait};
 
 use crate::{Error, Transaction};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Connection {
     name: Arc<str>,
     conn: DatabaseConnection,
@@ -36,7 +36,7 @@ impl Connection {
 
     pub async fn commit(&mut self) -> Result<(), Error> {
         let Some(Transaction(txn)) = self.transactions.pop() else {
-            return Err(Error::NoTransactionToCommit {
+            return Err(Error::NoTransactionsToCommit {
                 name: self.name.clone(),
             });
         };
@@ -65,7 +65,7 @@ impl Connection {
 
     pub async fn rollback(&mut self) -> Result<(), Error> {
         let Some(Transaction(txn)) = self.transactions.pop() else {
-            return Err(Error::NoTransactionToRollback {
+            return Err(Error::NoTransactionsToRollback {
                 name: self.name.clone(),
             });
         };

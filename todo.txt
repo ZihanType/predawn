@@ -1,5 +1,29 @@
+1.
+#[derive(Debug)]
+pub struct Connection {
+    name: Arc<str>,
+    conn: DatabaseConnection,
+    transactions: Vec<Option<Transaction>>,
+    current_transaction: usize,
+}
+
+usize::MAX 表示没有事务
+
+嵌套事务
+第一个事务由 conn 创建，后续事务由 current 事务创建
+
+独立事务 ?
+
+2.
+ToSchema 没有修改属性的schema时，调用属性的 schema_ref_box 方法
+
+3.
+数据库连接参数
+
 Tag
 SecuritySchema
+
+predawn schema macro
 
 controller: condition, skip
 

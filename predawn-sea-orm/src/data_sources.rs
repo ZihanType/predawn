@@ -7,7 +7,7 @@ use sea_orm::{Database, DatabaseConnection, DbErr};
 use crate::{Connection, DataSourcesConfig, Error, Transaction, DEFAULT_DATA_SOURCE_NAME};
 
 #[derive(Debug, Default, Clone)]
-pub struct DataSources(Arc<HashMap<Arc<str>, Connection>>);
+pub struct DataSources(HashMap<Arc<str>, Connection>);
 
 impl DataSources {
     pub async fn with_default(conn: DatabaseConnection) -> Self {
@@ -19,7 +19,7 @@ impl DataSources {
             .insert_async(name.clone(), Connection::new(name, conn))
             .await;
 
-        Self(Arc::new(map))
+        Self(map)
     }
 
     pub async fn insert<N: Into<Arc<str>>>(
@@ -45,7 +45,7 @@ macro_rules! single_operation {
     ($ident:ident, $ty:ty) => {
         pub async fn $ident(&self, name: &str) -> Result<$ty, Error> {
             match self.0.get_async(name).await {
-                Some(mut entry) => Ok(entry.get_mut().$ident().await?),
+                Some(mut entry) => entry.get_mut().$ident().await,
                 None => Err(Error::NotFoundDataSourceError { name: name.into() }),
             }
         }
