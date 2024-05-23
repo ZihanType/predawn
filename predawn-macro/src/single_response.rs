@@ -9,6 +9,8 @@ use syn::{
     Expr, ExprLit, Field, Fields, FieldsNamed, FieldsUnnamed, Ident, Lit, LitInt, Member, Type,
 };
 
+use crate::util;
+
 #[derive(FromAttr, Default)]
 #[attribute(idents = [single_response])]
 struct StructAttr {
@@ -34,7 +36,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         Err(AttrsValue { value: e, .. }) => return Err(e),
     };
 
-    let status_code_value = crate::util::extract_status_code_value(status_code)?;
+    let status_code_value = util::extract_status_code_value(status_code)?;
 
     let fields = match data {
         Data::Struct(DataStruct { fields, .. }) => fields,

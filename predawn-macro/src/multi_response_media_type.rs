@@ -3,6 +3,8 @@ use proc_macro2::TokenStream;
 use quote_use::quote_use;
 use syn::{spanned::Spanned, DeriveInput, Ident, LitInt, Type, Variant};
 
+use crate::util;
+
 #[derive(FromAttr)]
 #[attribute(idents = [multi_response_media_type])]
 struct EnumAttr {
@@ -34,9 +36,9 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
             Err(AttrsValue { value: e, .. }) => return Err(e),
         };
 
-    let status_code_value = crate::util::extract_status_code_value(status_code)?;
+    let status_code_value = util::extract_status_code_value(status_code)?;
 
-    let variants = crate::util::extract_variants(data, "MultiRequestMediaType")?;
+    let variants = util::extract_variants(data, "MultiRequestMediaType")?;
 
     let variants_size = variants.len();
     let mut content_bodies = Vec::new();
@@ -133,7 +135,7 @@ fn handle_single_variant<'a>(
         ..
     } = variant;
 
-    let ty = crate::util::extract_single_unnamed_field_type_from_variant(fields, variant_span)?;
+    let ty = util::extract_single_unnamed_field_type_from_variant(fields, variant_span)?;
 
     let content_body = quote_use! {
         # use std::string::ToString;

@@ -3,7 +3,7 @@ use quote::quote;
 use quote_use::quote_use;
 use syn::{DeriveInput, Field, Ident};
 
-use crate::serde_attr::SerdeAttr;
+use crate::{serde_attr::SerdeAttr, util};
 
 pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
     let DeriveInput {
@@ -13,7 +13,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         ..
     } = input;
 
-    let named = crate::util::extract_named_struct_fields(data, "Multipart")?;
+    let named = util::extract_named_struct_fields(data, "Multipart")?;
 
     let mut struct_field_idents = Vec::new();
     let mut define_vars = Vec::new();

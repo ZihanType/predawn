@@ -7,7 +7,31 @@ use syn::{
     Path, Receiver, ReturnType, Type,
 };
 
-use crate::method::{Method, ENUM_METHODS};
+use crate::{
+    method::{Method, ENUM_METHODS},
+    util,
+};
+
+#[derive(FromAttr)]
+#[attribute(idents = [controller])]
+pub(crate) struct ImplAttr {
+    paths: Vec<Expr>,
+    middleware: Option<Path>,
+    tags: Vec<Type>,
+}
+
+#[derive(FromAttr)]
+#[attribute(idents = [handler])]
+struct ImplFnAttr {
+    paths: Vec<Expr>,
+    methods: Vec<Method>,
+    middleware: Option<Path>,
+    tags: Vec<Type>,
+}
+
+fn default_paths() -> Vec<Expr> {
+    vec![parse_quote!("")]
+}
 
 pub(crate) fn generate(impl_attr: ImplAttr, mut item_impl: ItemImpl) -> syn::Result<TokenStream> {
     if let Some((_, trait_name, _)) = item_impl.trait_ {
@@ -17,7 +41,11 @@ pub(crate) fn generate(impl_attr: ImplAttr, mut item_impl: ItemImpl) -> syn::Res
         ));
     }
 
-    let ImplAttr { paths, middleware } = impl_attr;
+    let ImplAttr {
+        paths,
+        middleware,
+        tags,
+    } = impl_attr;
 
     let paths = if !paths.is_empty() {
         paths
@@ -45,7 +73,7 @@ pub(crate) fn generate(impl_attr: ImplAttr, mut item_impl: ItemImpl) -> syn::Res
             }
         };
 
-        match generate_single_fn_impl(&paths, middleware.as_ref(), self_ty, f, fn_attr) {
+        match generate_single_fn_impl(&paths, middleware.as_ref(), &tags, self_ty, f, fn_attr) {
             Ok(insert_routes_impl) => insert_routes_impls.push(insert_routes_impl),
             Err(e) => errors.push(e),
         }
@@ -87,7 +115,7 @@ pub(crate) fn generate(impl_attr: ImplAttr, mut item_impl: ItemImpl) -> syn::Res
         # use predawn::__internal::http::Method;
         # use predawn::__internal::indexmap::IndexMap;
         # use predawn::__internal::rudi::Context;
-        # use predawn::openapi::{PathItem, Components};
+        # use predawn::openapi::{PathItem, Components, Tag};
 
         impl Controller for #self_ty {
             fn insert_routes(
@@ -96,6 +124,7 @@ pub(crate) fn generate(impl_attr: ImplAttr, mut item_impl: ItemImpl) -> syn::Res
                 route_table: &mut BTreeMap<NormalizedPath, IndexMap<Method, DynHandler>>,
                 paths: &mut BTreeMap<NormalizedPath, PathItem>,
                 components: &mut Components,
+                tags: &mut BTreeMap<&'static str, (&'static str, Tag)>,
             ) {
                 let this = self;
 
@@ -114,6 +143,7 @@ pub(crate) fn generate(impl_attr: ImplAttr, mut item_impl: ItemImpl) -> syn::Res
 fn generate_single_fn_impl<'a>(
     controller_paths: &'a [Expr],
     controller_middeleware: Option<&'a Path>,
+    controller_tags: &'a [Type],
     self_ty: &'a Type,
     f: &'a ImplItemFn,
     fn_attr: ImplFnAttr,
@@ -125,7 +155,8 @@ fn generate_single_fn_impl<'a>(
     let ImplFnAttr {
         paths,
         methods,
-        middleware,
+        middleware: method_middleware,
+        tags: method_tags,
     } = fn_attr;
 
     let method_paths = if !paths.is_empty() {
@@ -288,27 +319,68 @@ fn generate_single_fn_impl<'a>(
         #last_from_request
     };
 
-    let add_controller_middleware = match controller_middeleware {
-        None => TokenStream::new(),
-        Some(middleware) => {
-            quote_use! {
-                # use predawn::handler::assert_handler;
+    let add_controller_middleware = controller_middeleware.map(|middleware| {
+        quote_use! {
+            # use predawn::handler::assert_handler;
 
-                let handler = #middleware(cx, handler);
-                assert_handler(&handler);
-            }
+            let handler = #middleware(cx, handler);
+            assert_handler(&handler);
         }
-    };
+    });
 
-    let add_method_middleware = match middleware {
-        None => TokenStream::new(),
-        Some(middleware) => {
+    let add_method_middleware = method_middleware.map(|middleware| {
+        quote_use! {
+            # use predawn::handler::assert_handler;
+
+            let handler = #middleware(cx, handler);
+            assert_handler(&handler);
+        }
+    });
+
+    let (summary, description) = util::extract_summary_and_description(&f.attrs);
+
+    let add_summary = util::generate_optional_lit_str(&summary).map(|summary| {
+        quote! {
+            operation.summary = #summary;
+        }
+    });
+
+    let add_description = util::generate_optional_lit_str(&description).map(|description| {
+        quote! {
+            operation.description = #description;
+        }
+    });
+
+    let add_tags = if controller_tags.is_empty() && method_tags.is_empty() {
+        TokenStream::new()
+    } else {
+        let insert_tags = controller_tags.iter().chain(method_tags.iter()).map(|ty| {
             quote_use! {
-                # use predawn::handler::assert_handler;
+                # use core::any::type_name;
+                # use std::string::ToString;
+                # use predawn::Tag;
 
-                let handler = #middleware(cx, handler);
-                assert_handler(&handler);
+                let tag_type_name = type_name::<#ty>();
+                let tag_name = <#ty as Tag>::name();
+
+                if !tags.contains_key(tag_type_name) {
+                    tags.insert(
+                        tag_type_name,
+                        (tag_name, <#ty as Tag>::create())
+                    );
+                }
+
+                op_tags.insert(ToString::to_string(tag_name));
             }
+        });
+
+        quote_use! {
+            # use std::collections::BTreeSet;
+            # use std::vec::Vec;
+
+            let mut op_tags = BTreeSet::new();
+            #(#insert_tags)*
+            operation.tags.extend(op_tags);
         }
     };
 
@@ -426,9 +498,14 @@ fn generate_single_fn_impl<'a>(
 
         let mut operation = Operation::default();
 
-        #last_request_body
+        #add_summary
+        #add_description
+
+        #add_tags
 
         operation.operation_id = Some(format!("{}::{}", type_name::<#self_ty>(), stringify!(#fn_name)));
+
+        #last_request_body
 
         #(#heads_parameters)*
         #last_parameters
@@ -455,26 +532,4 @@ fn generate_single_fn_impl<'a>(
     };
 
     Ok(expand)
-}
-
-#[derive(FromAttr)]
-#[attribute(idents = [controller])]
-pub(crate) struct ImplAttr {
-    paths: Vec<Expr>,
-
-    middleware: Option<Path>,
-}
-
-#[derive(FromAttr)]
-#[attribute(idents = [handler])]
-struct ImplFnAttr {
-    paths: Vec<Expr>,
-
-    methods: Vec<Method>,
-
-    middleware: Option<Path>,
-}
-
-fn default_paths() -> Vec<Expr> {
-    vec![parse_quote!("")]
 }

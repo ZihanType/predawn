@@ -6,6 +6,8 @@ use proc_macro2::TokenStream;
 use quote_use::quote_use;
 use syn::{spanned::Spanned, Attribute, DeriveInput, Expr, ExprLit, Ident, Lit, Type, Variant};
 
+use crate::util;
+
 #[derive(FromAttr)]
 #[attribute(idents = [multi_response])]
 struct EnumAttr {
@@ -36,7 +38,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         Err(AttrsValue { value: e, .. }) => return Err(e),
     };
 
-    let variants = crate::util::extract_variants(data, "MultiResponse")?;
+    let variants = util::extract_variants(data, "MultiResponse")?;
 
     let mut status_codes = HashSet::new();
     let mut responses_bodies = Vec::new();
@@ -125,7 +127,7 @@ fn handle_single_variant<'a>(
         return Err(e);
     };
 
-    let ty = crate::util::extract_single_unnamed_field_type_from_variant(fields, variant_span)?;
+    let ty = util::extract_single_unnamed_field_type_from_variant(fields, variant_span)?;
 
     let responses_body = quote_use! {
         # use predawn::SingleResponse;

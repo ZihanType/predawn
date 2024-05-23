@@ -16,6 +16,10 @@ pub struct JsonField<T>(pub T);
 impl_deref!(JsonField);
 
 impl<T: ToSchema> ToSchema for JsonField<T> {
+    fn name() -> String {
+        T::name()
+    }
+
     fn schema(components: &mut Components) -> Schema {
         T::schema(components)
     }

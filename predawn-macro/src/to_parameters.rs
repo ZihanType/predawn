@@ -1,8 +1,9 @@
 use proc_macro2::TokenStream;
+use quote::quote;
 use quote_use::quote_use;
 use syn::{DeriveInput, Field};
 
-use crate::serde_attr::SerdeAttr;
+use crate::{serde_attr::SerdeAttr, util};
 
 pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
     let DeriveInput {
@@ -12,7 +13,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         ..
     } = input;
 
-    let named = crate::util::extract_named_struct_fields(data, "ToParameters")?;
+    let named = util::extract_named_struct_fields(data, "ToParameters")?;
 
     let mut parameter_impls = Vec::new();
     let mut errors = Vec::new();
@@ -66,6 +67,10 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
             .to_string()
     });
 
+    let description = util::extract_description(&attrs);
+    let description = util::generate_optional_lit_str(&description)
+        .unwrap_or_else(|| quote!(::core::option::Option::None));
+
     let expand = quote_use! {
         # use core::default::Default;
         # use std::string::ToString;
@@ -74,7 +79,7 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
 
         ParameterData {
             name: ToString::to_string(#ident),
-            description: Default::default(),
+            description: #description,
             required: <#ty as ToSchema>::REQUIRED,
             deprecated: Default::default(),
             format: ParameterSchemaOrContent::Schema(<#ty as ToSchema>::schema_ref(components)),

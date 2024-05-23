@@ -99,21 +99,53 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
     let mut route_table = BTreeMap::new();
     let mut paths = BTreeMap::new();
     let mut components = Components::default();
+    let mut tags = BTreeMap::new();
 
     cx.resolve_by_type_async::<Arc<dyn Controller>>()
         .await
         .into_iter()
         .for_each(|c| {
-            c.insert_routes(&mut cx, &mut route_table, &mut paths, &mut components);
+            c.insert_routes(
+                &mut cx,
+                &mut route_table,
+                &mut paths,
+                &mut components,
+                &mut tags,
+            );
         });
 
     let info = H::openapi_info(&mut cx);
+
     let servers = H::openapi_servers(&mut cx);
 
     let paths = paths
         .into_iter()
         .map(|(k, v)| (root_path.clone().join(k).into(), ReferenceOr::Item(v)))
         .collect();
+
+    let mut tag_name_to_type_names: BTreeMap<_, Vec<_>> = BTreeMap::new();
+    let mut oai_tags = Vec::new();
+
+    for (tag_type_name, (tag_name, tag)) in tags {
+        tag_name_to_type_names
+            .entry(tag_name)
+            .or_default()
+            .push(tag_type_name);
+
+        oai_tags.push(tag);
+    }
+
+    // retains only the tags with the same name
+    tag_name_to_type_names.retain(|_, v| v.len() > 1);
+
+    // if tag_name_to_type_names is not empty, it should panic
+    // because it means that there are multiple tags with the same name
+    if !tag_name_to_type_names.is_empty() {
+        panic!(
+            "multiple tags with the same name: {:#?}",
+            tag_name_to_type_names
+        );
+    }
 
     let api = OpenAPI {
         openapi: "3.0.0".to_string(),
@@ -124,6 +156,7 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
             ..Default::default()
         },
         components: Some(components),
+        tags: oai_tags,
         ..Default::default()
     };
 

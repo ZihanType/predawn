@@ -4,6 +4,8 @@ use quote::quote;
 use quote_use::quote_use;
 use syn::{spanned::Spanned, DeriveInput, Ident, Type, Variant};
 
+use crate::util;
+
 #[derive(FromAttr)]
 #[attribute(idents = [multi_request_media_type])]
 struct EnumAttr {
@@ -34,7 +36,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         Err(AttrsValue { value: e, .. }) => return Err(e),
     };
 
-    let variants = crate::util::extract_variants(data, "MultiRequestMediaType")?;
+    let variants = util::extract_variants(data, "MultiRequestMediaType")?;
 
     let variants_size = variants.len();
     let mut media_type_exprs = Vec::new();
@@ -142,7 +144,7 @@ fn handle_single_variant<'a>(
         ..
     } = variant;
 
-    let ty = crate::util::extract_single_unnamed_field_type_from_variant(fields, variant_span)?;
+    let ty = util::extract_single_unnamed_field_type_from_variant(fields, variant_span)?;
 
     let media_type_expr = quote_use! {
         # use predawn::media_type::MediaType;

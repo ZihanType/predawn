@@ -22,7 +22,7 @@ pub mod response_error;
 pub mod route;
 pub mod server;
 pub mod test_client;
-mod to_parameters;
+mod traits;
 pub(crate) mod util;
 
 pub use predawn_core::{
@@ -34,7 +34,7 @@ pub use predawn_core::{
 #[cfg_attr(docsrs, doc(cfg(feature = "macro")))]
 #[cfg(feature = "macro")]
 pub use predawn_macro::{
-    controller, MultiRequestMediaType, MultiResponse, MultiResponseMediaType, SingleResponse,
+    controller, MultiRequestMediaType, MultiResponse, MultiResponseMediaType, SingleResponse, Tag,
     ToParameters, ToSchema,
 };
 #[cfg_attr(docsrs, doc(cfg(feature = "schemars")))]
@@ -42,7 +42,7 @@ pub use predawn_macro::{
 pub use predawn_schema::schemars_transform;
 pub use predawn_schema::ToSchema;
 
-pub use self::to_parameters::ToParameters;
+pub use self::traits::{Tag, ToParameters};
 
 #[doc(hidden)]
 pub mod __internal {

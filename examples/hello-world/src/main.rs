@@ -13,7 +13,7 @@ use predawn::{
     payload::{Form, Json},
     response::Download,
     response_error::ResponseError,
-    ToParameters, ToSchema,
+    Tag, ToParameters, ToSchema,
 };
 use rudi::{Context, Singleton};
 use serde::{Deserialize, Serialize};
@@ -49,12 +49,28 @@ async fn main() {
 #[Singleton]
 pub struct MyController {}
 
-#[controller]
+/// This is a controller.
+#[derive(Tag)]
+#[tag(rename = "Controller Tag")]
+struct Controller;
+
+/// Hello
+#[derive(Tag)]
+struct Hello;
+
+#[controller(tags = [Controller])]
 impl MyController {
+    /// no argument, no return
+    ///
+    /// # Example
+    ///
+    /// ```shell
+    /// curl http://localhost:9612/no_arg
+    /// ```
     #[handler(paths = ["/no_arg"], methods = [GET])]
     async fn no_arg(&self) {}
 
-    #[handler(methods = [GET, POST, PUT], middleware = add_middlewares)]
+    #[handler(methods = [GET, POST, PUT], middleware = add_middlewares, tags = [Hello])]
     async fn hello(&self, name: String) -> Result<String, MyError> {
         Ok(format!("hello, {}", name))
     }
@@ -143,14 +159,18 @@ fn CreateMiddleware() -> Tracing {
     Tracing
 }
 
+/// A person.
 #[derive(Debug, Serialize, Deserialize, ToSchema, ToParameters, Multipart)]
 struct Person {
+    /// The name of the person.
     name: Option<String>,
+    /// The age of the person.
     age: u16,
 }
 
 #[derive(Serialize, Deserialize, ToSchema, ToParameters)]
 struct MultiValue {
+    /// value
     #[serde(rename = "value")]
     values: Vec<u16>,
 }

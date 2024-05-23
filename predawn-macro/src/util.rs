@@ -1,8 +1,10 @@
 use http::StatusCode;
-use proc_macro2::Span;
+use proc_macro2::{Span, TokenStream};
+use quote::quote;
 use syn::{
-    punctuated::Punctuated, spanned::Spanned, Data, DataEnum, DataStruct, DataUnion, Field, Fields,
-    FieldsNamed, FieldsUnnamed, LitInt, Token, Type, Variant,
+    punctuated::Punctuated, spanned::Spanned, Attribute, Data, DataEnum, DataStruct, DataUnion,
+    Expr, ExprLit, Field, Fields, FieldsNamed, FieldsUnnamed, Lit, LitInt, Meta, MetaNameValue,
+    Token, Type, Variant,
 };
 
 pub(crate) fn extract_variants(
@@ -117,4 +119,59 @@ pub(crate) fn extract_status_code_value(status_code: Option<LitInt>) -> syn::Res
     };
 
     Ok(status_code_value)
+}
+
+pub(crate) fn extract_description(attrs: &[Attribute]) -> String {
+    let mut docs = String::new();
+
+    attrs.iter().for_each(|attr| {
+        let meta = if attr.path().is_ident("doc") {
+            &attr.meta
+        } else {
+            return;
+        };
+
+        let doc = if let Meta::NameValue(MetaNameValue {
+            value: Expr::Lit(ExprLit {
+                lit: Lit::Str(doc), ..
+            }),
+            ..
+        }) = meta
+        {
+            doc.value()
+        } else {
+            return;
+        };
+
+        if !docs.is_empty() {
+            docs.push('\n');
+        }
+
+        docs.push_str(doc.trim());
+    });
+
+    docs
+}
+
+pub(crate) fn extract_summary_and_description(attrs: &[Attribute]) -> (String, String) {
+    let docs = extract_description(attrs);
+
+    if docs.is_empty() {
+        return (String::new(), String::new());
+    }
+
+    match docs.split_once("\n\n") {
+        Some((summary, description)) => (summary.to_string(), description.to_string()),
+        None => (docs, String::new()),
+    }
+}
+
+pub(crate) fn generate_optional_lit_str(s: &str) -> Option<TokenStream> {
+    if !s.is_empty() {
+        Some(quote! {
+           ::core::option::Option::Some(::std::string::ToString::to_string(#s))
+        })
+    } else {
+        None
+    }
 }

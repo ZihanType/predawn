@@ -6,6 +6,7 @@ mod multi_response_media_type;
 mod multipart;
 mod serde_attr;
 mod single_response;
+mod tag;
 mod to_parameters;
 mod to_schema;
 mod util;
@@ -91,6 +92,16 @@ pub fn multipart(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
     multipart::generate(input)
+        .unwrap_or_else(|e| e.to_compile_error())
+        .into()
+}
+
+#[doc = include_str!("docs/tag.md")]
+#[proc_macro_derive(Tag, attributes(tag))]
+pub fn tag(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+
+    tag::generate(input)
         .unwrap_or_else(|e| e.to_compile_error())
         .into()
 }

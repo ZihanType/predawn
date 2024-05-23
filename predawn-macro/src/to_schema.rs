@@ -3,17 +3,18 @@ use quote::quote;
 use quote_use::quote_use;
 use syn::{DeriveInput, Field, Generics};
 
-use crate::serde_attr::SerdeAttr;
+use crate::{serde_attr::SerdeAttr, util};
 
 pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
     let DeriveInput {
+        attrs,
         ident,
         generics,
         data,
         ..
     } = input;
 
-    let named = crate::util::extract_named_struct_fields(data, "ToSchema")?;
+    let named = util::extract_named_struct_fields(data, "ToSchema")?;
 
     let mut errors = Vec::new();
 
@@ -37,6 +38,13 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
 
     let schema_title = generate_schema_title(&ident.to_string(), &generics);
 
+    let description = util::extract_description(&attrs);
+    let add_description = util::generate_optional_lit_str(&description).map(|description| {
+        quote! {
+            data.description = #description;
+        }
+    });
+
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let expand = quote_use! {
@@ -46,17 +54,19 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
 
         impl #impl_generics ToSchema for #ident #ty_generics #where_clause {
             fn schema(components: &mut Components) -> Schema {
+                let mut data = SchemaData::default();
+
+                let title = #schema_title;
+                data.title = Some(title);
+
+                #add_description
+
                 let mut ty = ObjectType::default();
 
                 #(#properties)*
 
-                let title = #schema_title;
-
                 Schema {
-                    schema_data: SchemaData {
-                        title: Some(title),
-                        ..Default::default()
-                    },
+                    schema_data: data,
                     schema_kind: SchemaKind::Type(Type::Object(ty)),
                 }
             }
@@ -79,18 +89,49 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
             .to_string()
     });
 
+    let description = util::extract_description(&attrs);
+    let add_description = util::generate_optional_lit_str(&description).map(|description| {
+        quote! {
+            schema.schema_data.description = #description;
+        }
+    });
+
+    let generate_schema = if add_description.is_none() {
+        quote_use! {
+            # use predawn::ToSchema;
+
+            <#ty as ToSchema>::schema_ref_box(components)
+        }
+    } else {
+        let create = quote_use! {
+            # use predawn::ToSchema;
+
+            // TODO: add default, example, flatten etc.
+            let mut schema = <#ty as ToSchema>::schema(components);
+        };
+
+        let finish = quote_use! {
+            # use std::boxed::Box;
+            # use predawn::openapi::ReferenceOr;
+
+            ReferenceOr::Item(Box::new(schema))
+        };
+
+        quote! {{
+            #create
+            #add_description
+            #finish
+        }}
+    };
+
     let expand = quote_use! {
         # use std::string::ToString;
-        # use std::boxed::Box;
         # use predawn::ToSchema;
-        # use predawn::openapi::ReferenceOr;
 
-        // TODO: add description, default, example, etc.
-        #[allow(unused_mut)]
-        let mut schema = <#ty as ToSchema>::schema(components);
+        let schema = #generate_schema;
 
         ty.properties
-            .insert(ToString::to_string(#ident), ReferenceOr::Item(Box::new(schema)));
+            .insert(ToString::to_string(#ident), schema);
 
         if <#ty as ToSchema>::REQUIRED {
             ty.required.push(ToString::to_string(#ident));
@@ -103,7 +144,7 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
 fn generate_schema_title(name: &str, generics: &Generics) -> TokenStream {
     let mut have_first = false;
 
-    let types = generics
+    let push_types = generics
         .params
         .iter()
         .filter_map(|param| match param {
@@ -165,7 +206,7 @@ fn generate_schema_title(name: &str, generics: &Generics) -> TokenStream {
         })
         .collect::<Vec<_>>();
 
-    if types.is_empty() {
+    if push_types.is_empty() {
         quote_use! {
             # use std::string::ToString;
 
@@ -181,10 +222,10 @@ fn generate_schema_title(name: &str, generics: &Generics) -> TokenStream {
                 let mut name = ToString::to_string(#name);
 
                 name.push('<');
-
-                #(#types)*
-
+                #(#push_types)*
                 name.push('>');
+
+                name
             }
         }
     }
