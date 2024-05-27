@@ -11,58 +11,61 @@ const TEMPLATE: &str = r###"
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="{{description}}" />
     <title>{{title}}</title>
     <script type="module" src="{{js_url}}"></script>
   </head>
   <body>
-    <rapi-doc spec-url="{{spec_url}}"> </rapi-doc>
+    <openapi-explorer spec-url="{{spec_url}}">
+    </openapi-explorer>
   </body>
 </html>
 "###;
 
 #[derive(Clone, Debug)]
-pub struct RapiDoc {
+pub struct OpenapiExplorer {
     description: Box<str>,
     title: Box<str>,
     js_url: Box<str>,
     spec_url: Box<str>,
 }
 
-impl Plugin for RapiDoc {
+impl Plugin for OpenapiExplorer {
     fn create_route(
         self: Arc<Self>,
         cx: &mut Context,
     ) -> (NormalizedPath, IndexMap<Method, DynHandler>) {
-        super::create_route(cx, |c| c.rapidoc_path, self.as_html())
+        super::create_route(cx, |c| c.openapi_explorer_path, self.as_html())
     }
 }
 
 fn condition(cx: &Context) -> bool {
-    !cx.contains_provider::<RapiDoc>()
+    !cx.contains_provider::<OpenapiExplorer>()
 }
 
 #[Singleton(condition = condition)]
-fn RapiDocRegister(#[di(ref)] cfg: &Config) -> RapiDoc {
+fn OpenapiExplorerRegister(#[di(ref)] cfg: &Config) -> OpenapiExplorer {
     let json_path = super::json_path(cfg).into_inner();
-    RapiDoc::new(json_path)
+    OpenapiExplorer::new(json_path)
 }
 
-#[Singleton(name = std::any::type_name::<RapiDoc>())]
-fn RapiDocToPlugin(rapidoc: RapiDoc) -> Arc<dyn Plugin> {
-    Arc::new(rapidoc)
+#[Singleton(name = std::any::type_name::<OpenapiExplorer>())]
+fn OpenapiExplorerToPlugin(openapi_explorer: OpenapiExplorer) -> Arc<dyn Plugin> {
+    Arc::new(openapi_explorer)
 }
 
-impl RapiDoc {
+impl OpenapiExplorer {
     pub fn new<T>(spec_url: T) -> Self
     where
         T: Into<Box<str>>,
     {
         Self {
-            description: Box::from("RapiDoc"),
-            title: Box::from("RapiDoc"),
-            js_url: Box::from("https://unpkg.com/rapidoc/dist/rapidoc-min.js"),
+            description: Box::from("Openapi Explorer"),
+            title: Box::from("Openapi Explorer"),
+            js_url: Box::from(
+                "https://unpkg.com/openapi-explorer@0/dist/browser/openapi-explorer.min.js",
+            ),
             spec_url: spec_url.into(),
         }
     }

@@ -23,17 +23,16 @@ impl Plugin for OpenAPIJson {
         cx: &mut Context,
     ) -> (NormalizedPath, IndexMap<Method, DynHandler>) {
         let json_path = cx.resolve::<OpenAPIConfig>().json_path;
-        let api = cx.resolve::<OpenAPI>();
 
-        let mut map = IndexMap::with_capacity(1);
+        let api = cx.resolve::<OpenAPI>();
 
         let handler = handler_fn(move |_| {
             let api = api.clone();
             async move { Ok(Json(api)) }
         });
-
         let handler = DynHandler::new(handler);
 
+        let mut map = IndexMap::with_capacity(1);
         map.insert(Method::GET, handler);
 
         (json_path, map)

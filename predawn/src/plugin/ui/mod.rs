@@ -1,4 +1,7 @@
+mod openapi_explorer;
 mod rapidoc;
+mod redoc;
+mod scalar;
 mod swagger_ui;
 
 use http::{header::CONTENT_TYPE, HeaderValue, Method};
@@ -36,8 +39,6 @@ pub(crate) fn json_path(cfg: &Config) -> NormalizedPath {
 }
 
 fn create_map(html: String) -> IndexMap<Method, DynHandler> {
-    let mut map = IndexMap::with_capacity(1);
-
     let handler = handler_fn(move |_| {
         let html = html.clone();
 
@@ -53,7 +54,7 @@ fn create_map(html: String) -> IndexMap<Method, DynHandler> {
 
     let handler = DynHandler::new(handler);
 
+    let mut map = IndexMap::with_capacity(1);
     map.insert(Method::GET, handler);
-
     map
 }

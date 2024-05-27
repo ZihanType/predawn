@@ -11,58 +11,67 @@ const TEMPLATE: &str = r###"
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="{{description}}" />
     <title>{{title}}</title>
-    <script type="module" src="{{js_url}}"></script>
   </head>
   <body>
-    <rapi-doc spec-url="{{spec_url}}"> </rapi-doc>
+    <script id="api-reference" data-url="{{spec_url}}"></script>
+
+    <script>
+      const configuration = {
+        theme: "default",
+      };
+
+      document.getElementById("api-reference").dataset.configuration =
+        JSON.stringify(configuration);
+    </script>
+    <script src="{{js_url}}"></script>
   </body>
 </html>
 "###;
 
 #[derive(Clone, Debug)]
-pub struct RapiDoc {
+pub struct Scalar {
     description: Box<str>,
     title: Box<str>,
     js_url: Box<str>,
     spec_url: Box<str>,
 }
 
-impl Plugin for RapiDoc {
+impl Plugin for Scalar {
     fn create_route(
         self: Arc<Self>,
         cx: &mut Context,
     ) -> (NormalizedPath, IndexMap<Method, DynHandler>) {
-        super::create_route(cx, |c| c.rapidoc_path, self.as_html())
+        super::create_route(cx, |c| c.scalar_path, self.as_html())
     }
 }
 
 fn condition(cx: &Context) -> bool {
-    !cx.contains_provider::<RapiDoc>()
+    !cx.contains_provider::<Scalar>()
 }
 
 #[Singleton(condition = condition)]
-fn RapiDocRegister(#[di(ref)] cfg: &Config) -> RapiDoc {
+fn ScalarRegister(#[di(ref)] cfg: &Config) -> Scalar {
     let json_path = super::json_path(cfg).into_inner();
-    RapiDoc::new(json_path)
+    Scalar::new(json_path)
 }
 
-#[Singleton(name = std::any::type_name::<RapiDoc>())]
-fn RapiDocToPlugin(rapidoc: RapiDoc) -> Arc<dyn Plugin> {
-    Arc::new(rapidoc)
+#[Singleton(name = std::any::type_name::<Scalar>())]
+fn ScalarToPlugin(scalar: Scalar) -> Arc<dyn Plugin> {
+    Arc::new(scalar)
 }
 
-impl RapiDoc {
+impl Scalar {
     pub fn new<T>(spec_url: T) -> Self
     where
         T: Into<Box<str>>,
     {
         Self {
-            description: Box::from("RapiDoc"),
-            title: Box::from("RapiDoc"),
-            js_url: Box::from("https://unpkg.com/rapidoc/dist/rapidoc-min.js"),
+            description: Box::from("Scalar"),
+            title: Box::from("Scalar"),
+            js_url: Box::from("https://cdn.jsdelivr.net/npm/@scalar/api-reference"),
             spec_url: spec_url.into(),
         }
     }

@@ -6,48 +6,42 @@ use rudi::{Context, Singleton};
 
 use crate::{config::Config, handler::DynHandler, normalized_path::NormalizedPath, plugin::Plugin};
 
-const TEMPLATE: &str = r#"
+const TEMPLATE: &str = r###"
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta
-    name="description"
-    content="{{description}}"
-  />
-  <title>{{title}}</title>
-  <link rel="stylesheet" href="{{css_url}}" />
-</head>
-<body>
-<div id="swagger-ui"></div>
-<script src="{{bundle_js_url}}" crossorigin></script>
-<script src="{{standalone_preset_url}}" crossorigin></script>
-<script>
-  window.onload = () => {
-    window.ui = SwaggerUIBundle({
-      url: '{{spec_url}}',
-      dom_id: '#swagger-ui',
-      presets: [
-        SwaggerUIBundle.presets.apis,
-        SwaggerUIStandalonePreset
-      ],
-      layout: "StandaloneLayout",
-    });
-  };
-</script>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="{{description}}" />
+    <title>{{title}}</title>
+    <link rel="stylesheet" href="{{css_url}}" />
+  </head>
+  <body>
+    <div id="swagger-ui"></div>
+    <script src="{{bundle_js_url}}" crossorigin></script>
+    <script src="{{standalone_preset_url}}" crossorigin></script>
+    <script>
+      window.onload = () => {
+        window.ui = SwaggerUIBundle({
+          url: "{{spec_url}}",
+          dom_id: "#swagger-ui",
+          presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
+          layout: "StandaloneLayout",
+        });
+      };
+    </script>
+  </body>
 </html>
-"#;
+"###;
 
 #[derive(Debug, Clone)]
 pub struct SwaggerUI {
-    description: Arc<str>,
-    title: Arc<str>,
-    css_url: Arc<str>,
-    bundle_js_url: Arc<str>,
-    standalone_preset_url: Arc<str>,
-    spec_url: Arc<str>,
+    description: Box<str>,
+    title: Box<str>,
+    css_url: Box<str>,
+    bundle_js_url: Box<str>,
+    standalone_preset_url: Box<str>,
+    spec_url: Box<str>,
 }
 
 impl Plugin for SwaggerUI {
@@ -77,14 +71,14 @@ fn SwaggerUIToPlugin(ui: SwaggerUI) -> Arc<dyn Plugin> {
 impl SwaggerUI {
     pub fn new<T>(spec_url: T) -> Self
     where
-        T: Into<Arc<str>>,
+        T: Into<Box<str>>,
     {
         Self {
-            description: Arc::from("SwaggerUI"),
-            title: Arc::from("SwaggerUI"),
-            css_url: Arc::from("https://unpkg.com/swagger-ui-dist/swagger-ui.css"),
-            bundle_js_url: Arc::from("https://unpkg.com/swagger-ui-dist/swagger-ui-bundle.js"),
-            standalone_preset_url: Arc::from(
+            description: Box::from("SwaggerUI"),
+            title: Box::from("SwaggerUI"),
+            css_url: Box::from("https://unpkg.com/swagger-ui-dist/swagger-ui.css"),
+            bundle_js_url: Box::from("https://unpkg.com/swagger-ui-dist/swagger-ui-bundle.js"),
+            standalone_preset_url: Box::from(
                 "https://unpkg.com/swagger-ui-dist/swagger-ui-standalone-preset.js",
             ),
             spec_url: spec_url.into(),
@@ -93,7 +87,7 @@ impl SwaggerUI {
 
     pub fn description<T>(mut self, description: T) -> Self
     where
-        T: Into<Arc<str>>,
+        T: Into<Box<str>>,
     {
         self.description = description.into();
         self
@@ -101,7 +95,7 @@ impl SwaggerUI {
 
     pub fn title<T>(mut self, title: T) -> Self
     where
-        T: Into<Arc<str>>,
+        T: Into<Box<str>>,
     {
         self.title = title.into();
         self
@@ -109,7 +103,7 @@ impl SwaggerUI {
 
     pub fn css_url<T>(mut self, css_url: T) -> Self
     where
-        T: Into<Arc<str>>,
+        T: Into<Box<str>>,
     {
         self.css_url = css_url.into();
         self
@@ -117,7 +111,7 @@ impl SwaggerUI {
 
     pub fn bundle_js_url<T>(mut self, bundle_js_url: T) -> Self
     where
-        T: Into<Arc<str>>,
+        T: Into<Box<str>>,
     {
         self.bundle_js_url = bundle_js_url.into();
         self
@@ -125,7 +119,7 @@ impl SwaggerUI {
 
     pub fn standalone_preset_url<T>(mut self, standalone_preset_url: T) -> Self
     where
-        T: Into<Arc<str>>,
+        T: Into<Box<str>>,
     {
         self.standalone_preset_url = standalone_preset_url.into();
         self

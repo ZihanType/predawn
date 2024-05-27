@@ -11,58 +11,62 @@ const TEMPLATE: &str = r###"
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="{{description}}" />
     <title>{{title}}</title>
-    <script type="module" src="{{js_url}}"></script>
+    <link
+      href="https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700"
+      rel="stylesheet"
+    />
   </head>
   <body>
-    <rapi-doc spec-url="{{spec_url}}"> </rapi-doc>
+    <redoc spec-url="{{spec_url}}"></redoc>
+    <script src="{{js_url}}"></script>
   </body>
 </html>
 "###;
 
 #[derive(Clone, Debug)]
-pub struct RapiDoc {
+pub struct Redoc {
     description: Box<str>,
     title: Box<str>,
     js_url: Box<str>,
     spec_url: Box<str>,
 }
 
-impl Plugin for RapiDoc {
+impl Plugin for Redoc {
     fn create_route(
         self: Arc<Self>,
         cx: &mut Context,
     ) -> (NormalizedPath, IndexMap<Method, DynHandler>) {
-        super::create_route(cx, |c| c.rapidoc_path, self.as_html())
+        super::create_route(cx, |c| c.redoc_path, self.as_html())
     }
 }
 
 fn condition(cx: &Context) -> bool {
-    !cx.contains_provider::<RapiDoc>()
+    !cx.contains_provider::<Redoc>()
 }
 
 #[Singleton(condition = condition)]
-fn RapiDocRegister(#[di(ref)] cfg: &Config) -> RapiDoc {
+fn RedocRegister(#[di(ref)] cfg: &Config) -> Redoc {
     let json_path = super::json_path(cfg).into_inner();
-    RapiDoc::new(json_path)
+    Redoc::new(json_path)
 }
 
-#[Singleton(name = std::any::type_name::<RapiDoc>())]
-fn RapiDocToPlugin(rapidoc: RapiDoc) -> Arc<dyn Plugin> {
-    Arc::new(rapidoc)
+#[Singleton(name = std::any::type_name::<Redoc>())]
+fn RedocToPlugin(redoc: Redoc) -> Arc<dyn Plugin> {
+    Arc::new(redoc)
 }
 
-impl RapiDoc {
+impl Redoc {
     pub fn new<T>(spec_url: T) -> Self
     where
         T: Into<Box<str>>,
     {
         Self {
-            description: Box::from("RapiDoc"),
-            title: Box::from("RapiDoc"),
-            js_url: Box::from("https://unpkg.com/rapidoc/dist/rapidoc-min.js"),
+            description: Box::from("Redoc"),
+            title: Box::from("Redoc"),
+            js_url: Box::from("https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"),
             spec_url: spec_url.into(),
         }
     }

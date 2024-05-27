@@ -13,6 +13,12 @@ pub struct OpenAPIConfig {
     pub swagger_ui_path: NormalizedPath,
     #[serde(default = "default_rapidoc_path")]
     pub rapidoc_path: NormalizedPath,
+    #[serde(default = "default_scalar_path")]
+    pub scalar_path: NormalizedPath,
+    #[serde(default = "default_redoc_path")]
+    pub redoc_path: NormalizedPath,
+    #[serde(default = "default_openapi_explorer_path")]
+    pub openapi_explorer_path: NormalizedPath,
 }
 
 #[Singleton]
@@ -36,12 +42,27 @@ fn default_rapidoc_path() -> NormalizedPath {
     "/rapidoc".into()
 }
 
+fn default_scalar_path() -> NormalizedPath {
+    "/scalar".into()
+}
+
+fn default_redoc_path() -> NormalizedPath {
+    "/redoc".into()
+}
+
+fn default_openapi_explorer_path() -> NormalizedPath {
+    "/openapi-explorer".into()
+}
+
 impl Default for OpenAPIConfig {
     fn default() -> Self {
         Self {
             json_path: default_json_path(),
             swagger_ui_path: default_swagger_ui_path(),
             rapidoc_path: default_rapidoc_path(),
+            scalar_path: default_scalar_path(),
+            redoc_path: default_redoc_path(),
+            openapi_explorer_path: default_openapi_explorer_path(),
         }
     }
 }
