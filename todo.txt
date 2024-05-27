@@ -1,4 +1,6 @@
-把对唯一路径的检查放到 ceata_app 函数中，而不是在宏生成的代码中
+SecuritySchema
+
+tempfile
 
 1.
 #[derive(Debug)]
@@ -21,8 +23,6 @@ ToSchema 没有修改属性的schema时，调用属性的 schema_ref_box 方法
 
 3.
 数据库连接参数
-
-SecuritySchema
 
 predawn schema macro
 
@@ -57,6 +57,7 @@ FILE
 WebSocket
 Listener trait
 ExternalDocumentation
+Hooks::init_logger
 end-to-end test-helper edition 2
 startup message
 handle .unwrap()

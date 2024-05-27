@@ -108,21 +108,20 @@ pub(crate) fn generate(impl_attr: ImplAttr, mut item_impl: ItemImpl) -> syn::Res
     let expand = quote_use! {
         # use std::sync::Arc;
         # use std::collections::BTreeMap;
-        # use std::collections::BTreeMap;
+        # use std::vec::Vec;
         # use predawn::controller::Controller;
-        # use predawn::handler::{Handler, DynHandler};
+        # use predawn::handler::DynHandler;
         # use predawn::normalized_path::NormalizedPath;
         # use predawn::__internal::http::Method;
-        # use predawn::__internal::indexmap::IndexMap;
         # use predawn::__internal::rudi::Context;
-        # use predawn::openapi::{PathItem, Components, Tag};
+        # use predawn::openapi::{Components, Operation, Tag};
 
         impl Controller for #self_ty {
             fn insert_routes(
                 self: Arc<Self>,
                 cx: &mut Context,
-                route_table: &mut BTreeMap<NormalizedPath, IndexMap<Method, DynHandler>>,
-                paths: &mut BTreeMap<NormalizedPath, PathItem>,
+                route_table: &mut BTreeMap<NormalizedPath, Vec<(Method, DynHandler)>>,
+                paths: &mut BTreeMap<NormalizedPath, Vec<(Method, Operation)>>,
                 components: &mut Components,
                 tags: &mut BTreeMap<&'static str, (&'static str, Tag)>,
             ) {
@@ -384,82 +383,6 @@ fn generate_single_fn_impl<'a>(
         }
     };
 
-    let mut insert_fn_into_multi_path = Vec::new();
-
-    controller_paths.iter().for_each(|controller_path| {
-        method_paths.iter().for_each(|method_path| {
-            let mut insert_handler_into_multi_method = Vec::new();
-            let mut insert_operation_into_multi_method = Vec::new();
-
-            methods.iter().for_each(|method| {
-                let uppercase_method = method.as_uppercase_ident();
-                let lowercase_method = method.as_lowercase_ident();
-
-                let runtime_panic = quote_use! {
-                    # use core::panic;
-                    # use core::stringify;
-
-                    panic!("path: `{}`, method: `{}` already exists", path, stringify!(#uppercase_method));
-                };
-
-                let insert_handler_into_single_method = quote_use! {
-                    # use predawn::__internal::http::Method;
-                    # use core::panic;
-                    # use core::stringify;
-
-                    map.insert(Method::#uppercase_method, #fn_name.clone())
-                        .inspect(|_| { #runtime_panic });
-                };
-
-                let insert_operation_into_single_method = quote_use! {
-                    # use core::panic;
-                    # use core::stringify;
-
-                    if path_item.#lowercase_method.is_some() {
-                        #runtime_panic
-                    }
-                    path_item.#lowercase_method = Some(operation.clone());
-                };
-
-                insert_handler_into_multi_method.push(insert_handler_into_single_method);
-                insert_operation_into_multi_method.push(insert_operation_into_single_method);
-            });
-
-            let convert_single_path = quote_use! {
-                # use core::convert::AsRef;
-                # use predawn::normalized_path::NormalizedPath;
-
-                let path = NormalizedPath::join(
-                    NormalizedPath::new(AsRef::<str>::as_ref(#controller_path)),
-                    NormalizedPath::new(AsRef::<str>::as_ref(#method_path)),
-                );
-            };
-
-            let insert_handler_into_single_path = quote_use! {
-                # use std::clone::Clone;
-
-                let map = route_table.entry(Clone::clone(&path)).or_default();
-                #(#insert_handler_into_multi_method)*
-            };
-
-            let insert_operation_into_single_path = quote_use! {
-                # use core::default::Default;
-                # use std::clone::Clone;
-
-                let path_item = paths.entry(Clone::clone(&path)).or_default();
-                #(#insert_operation_into_multi_method)*
-            };
-
-            let insert_fn_into_single_path = quote! {
-                #convert_single_path
-                #insert_handler_into_single_path
-                #insert_operation_into_single_path
-            };
-
-            insert_fn_into_multi_path.push(insert_fn_into_single_path);
-        });
-    });
-
     let create_handler = quote_use! {
         # use std::sync::Arc;
         # use predawn::handler::{DynHandler, handler_fn};
@@ -471,6 +394,7 @@ fn generate_single_fn_impl<'a>(
                 let this = this.clone();
 
                 async move {
+                    #[allow(unused_variables)]
                     let (head, body) = req.split();
 
                     #extract_from_request
@@ -519,6 +443,44 @@ fn generate_single_fn_impl<'a>(
 
         operation.responses.responses.extend(transform_responses(responses));
     };
+
+    let mut insert_fn_into_multi_path = Vec::new();
+
+    controller_paths.iter().for_each(|controller_path| {
+        method_paths.iter().for_each(|method_path| {
+            let extract_single_path_map = quote_use! {
+                # use core::convert::AsRef;
+                # use std::clone::Clone;
+                # use predawn::normalized_path::NormalizedPath;
+
+                let path = NormalizedPath::join(
+                    NormalizedPath::new(AsRef::<str>::as_ref(#controller_path)),
+                    NormalizedPath::new(AsRef::<str>::as_ref(#method_path)),
+                );
+
+                let handlers = route_table.entry(Clone::clone(&path)).or_default();
+                let operations = paths.entry(Clone::clone(&path)).or_default();
+            };
+
+            let insert_fn_into_multi_method = methods.iter().map(|method| {
+                let uppercase_method = method.as_uppercase_ident();
+
+                quote_use! {
+                    # use predawn::__internal::http::Method;
+
+                    handlers.push((Method::#uppercase_method, #fn_name.clone()));
+                    operations.push((Method::#uppercase_method, operation.clone()));
+                }
+            });
+
+            let insert_fn_into_single_path = quote! {
+                #extract_single_path_map
+                #(#insert_fn_into_multi_method)*
+            };
+
+            insert_fn_into_multi_path.push(insert_fn_into_single_path);
+        });
+    });
 
     let label: Label = syn::parse_str(&format!("'{}:", fn_name))?;
 

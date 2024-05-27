@@ -35,19 +35,6 @@ impl Method {
             Method::Patch => parse_quote!(PATCH),
         }
     }
-
-    pub(crate) fn as_lowercase_ident(&self) -> Ident {
-        match self {
-            Method::Options => parse_quote!(options),
-            Method::Get => parse_quote!(get),
-            Method::Post => parse_quote!(post),
-            Method::Put => parse_quote!(put),
-            Method::Delete => parse_quote!(delete),
-            Method::Head => parse_quote!(head),
-            Method::Trace => parse_quote!(trace),
-            Method::Patch => parse_quote!(patch),
-        }
-    }
 }
 
 pub(crate) const ENUM_METHODS: [Method; 8] = [

@@ -1,8 +1,11 @@
+use core::panic;
 use std::{collections::BTreeMap, io, net::SocketAddr, sync::Arc};
 
 use config::ConfigError;
+use http::Method;
+use indexmap::IndexMap;
 use predawn_core::{
-    openapi::{self, Components, Info, OpenAPI, Paths, ReferenceOr},
+    openapi::{self, Components, Info, OpenAPI, PathItem, Paths, ReferenceOr},
     request::BodyLimit,
 };
 use rudi::Context;
@@ -118,22 +121,68 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
 
     let servers = H::openapi_servers(&mut cx);
 
+    let mut duplicate_endpoints = Vec::new();
+
     let paths = paths
         .into_iter()
-        .map(|(k, v)| (root_path.clone().join(k).into(), ReferenceOr::Item(v)))
+        .map(|(path, operations)| {
+            let path = root_path.clone().join(path).into_inner();
+
+            let mut path_item = PathItem::default();
+
+            operations.into_iter().for_each(|(method, operation)| {
+                let duplicate = if method == Method::GET {
+                    path_item.get.replace(operation)
+                } else if method == Method::PUT {
+                    path_item.put.replace(operation)
+                } else if method == Method::POST {
+                    path_item.post.replace(operation)
+                } else if method == Method::DELETE {
+                    path_item.delete.replace(operation)
+                } else if method == Method::OPTIONS {
+                    path_item.options.replace(operation)
+                } else if method == Method::HEAD {
+                    path_item.head.replace(operation)
+                } else if method == Method::PATCH {
+                    path_item.patch.replace(operation)
+                } else if method == Method::TRACE {
+                    path_item.trace.replace(operation)
+                } else {
+                    panic!("unsupported method: {:?}", method);
+                };
+
+                if duplicate.is_some() {
+                    let endpoint = (method, path.clone());
+
+                    if !duplicate_endpoints.contains(&endpoint) {
+                        duplicate_endpoints.push(endpoint);
+                    }
+                }
+            });
+
+            (path, ReferenceOr::Item(path_item))
+        })
         .collect();
 
-    let mut tag_name_to_type_names: BTreeMap<_, Vec<_>> = BTreeMap::new();
-    let mut oai_tags = Vec::new();
-
-    for (tag_type_name, (tag_name, tag)) in tags {
-        tag_name_to_type_names
-            .entry(tag_name)
-            .or_default()
-            .push(tag_type_name);
-
-        oai_tags.push(tag);
+    if !duplicate_endpoints.is_empty() {
+        panic!("duplicate endpoints: {:?}", duplicate_endpoints);
     }
+
+    let mut tag_name_to_type_names: BTreeMap<_, Vec<_>> = BTreeMap::new();
+
+    let tags = tags
+        .into_iter()
+        .map(|(tag_type_name, (tag_name, tag))| {
+            debug_assert_eq!(tag_name, tag.name);
+
+            tag_name_to_type_names
+                .entry(tag_name)
+                .or_default()
+                .push(tag_type_name);
+
+            tag
+        })
+        .collect::<Vec<_>>();
 
     // retains only the tags with the same name
     tag_name_to_type_names.retain(|_, v| v.len() > 1);
@@ -156,7 +205,7 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
             ..Default::default()
         },
         components: Some(components),
-        tags: oai_tags,
+        tags,
         ..Default::default()
     };
 
@@ -164,28 +213,32 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
 
     let mut router = Router::default();
 
-    for (path, map) in route_table {
+    // already checked for duplicates at `paths` above, so no need to check again here.
+    for (path, handlers) in route_table {
         let path = root_path.clone().join(path);
 
-        let err_msg = format!("failed to insert route `{}`", path);
+        let map = handlers.into_iter().collect::<IndexMap<_, _>>();
+        let method_router = MethodRouter::from(map);
 
-        router
-            .insert(path, MethodRouter::from(map))
-            .unwrap_or_else(|e| panic!("{}: {:?}", err_msg, e));
+        let err_msg = format!("failed to insert path `{path}`");
+
+        if let Err(e) = router.insert(path, method_router) {
+            panic!("{}: {:?}", err_msg, e);
+        }
     }
 
-    for p in cx.resolve_by_type_async::<Arc<dyn Plugin>>().await {
-        let (path, map) = p.create_route(&mut cx);
+    for plugin in cx.resolve_by_type_async::<Arc<dyn Plugin>>().await {
+        let (path, map) = plugin.create_route(&mut cx);
 
         let path = full_non_application_root_path.clone().join(path);
 
         tracing::info!("registering plugin: {}", path);
 
-        let err_msg = format!("failed to insert route `{}`", path);
+        let err_msg = format!("failed to insert path `{path}`");
 
-        router
-            .insert(path, MethodRouter::from(map))
-            .unwrap_or_else(|e| panic!("{}: {:?}", err_msg, e));
+        if let Err(e) = router.insert(path, MethodRouter::from(map)) {
+            panic!("{}: {:?}", err_msg, e);
+        }
     }
 
     H::after_routes(&router);
