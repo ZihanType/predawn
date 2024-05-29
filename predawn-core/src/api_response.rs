@@ -2,19 +2,25 @@ use std::{borrow::Cow, collections::BTreeMap, convert::Infallible};
 
 use bytes::{Bytes, BytesMut};
 use http::StatusCode;
+use indexmap::IndexMap;
+use openapiv3::{ReferenceOr, Schema};
 
 use crate::{
     body::ResponseBody,
-    openapi::{self, Components},
+    openapi,
     response::{MultiResponse, Response},
 };
 
 pub trait ApiResponse {
-    fn responses(components: &mut Components) -> Option<BTreeMap<StatusCode, openapi::Response>>;
+    fn responses(
+        schemas: &mut IndexMap<String, ReferenceOr<Schema>>,
+    ) -> Option<BTreeMap<StatusCode, openapi::Response>>;
 }
 
 impl<B> ApiResponse for Response<B> {
-    fn responses(_: &mut Components) -> Option<BTreeMap<StatusCode, openapi::Response>> {
+    fn responses(
+        _: &mut IndexMap<String, ReferenceOr<Schema>>,
+    ) -> Option<BTreeMap<StatusCode, openapi::Response>> {
         None
     }
 }
@@ -23,7 +29,7 @@ macro_rules! none_response {
     ($($ty:ty),+ $(,)?) => {
         $(
             impl ApiResponse for $ty {
-                fn responses(_: &mut Components) -> Option<BTreeMap<StatusCode, openapi::Response>> {
+                fn responses(_: &mut IndexMap<String, ReferenceOr<Schema>>) -> Option<BTreeMap<StatusCode, openapi::Response>> {
                     None
                 }
             }
@@ -37,8 +43,8 @@ macro_rules! some_response {
     ($($ty:ty),+ $(,)?) => {
         $(
             impl ApiResponse for $ty {
-                fn responses(components: &mut Components) -> Option<BTreeMap<StatusCode, openapi::Response>> {
-                    Some(<$ty as MultiResponse>::responses(components))
+                fn responses(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Option<BTreeMap<StatusCode, openapi::Response>> {
+                    Some(<$ty as MultiResponse>::responses(schemas))
                 }
             }
         )+
@@ -65,8 +71,8 @@ macro_rules! const_n_response {
     ($($ty:ty),+ $(,)?) => {
         $(
             impl<const N: usize> ApiResponse for $ty {
-                fn responses(components: &mut Components) -> Option<BTreeMap<StatusCode, openapi::Response>> {
-                    Some(<$ty as MultiResponse>::responses(components))
+                fn responses(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Option<BTreeMap<StatusCode, openapi::Response>> {
+                    Some(<$ty as MultiResponse>::responses(schemas))
                 }
             }
         )+
@@ -79,7 +85,9 @@ impl<T, E> ApiResponse for Result<T, E>
 where
     T: ApiResponse,
 {
-    fn responses(components: &mut Components) -> Option<BTreeMap<StatusCode, openapi::Response>> {
-        T::responses(components)
+    fn responses(
+        schemas: &mut IndexMap<String, ReferenceOr<Schema>>,
+    ) -> Option<BTreeMap<StatusCode, openapi::Response>> {
+        T::responses(schemas)
     }
 }

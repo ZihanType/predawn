@@ -1,5 +1,6 @@
+use indexmap::IndexMap;
 use openapiv3::{
-    AdditionalProperties, Components, ObjectType, Schema, SchemaData, SchemaKind, Type,
+    AdditionalProperties, ObjectType, ReferenceOr, Schema, SchemaData, SchemaKind, Type,
 };
 
 use crate::ToSchema;
@@ -10,13 +11,13 @@ macro_rules! map_impl {
         where
             V: ToSchema
         {
-            fn schema(components: &mut Components) -> Schema {
-                let schema = V::schema(components);
+            fn schema(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Schema {
+                let schema = V::schema(schemas);
                 let title = schema.schema_data.title.as_deref().unwrap_or("Unknown");
                 let title = format!("Map<String, {}>", title);
 
                 let ty = ObjectType {
-                    additional_properties: Some(AdditionalProperties::Schema(Box::new(V::schema_ref(components)))),
+                    additional_properties: Some(AdditionalProperties::Schema(Box::new(V::schema_ref(schemas)))),
                     ..Default::default()
                 };
 

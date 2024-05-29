@@ -1,8 +1,9 @@
+use indexmap::IndexMap;
 use predawn_core::{
     api_request::ApiRequestHead,
     from_request::FromRequestHead,
     impl_deref,
-    openapi::{Components, Parameter},
+    openapi::{Parameter, ReferenceOr, Schema},
     request::Head,
 };
 use serde::Deserialize;
@@ -29,9 +30,9 @@ where
 }
 
 impl<T: ToParameters> ApiRequestHead for Query<T> {
-    fn parameters(components: &mut Components) -> Option<Vec<Parameter>> {
+    fn parameters(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Option<Vec<Parameter>> {
         Some(
-            <T as ToParameters>::parameters(components)
+            <T as ToParameters>::parameters(schemas)
                 .into_iter()
                 .map(|parameter_data| Parameter::Query {
                     parameter_data,

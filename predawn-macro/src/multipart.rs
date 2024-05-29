@@ -64,7 +64,8 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         # use predawn::body::RequestBody;
         # use predawn::extract::multipart::Multipart;
         # use predawn::api_request::ApiRequest;
-        # use predawn::openapi::{self, Components, Parameter};
+        # use predawn::openapi::{self, ReferenceOr, Schema, Parameter};
+        # use predawn::__internal::indexmap::IndexMap;
 
         impl #impl_generics_with_lifetime FromRequest<'a> for #ident #ty_generics #where_clause {
             type Error = MultipartError;
@@ -85,14 +86,14 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         }
 
         impl #impl_generics ApiRequest for #ident #ty_generics #where_clause {
-            fn parameters(_: &mut Components) -> Option<Vec<openapi::Parameter>> {
+            fn parameters(_: &mut IndexMap<String, ReferenceOr<Schema>>) -> Option<Vec<openapi::Parameter>> {
                 None
             }
 
-            fn request_body(components: &mut Components) -> Option<openapi::RequestBody> {
+            fn request_body(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Option<openapi::RequestBody> {
                 Some(openapi::RequestBody {
                     description: Default::default(),
-                    content: <Self as MultiRequestMediaType>::content(components),
+                    content: <Self as MultiRequestMediaType>::content(schemas),
                     required: true,
                     extensions: Default::default(),
                 })
@@ -110,9 +111,9 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         }
 
         impl #impl_generics SingleMediaType for #ident #ty_generics #where_clause {
-            fn media_type(components: &mut Components) -> openapi::MediaType {
+            fn media_type(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> openapi::MediaType {
                 openapi::MediaType {
-                    schema: Some(<Self as ToSchema>::schema_ref(components)),
+                    schema: Some(<Self as ToSchema>::schema_ref(schemas)),
                     example: Default::default(),
                     examples: Default::default(),
                     encoding: Default::default(),

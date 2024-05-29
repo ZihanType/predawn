@@ -3,8 +3,9 @@ use std::num::{
     NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize,
 };
 
+use indexmap::IndexMap;
 use openapiv3::{
-    AnySchema, Components, IntegerType, ReferenceOr, Schema, SchemaData, SchemaKind, Type,
+    AnySchema, IntegerType, ReferenceOr, Schema, SchemaData, SchemaKind, Type,
     VariantOrUnknownOrEmpty,
 };
 
@@ -13,7 +14,7 @@ use crate::ToSchema;
 macro_rules! nonzero_signed_impl {
     ($ty:ty, $format:literal) => {
         impl ToSchema for $ty {
-            fn schema(_: &mut Components) -> Schema {
+            fn schema(_: &mut IndexMap<String, ReferenceOr<Schema>>) -> Schema {
                 Schema {
                     schema_data: SchemaData {
                         title: Some(stringify!($ty).to_string()),
@@ -49,7 +50,7 @@ nonzero_signed_impl!(NonZeroIsize, "int");
 macro_rules! nonzero_unsigned_impl {
     ($ty:ty, $format:literal) => {
         impl ToSchema for $ty {
-            fn schema(_: &mut Components) -> Schema {
+            fn schema(_: &mut IndexMap<String, ReferenceOr<Schema>>) -> Schema {
                 Schema {
                     schema_data: SchemaData {
                         title: Some(stringify!($ty).to_string()),

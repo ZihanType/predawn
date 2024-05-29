@@ -81,16 +81,17 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         # use std::string::String;
         # use predawn::MultiRequestMediaType;
         # use predawn::media_type::InvalidContentType;
-        # use predawn::openapi::{self, Components, Parameter};
+        # use predawn::openapi::{self, ReferenceOr, Schema, Parameter};
         # use predawn::__internal::indexmap::IndexMap;
         # use predawn::__internal::http::header::CONTENT_TYPE;
         # use predawn::from_request::FromRequest;
         # use predawn::api_request::ApiRequest;
         # use predawn::request::Head;
         # use predawn::body::RequestBody;
+        # use predawn::__internal::indexmap::IndexMap;
 
         impl #impl_generics MultiRequestMediaType for #ident #ty_generics #where_clause {
-            fn content(components: &mut Components) -> IndexMap<String, openapi::MediaType> {
+            fn content(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> IndexMap<String, openapi::MediaType> {
                 let mut map = IndexMap::with_capacity(#variants_size);
                 #(#content_bodies)*
                 map
@@ -113,14 +114,14 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         }
 
         impl #impl_generics ApiRequest for #ident #ty_generics #where_clause {
-            fn parameters(_: &mut Components) -> Option<Vec<Parameter>> {
+            fn parameters(_: &mut IndexMap<String, ReferenceOr<Schema>>) -> Option<Vec<Parameter>> {
                 None
             }
 
-            fn request_body(components: &mut Components) -> Option<openapi::RequestBody> {
+            fn request_body(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Option<openapi::RequestBody> {
                 Some(openapi::RequestBody {
                     description: Default::default(),
-                    content: <Self as MultiRequestMediaType>::content(components),
+                    content: <Self as MultiRequestMediaType>::content(schemas),
                     required: true,
                     extensions: Default::default(),
                 })
@@ -158,7 +159,7 @@ fn handle_single_variant<'a>(
 
         map.insert(
             ToString::to_string(#media_type_expr),
-            <#ty as SingleMediaType>::media_type(components),
+            <#ty as SingleMediaType>::media_type(schemas),
         );
     };
 

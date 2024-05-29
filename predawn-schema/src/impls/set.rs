@@ -1,4 +1,5 @@
-use openapiv3::{ArrayType, Components, Schema, SchemaData, SchemaKind, Type};
+use indexmap::IndexMap;
+use openapiv3::{ArrayType, ReferenceOr, Schema, SchemaData, SchemaKind, Type};
 
 use crate::ToSchema;
 
@@ -8,13 +9,13 @@ macro_rules! set_impl {
         where
             T: ToSchema
         {
-            fn schema(components: &mut Components) -> Schema {
-                let schema = T::schema(components);
+            fn schema(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Schema {
+                let schema = T::schema(schemas);
                 let title = schema.schema_data.title.as_deref().unwrap_or("Unknown");
                 let title = format!("Set<{}>", title);
 
                 let ty = ArrayType {
-                    items: Some(T::schema_ref_box(components)),
+                    items: Some(T::schema_ref_box(schemas)),
                     min_items: None,
                     max_items: None,
                     unique_items: true,

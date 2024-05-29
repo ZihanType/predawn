@@ -1,6 +1,16 @@
-SecuritySchema
+Authorization
+TypedHeader
+
+flatten
+
+Enum
 
 tempfile
+
+SecuritySchema
+OAuth2
+OpenIDConnect
+HttpAuthScheme
 
 1.
 #[derive(Debug)]
@@ -44,7 +54,6 @@ update references in doc comments by search `https://docs.rs`
 service attribute macro
 operation id [repeated]
 Extension
-TypedHeader
 Header
 Cookie
 Base64

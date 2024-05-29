@@ -34,15 +34,15 @@ pub use predawn_core::{
 #[cfg_attr(docsrs, doc(cfg(feature = "macro")))]
 #[cfg(feature = "macro")]
 pub use predawn_macro::{
-    controller, MultiRequestMediaType, MultiResponse, MultiResponseMediaType, SingleResponse, Tag,
-    ToParameters, ToSchema,
+    controller, MultiRequestMediaType, MultiResponse, MultiResponseMediaType, SecurityScheme,
+    SingleResponse, Tag, ToParameters, ToSchema,
 };
 #[cfg_attr(docsrs, doc(cfg(feature = "schemars")))]
 #[cfg(feature = "schemars")]
 pub use predawn_schema::schemars_transform;
 pub use predawn_schema::ToSchema;
 
-pub use self::traits::{Tag, ToParameters};
+pub use self::traits::{SecurityScheme, Tag, ToParameters};
 
 #[doc(hidden)]
 pub mod __internal {

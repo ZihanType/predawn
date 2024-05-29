@@ -1,4 +1,4 @@
-use from_attr::{AttrsValue, FromAttr};
+use from_attr::{AttrsValue, FromAttr, Map};
 use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote};
 use quote_use::quote_use;
@@ -14,26 +14,31 @@ use crate::{
 
 #[derive(FromAttr)]
 #[attribute(idents = [controller])]
-pub(crate) struct ImplAttr {
+pub(crate) struct ControllerAttr {
     paths: Vec<Expr>,
     middleware: Option<Path>,
     tags: Vec<Type>,
+    security: Vec<Map<Type, Vec<String>>>,
 }
 
 #[derive(FromAttr)]
 #[attribute(idents = [handler])]
-struct ImplFnAttr {
+struct MethodAttr {
     paths: Vec<Expr>,
     methods: Vec<Method>,
     middleware: Option<Path>,
     tags: Vec<Type>,
+    security: Vec<Map<Type, Vec<String>>>,
 }
 
 fn default_paths() -> Vec<Expr> {
     vec![parse_quote!("")]
 }
 
-pub(crate) fn generate(impl_attr: ImplAttr, mut item_impl: ItemImpl) -> syn::Result<TokenStream> {
+pub(crate) fn generate(
+    controller_attr: ControllerAttr,
+    mut item_impl: ItemImpl,
+) -> syn::Result<TokenStream> {
     if let Some((_, trait_name, _)) = item_impl.trait_ {
         return Err(syn::Error::new(
             trait_name.span(),
@@ -41,11 +46,12 @@ pub(crate) fn generate(impl_attr: ImplAttr, mut item_impl: ItemImpl) -> syn::Res
         ));
     }
 
-    let ImplAttr {
+    let ControllerAttr {
         paths,
         middleware,
         tags,
-    } = impl_attr;
+        security,
+    } = controller_attr;
 
     let paths = if !paths.is_empty() {
         paths
@@ -64,8 +70,10 @@ pub(crate) fn generate(impl_attr: ImplAttr, mut item_impl: ItemImpl) -> syn::Res
             _ => return,
         };
 
-        let fn_attr = match ImplFnAttr::remove_attributes(&mut f.attrs) {
-            Ok(Some(AttrsValue { value: fn_attr, .. })) => fn_attr,
+        let method_attr = match MethodAttr::remove_attributes(&mut f.attrs) {
+            Ok(Some(AttrsValue {
+                value: method_attr, ..
+            })) => method_attr,
             Ok(None) => return,
             Err(AttrsValue { value: e, .. }) => {
                 errors.push(e);
@@ -73,7 +81,15 @@ pub(crate) fn generate(impl_attr: ImplAttr, mut item_impl: ItemImpl) -> syn::Res
             }
         };
 
-        match generate_single_fn_impl(&paths, middleware.as_ref(), &tags, self_ty, f, fn_attr) {
+        match generate_single_fn_impl(
+            &paths,
+            middleware.as_ref(),
+            &tags,
+            &security,
+            self_ty,
+            f,
+            method_attr,
+        ) {
             Ok(insert_routes_impl) => insert_routes_impls.push(insert_routes_impl),
             Err(e) => errors.push(e),
         }
@@ -114,7 +130,8 @@ pub(crate) fn generate(impl_attr: ImplAttr, mut item_impl: ItemImpl) -> syn::Res
         # use predawn::normalized_path::NormalizedPath;
         # use predawn::__internal::http::Method;
         # use predawn::__internal::rudi::Context;
-        # use predawn::openapi::{Components, Operation, Tag};
+        # use predawn::openapi::{SecurityScheme, Operation, Tag, ReferenceOr, Schema};
+        # use predawn::__internal::indexmap::IndexMap;
 
         impl Controller for #self_ty {
             fn insert_routes(
@@ -122,7 +139,8 @@ pub(crate) fn generate(impl_attr: ImplAttr, mut item_impl: ItemImpl) -> syn::Res
                 cx: &mut Context,
                 route_table: &mut BTreeMap<NormalizedPath, Vec<(Method, DynHandler)>>,
                 paths: &mut BTreeMap<NormalizedPath, Vec<(Method, Operation)>>,
-                components: &mut Components,
+                schemas: & mut IndexMap<String, ReferenceOr<Schema>>,
+                security_schemes: &mut BTreeMap<&'static str, (&'static str, SecurityScheme)>,
                 tags: &mut BTreeMap<&'static str, (&'static str, Tag)>,
             ) {
                 let this = self;
@@ -143,20 +161,22 @@ fn generate_single_fn_impl<'a>(
     controller_paths: &'a [Expr],
     controller_middeleware: Option<&'a Path>,
     controller_tags: &'a [Type],
+    controller_security: &'a [Map<Type, Vec<String>>],
     self_ty: &'a Type,
     f: &'a ImplItemFn,
-    fn_attr: ImplFnAttr,
+    method_attr: MethodAttr,
 ) -> syn::Result<TokenStream> {
     if f.sig.asyncness.is_none() {
         return Err(syn::Error::new(f.sig.span(), "the method must be async"));
     }
 
-    let ImplFnAttr {
+    let MethodAttr {
         paths,
         methods,
         middleware: method_middleware,
         tags: method_tags,
-    } = fn_attr;
+        security: method_security,
+    } = method_attr;
 
     let method_paths = if !paths.is_empty() {
         paths
@@ -168,6 +188,12 @@ fn generate_single_fn_impl<'a>(
         methods
     } else {
         ENUM_METHODS.to_vec()
+    };
+
+    let security = if !method_security.is_empty() {
+        &method_security
+    } else {
+        controller_security
     };
 
     let fn_name = &f.sig.ident;
@@ -216,7 +242,7 @@ fn generate_single_fn_impl<'a>(
             # use predawn::api_request::ApiRequestHead;
             # use predawn::openapi::transform_parameters;
 
-            if let Some(parameters) = <#ty as ApiRequestHead>::parameters(components) {
+            if let Some(parameters) = <#ty as ApiRequestHead>::parameters(schemas) {
                 operation
                     .parameters
                     .extend(transform_parameters(parameters));
@@ -230,7 +256,7 @@ fn generate_single_fn_impl<'a>(
 
             merge_responses(
                 &mut responses,
-                <<#ty as FromRequestHead>::Error as ResponseError>::responses(components),
+                <<#ty as FromRequestHead>::Error as ResponseError>::responses(schemas),
             );
         };
 
@@ -257,7 +283,7 @@ fn generate_single_fn_impl<'a>(
             # use predawn::api_request::ApiRequest;
             # use predawn::openapi::transform_parameters;
 
-            if let Some(parameters) = <#ty as ApiRequest<_>>::parameters(components) {
+            if let Some(parameters) = <#ty as ApiRequest<_>>::parameters(schemas) {
                 operation
                     .parameters
                     .extend(transform_parameters(parameters));
@@ -268,7 +294,7 @@ fn generate_single_fn_impl<'a>(
             # use predawn::api_request::ApiRequest;
             # use predawn::openapi::transform_request_body;
 
-            operation.request_body = transform_request_body(<#ty as ApiRequest<_>>::request_body(components));
+            operation.request_body = transform_request_body(<#ty as ApiRequest<_>>::request_body(schemas));
         };
 
         last_error_responses = quote_use! {
@@ -278,7 +304,7 @@ fn generate_single_fn_impl<'a>(
 
             merge_responses(
                 &mut responses,
-                <<#ty as FromRequest<_>>::Error as ResponseError>::responses(components),
+                <<#ty as FromRequest<_>>::Error as ResponseError>::responses(schemas),
             );
         };
     } else {
@@ -300,7 +326,7 @@ fn generate_single_fn_impl<'a>(
 
         merge_responses(
             &mut responses,
-            <<#return_ty as IntoResponse>::Error as ResponseError>::responses(components),
+            <<#return_ty as IntoResponse>::Error as ResponseError>::responses(schemas),
         );
     };
 
@@ -308,7 +334,7 @@ fn generate_single_fn_impl<'a>(
         # use predawn::api_response::ApiResponse;
         # use predawn::openapi::merge_responses;
 
-        if let Some(new) = <#return_ty as ApiResponse>::responses(components) {
+        if let Some(new) = <#return_ty as ApiResponse>::responses(schemas) {
             merge_responses(&mut responses, new);
         }
     };
@@ -360,7 +386,7 @@ fn generate_single_fn_impl<'a>(
                 # use predawn::Tag;
 
                 let tag_type_name = type_name::<#ty>();
-                let tag_name = <#ty as Tag>::name();
+                let tag_name = <#ty as Tag>::NAME;
 
                 if !tags.contains_key(tag_type_name) {
                     tags.insert(
@@ -380,6 +406,54 @@ fn generate_single_fn_impl<'a>(
             let mut op_tags = BTreeSet::new();
             #(#insert_tags)*
             operation.tags.extend(op_tags);
+        }
+    };
+
+    let add_security = if security.is_empty() {
+        TokenStream::new()
+    } else {
+        let push_security = security.iter().map(|Map(map)| {
+            let insert_security_requirement = map.iter().map(|(ty, scopes)| {
+                quote_use! {
+                    # use core::any::type_name;
+                    # use std::string::ToString;
+                    # use predawn::SecurityScheme;
+
+                    let scheme_type_name = type_name::<#ty>();
+                    let scheme_name = <#ty as SecurityScheme>::NAME;
+
+                    if !security_schemes.contains_key(scheme_type_name) {
+                        security_schemes.insert(
+                            scheme_type_name,
+                            (scheme_name, <#ty as SecurityScheme>::create())
+                        );
+                    }
+
+                    security_requirement.insert(
+                        ToString::to_string(scheme_name),
+                        vec![
+                            #(ToString::to_string(#scopes)),*
+                        ]
+                    );
+                }
+            });
+
+            quote_use! {
+                # use predawn::openapi::SecurityRequirement;
+
+                #[allow(unused_mut)]
+                let mut security_requirement = SecurityRequirement::default();
+                #(#insert_security_requirement)*
+                security.push(security_requirement);
+            }
+        });
+
+        quote_use! {
+            # use std::vec::Vec;
+
+            let mut security = Vec::new();
+            #(#push_security)*
+            operation.security = Some(security);
         }
     };
 
@@ -426,6 +500,8 @@ fn generate_single_fn_impl<'a>(
         #add_description
 
         #add_tags
+
+        #add_security
 
         operation.operation_id = Some(format!("{}::{}", type_name::<#self_ty>(), stringify!(#fn_name)));
 

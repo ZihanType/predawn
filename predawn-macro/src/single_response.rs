@@ -103,7 +103,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         }
         Ok(Last::Body { member, ty }) => {
             content_field_value =
-                parse_quote!(<#ty as ::predawn::MultiResponseMediaType>::content(components));
+                parse_quote!(<#ty as ::predawn::MultiResponseMediaType>::content(schemas));
             response_ty = ty;
             into_response_arg = parse_quote!(self.#member);
         }
@@ -142,14 +142,14 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         # use predawn::into_response::IntoResponse;
         # use predawn::api_response::ApiResponse;
         # use predawn::response::Response;
-        # use predawn::openapi::{self, Components};
+        # use predawn::openapi::{self, ReferenceOr, Schema};
         # use predawn::__internal::indexmap::IndexMap;
         # use predawn::__internal::http::StatusCode;
 
         impl #impl_generics SingleResponse for #ident #ty_generics #where_clause {
             const STATUS_CODE: u16 = #status_code_value;
 
-            fn response(components: &mut Components) -> openapi::Response {
+            fn response(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> openapi::Response {
                 let mut headers = IndexMap::with_capacity(#headers_len);
 
                 #(#response_bodies)*
@@ -179,8 +179,8 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         }
 
         impl #impl_generics ApiResponse for #ident #ty_generics #where_clause {
-            fn responses(components: &mut Components) -> Option<BTreeMap<StatusCode, openapi::Response>> {
-                Some(<Self as MultiResponse>::responses(components))
+            fn responses(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Option<BTreeMap<StatusCode, openapi::Response>> {
+                Some(<Self as MultiResponse>::responses(schemas))
             }
         }
     };
@@ -196,13 +196,14 @@ fn generate_unit(struct_ident: &Ident, status_code_value: u16) -> TokenStream {
         # use predawn::into_response::IntoResponse;
         # use predawn::api_response::ApiResponse;
         # use predawn::response::Response;
-        # use predawn::openapi::{self, Components};
+        # use predawn::openapi::{self, ReferenceOr, Schema};
         # use predawn::__internal::http::StatusCode;
+        # use predawn::__internal::indexmap::IndexMap;
 
         impl SingleResponse for #struct_ident {
             const STATUS_CODE: u16 = #status_code_value;
 
-            fn response(components: &mut Components) -> openapi::Response {
+            fn response(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> openapi::Response {
                 Default::default()
             }
         }
@@ -220,8 +221,8 @@ fn generate_unit(struct_ident: &Ident, status_code_value: u16) -> TokenStream {
         }
 
         impl ApiResponse for #struct_ident {
-            fn responses(components: &mut Components) -> Option<BTreeMap<StatusCode, openapi::Response>> {
-                Some(<Self as MultiResponse>::responses(components))
+            fn responses(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Option<BTreeMap<StatusCode, openapi::Response>> {
+                Some(<Self as MultiResponse>::responses(schemas))
             }
         }
     }
@@ -304,7 +305,7 @@ fn generate_bodies<'a>(
             style: Default::default(),
             required: <#ty as ToSchema>::REQUIRED,
             deprecated: Default::default(),
-            format: ParameterSchemaOrContent::Schema(<#ty as ToSchema>::schema_ref(components)),
+            format: ParameterSchemaOrContent::Schema(<#ty as ToSchema>::schema_ref(schemas)),
             example: Default::default(),
             examples: Default::default(),
             extensions: Default::default(),
@@ -373,10 +374,12 @@ fn extract_header_name<'a>(
         let raw_header_name = lit_str.value();
         let lit_str_span = lit_str.span();
 
-        let Ok(header_name) = HeaderName::from_bytes(raw_header_name.as_bytes()) else {
-            let e = syn::Error::new(lit_str_span, "it is not a valid header name");
-            errors.push(e);
-            continue;
+        let header_name = match HeaderName::from_bytes(raw_header_name.as_bytes()) {
+            Ok(header_name) => header_name,
+            Err(e) => {
+                errors.push(syn::Error::new(lit_str_span, e));
+                continue;
+            }
         };
 
         let header_name = header_name.as_str().to_string();

@@ -5,7 +5,7 @@ use config::ConfigError;
 use http::Method;
 use indexmap::IndexMap;
 use predawn_core::{
-    openapi::{self, Components, Info, OpenAPI, PathItem, Paths, ReferenceOr},
+    openapi::{self, Components, Info, OpenAPI, PathItem, Paths, ReferenceOr, SecurityRequirement},
     request::BodyLimit,
 };
 use rudi::Context;
@@ -49,6 +49,16 @@ pub trait Hooks {
     }
 
     fn openapi_servers(cx: &mut Context) -> Vec<openapi::Server> {
+        let _cx = cx;
+        Default::default()
+    }
+
+    fn openapi_security_requirements(cx: &mut Context) -> Option<Vec<SecurityRequirement>> {
+        let _cx = cx;
+        Default::default()
+    }
+
+    fn openapi_security_schemes(cx: &mut Context) -> BTreeMap<String, openapi::SecurityScheme> {
         let _cx = cx;
         Default::default()
     }
@@ -101,7 +111,8 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
 
     let mut route_table = BTreeMap::new();
     let mut paths = BTreeMap::new();
-    let mut components = Components::default();
+    let mut schemas = IndexMap::new();
+    let mut security_schemes = BTreeMap::new();
     let mut tags = BTreeMap::new();
 
     cx.resolve_by_type_async::<Arc<dyn Controller>>()
@@ -112,14 +123,15 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
                 &mut cx,
                 &mut route_table,
                 &mut paths,
-                &mut components,
+                &mut schemas,
+                &mut security_schemes,
                 &mut tags,
             );
         });
 
     let info = H::openapi_info(&mut cx);
-
     let servers = H::openapi_servers(&mut cx);
+    let security = H::openapi_security_requirements(&mut cx);
 
     let mut duplicate_endpoints = Vec::new();
 
@@ -184,11 +196,11 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
         })
         .collect::<Vec<_>>();
 
-    // retains only the tags with the same name
+    // retains only the tag types with the same tag name
     tag_name_to_type_names.retain(|_, v| v.len() > 1);
 
     // if tag_name_to_type_names is not empty, it should panic
-    // because it means that there are multiple tags with the same name
+    // because it means that there are multiple tag types with the same tag name
     if !tag_name_to_type_names.is_empty() {
         panic!(
             "multiple tags with the same name: {:#?}",
@@ -196,17 +208,87 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
         );
     }
 
+    let mut schemes_name_to_type_names: BTreeMap<_, Vec<_>> = BTreeMap::new();
+
+    let mut security_schemes = security_schemes
+        .into_iter()
+        .map(|(scheme_type_name, (scheme_name, scheme))| {
+            schemes_name_to_type_names
+                .entry(scheme_name)
+                .or_default()
+                .push(scheme_type_name);
+
+            (scheme_name.to_string(), ReferenceOr::Item(scheme))
+        })
+        .collect::<IndexMap<_, _>>();
+
+    // retains only the security scheme types with the same scheme name
+    schemes_name_to_type_names.retain(|_, v| v.len() > 1);
+
+    // if schemes_name_to_type_names is not empty, it should panic
+    // because it means that there are multiple security scheme types with the same scheme name
+    if !schemes_name_to_type_names.is_empty() {
+        panic!(
+            "multiple security scheme types with the same name: {:#?}",
+            schemes_name_to_type_names
+        );
+    }
+
+    let duplicate_schemes = H::openapi_security_schemes(&mut cx)
+        .into_iter()
+        .filter_map(|(name, scheme)| {
+            let exist = security_schemes.get(&name);
+
+            match exist {
+                Some(ReferenceOr::Item(exist_scheme)) => {
+                    if exist_scheme == &scheme {
+                        None
+                    } else {
+                        Some((name, (scheme, exist_scheme.clone())))
+                    }
+                }
+                Some(ReferenceOr::Reference { .. }) => unreachable!(),
+                None => {
+                    security_schemes.insert(name, ReferenceOr::Item(scheme));
+                    None
+                }
+            }
+        })
+        .collect::<BTreeMap<_, _>>();
+
+    if !duplicate_schemes.is_empty() {
+        panic!(
+            "multiple security schemes with the same name: {:#?}",
+            duplicate_schemes
+        );
+    }
+
+    let components = Components {
+        schemas,
+        responses: Default::default(),
+        parameters: Default::default(),
+        examples: Default::default(),
+        request_bodies: Default::default(),
+        headers: Default::default(),
+        security_schemes,
+        links: Default::default(),
+        callbacks: Default::default(),
+        extensions: Default::default(),
+    };
+
     let api = OpenAPI {
         openapi: "3.0.0".to_string(),
         info,
         servers,
         paths: Paths {
             paths,
-            ..Default::default()
+            extensions: Default::default(),
         },
         components: Some(components),
+        security,
         tags,
-        ..Default::default()
+        external_docs: Default::default(),
+        extensions: Default::default(),
     };
 
     cx.insert_singleton(api);

@@ -8,7 +8,7 @@ use crate::util;
 
 #[derive(FromAttr, Default)]
 #[attribute(idents = [tag])]
-pub(crate) struct TypeAttr {
+struct TypeAttr {
     rename: Option<String>,
 }
 
@@ -36,13 +36,11 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         # use predawn::openapi;
 
         impl Tag for #ident {
-            fn name() -> &'static str {
-                #ident_str
-            }
+            const NAME: &'static str = #ident_str;
 
             fn create() -> openapi::Tag {
                 openapi::Tag {
-                    name: ToString::to_string(Self::name()),
+                    name: ToString::to_string(Self::NAME),
                     description: #description,
                     external_docs: Default::default(),
                     extensions: Default::default(),

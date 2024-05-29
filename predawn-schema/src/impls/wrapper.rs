@@ -1,4 +1,5 @@
-use openapiv3::{Components, Schema};
+use indexmap::IndexMap;
+use openapiv3::{ReferenceOr, Schema};
 
 use crate::ToSchema;
 
@@ -8,8 +9,8 @@ macro_rules! wrapper_impl {
         where
             T: ToSchema
         {
-            fn schema(components: &mut Components) -> Schema {
-                T::schema(components)
+            fn schema(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Schema {
+                T::schema(schemas)
             }
         }
     };

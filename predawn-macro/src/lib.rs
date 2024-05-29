@@ -4,6 +4,7 @@ mod multi_request_media_type;
 mod multi_response;
 mod multi_response_media_type;
 mod multipart;
+mod security_scheme;
 mod serde_attr;
 mod single_response;
 mod tag;
@@ -17,7 +18,7 @@ use syn::{parse_macro_input, DeriveInput, ItemImpl};
 
 #[proc_macro_attribute]
 pub fn controller(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let attr = match controller::ImplAttr::from_tokens(attr.into()) {
+    let attr = match controller::ControllerAttr::from_tokens(attr.into()) {
         Ok(attr) => attr,
         Err(e) => return e.to_compile_error().into(),
     };
@@ -102,6 +103,16 @@ pub fn tag(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
     tag::generate(input)
+        .unwrap_or_else(|e| e.to_compile_error())
+        .into()
+}
+
+#[doc = include_str!("docs/security_scheme.md")]
+#[proc_macro_derive(SecurityScheme, attributes(api_key, http))]
+pub fn security_scheme(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+
+    security_scheme::generate(input)
         .unwrap_or_else(|e| e.to_compile_error())
         .into()
 }

@@ -1,12 +1,13 @@
-use openapiv3::{Components, Schema};
+use indexmap::IndexMap;
+use openapiv3::{ReferenceOr, Schema};
 
 use crate::ToSchema;
 
 impl<T: ToSchema> ToSchema for Option<T> {
     const REQUIRED: bool = false;
 
-    fn schema(components: &mut Components) -> Schema {
-        let mut schema = T::schema(components);
+    fn schema(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Schema {
+        let mut schema = T::schema(schemas);
 
         schema.schema_data.nullable = true;
 

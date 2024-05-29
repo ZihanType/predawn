@@ -5,10 +5,12 @@ use std::{
 };
 
 use http::StatusCode;
+use indexmap::IndexMap;
+use openapiv3::{ReferenceOr, Schema};
 
 use crate::{
     error::BoxError,
-    openapi::{self, merge_responses, Components},
+    openapi::{self, merge_responses},
     response::Response,
     response_error::ResponseError,
 };
@@ -70,9 +72,11 @@ where
         }
     }
 
-    fn responses(components: &mut Components) -> BTreeMap<StatusCode, openapi::Response> {
-        let mut responses = L::responses(components);
-        merge_responses(&mut responses, R::responses(components));
+    fn responses(
+        schemas: &mut IndexMap<String, ReferenceOr<Schema>>,
+    ) -> BTreeMap<StatusCode, openapi::Response> {
+        let mut responses = L::responses(schemas);
+        merge_responses(&mut responses, R::responses(schemas));
         responses
     }
 

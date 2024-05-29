@@ -4,11 +4,12 @@ use http::{
     header::{CONTENT_DISPOSITION, CONTENT_TYPE},
     HeaderValue, StatusCode,
 };
+use indexmap::IndexMap;
 use predawn_core::{
     api_response::ApiResponse,
     into_response::IntoResponse,
     media_type::{MediaType, MultiResponseMediaType, ResponseMediaType, SingleMediaType},
-    openapi::{self, Components},
+    openapi::{self, ReferenceOr, Schema},
     response::{MultiResponse, Response, SingleResponse},
 };
 use predawn_schema::ToSchema;
@@ -111,8 +112,10 @@ impl<T: IntoResponse + MediaType> IntoResponse for Download<T> {
 }
 
 impl<T: MediaType + ResponseMediaType> ApiResponse for Download<T> {
-    fn responses(components: &mut Components) -> Option<BTreeMap<StatusCode, openapi::Response>> {
-        Some(<Self as MultiResponse>::responses(components))
+    fn responses(
+        schemas: &mut IndexMap<String, ReferenceOr<Schema>>,
+    ) -> Option<BTreeMap<StatusCode, openapi::Response>> {
+        Some(<Self as MultiResponse>::responses(schemas))
     }
 }
 
@@ -127,7 +130,7 @@ impl<T> ToSchema for Download<T> {
             .to_string()
     }
 
-    fn schema(_: &mut Components) -> openapi::Schema {
+    fn schema(_: &mut IndexMap<String, ReferenceOr<Schema>>) -> openapi::Schema {
         crate::util::binary_schema("Download")
     }
 }
@@ -139,18 +142,18 @@ impl<T: MediaType> MediaType for Download<T> {
 impl<T: ResponseMediaType> ResponseMediaType for Download<T> {}
 
 impl<T> SingleMediaType for Download<T> {
-    fn media_type(components: &mut Components) -> openapi::MediaType {
+    fn media_type(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> openapi::MediaType {
         openapi::MediaType {
-            schema: Some(<Self as ToSchema>::schema_ref(components)),
+            schema: Some(<Self as ToSchema>::schema_ref(schemas)),
             ..Default::default()
         }
     }
 }
 
 impl<T: MediaType + ResponseMediaType> SingleResponse for Download<T> {
-    fn response(components: &mut Components) -> openapi::Response {
+    fn response(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> openapi::Response {
         openapi::Response {
-            content: <Self as MultiResponseMediaType>::content(components),
+            content: <Self as MultiResponseMediaType>::content(schemas),
             ..Default::default()
         }
     }

@@ -50,10 +50,11 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
     let expand = quote_use! {
         # use core::default::Default;
         # use predawn::ToSchema;
-        # use predawn::openapi::{Components, Schema, ObjectType, SchemaData, SchemaKind, Type};
+        # use predawn::openapi::{ReferenceOr, Schema, ObjectType, SchemaData, SchemaKind, Type};
+        # use predawn::__internal::indexmap::IndexMap;
 
         impl #impl_generics ToSchema for #ident #ty_generics #where_clause {
-            fn schema(components: &mut Components) -> Schema {
+            fn schema(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Schema {
                 let mut data = SchemaData::default();
 
                 let title = #schema_title;
@@ -100,14 +101,14 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
         quote_use! {
             # use predawn::ToSchema;
 
-            <#ty as ToSchema>::schema_ref_box(components)
+            <#ty as ToSchema>::schema_ref_box(schemas)
         }
     } else {
         let create = quote_use! {
             # use predawn::ToSchema;
 
             // TODO: add default, example, flatten etc.
-            let mut schema = <#ty as ToSchema>::schema(components);
+            let mut schema = <#ty as ToSchema>::schema(schemas);
         };
 
         let finish = quote_use! {
@@ -154,7 +155,7 @@ fn generate_schema_title(name: &str, generics: &Generics) -> TokenStream {
                 let extract_title = quote_use! {
                     # use predawn::ToSchema;
 
-                    let schema = <#ty as ToSchema>::schema(components);
+                    let schema = <#ty as ToSchema>::schema(schemas);
                     let title = schema.schema_data.title.as_deref().unwrap_or("Unknown");
                 };
 

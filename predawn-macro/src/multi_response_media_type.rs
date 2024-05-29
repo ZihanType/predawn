@@ -68,16 +68,17 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         # use std::string::String;
         # use std::collections::BTreeMap;
         # use predawn::MultiResponseMediaType;
-        # use predawn::openapi::{self, Components};
+        # use predawn::openapi::{self, ReferenceOr, Schema};
         # use predawn::__internal::indexmap::IndexMap;
         # use predawn::response::Response;
         # use predawn::{SingleResponse, MultiResponse};
         # use predawn::into_response::IntoResponse;
         # use predawn::api_response::ApiResponse;
         # use predawn::__internal::http::StatusCode;
+        # use predawn::__internal::indexmap::IndexMap;
 
         impl #impl_generics MultiResponseMediaType for #ident #ty_generics #where_clause {
-            fn content(components: &mut Components) -> IndexMap<String, openapi::MediaType> {
+            fn content(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> IndexMap<String, openapi::MediaType> {
                 let mut map = IndexMap::with_capacity(#variants_size);
                 #(#content_bodies)*
                 map
@@ -87,11 +88,11 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         impl #impl_generics SingleResponse for #ident #ty_generics #where_clause {
             const STATUS_CODE: u16 = #status_code_value;
 
-            fn response(components: &mut Components) -> openapi::Response {
+            fn response(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> openapi::Response {
                 openapi::Response {
                     description: Default::default(),
                     headers: Default::default(),
-                    content: <Self as MultiResponseMediaType>::content(components),
+                    content: <Self as MultiResponseMediaType>::content(schemas),
                     links: Default::default(),
                     extensions: Default::default(),
                 }
@@ -113,8 +114,8 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         }
 
         impl #impl_generics ApiResponse for #ident #ty_generics #where_clause {
-            fn responses(components: &mut Components) -> Option<BTreeMap<StatusCode, openapi::Response>> {
-                Some(<Self as MultiResponse>::responses(components))
+            fn responses(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Option<BTreeMap<StatusCode, openapi::Response>> {
+                Some(<Self as MultiResponse>::responses(schemas))
             }
         }
     };
@@ -143,7 +144,7 @@ fn handle_single_variant<'a>(
 
         map.insert(
             ToString::to_string(<#ty as MediaType>::MEDIA_TYPE),
-            <#ty as SingleMediaType>::media_type(components),
+            <#ty as SingleMediaType>::media_type(schemas),
         );
     };
 

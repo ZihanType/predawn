@@ -1,4 +1,7 @@
-use std::{collections::HashSet, time::Duration};
+use std::{
+    collections::{BTreeMap, HashSet},
+    time::Duration,
+};
 
 use http::StatusCode;
 use predawn::{
@@ -10,10 +13,12 @@ use predawn::{
     },
     handler::{Handler, HandlerExt},
     middleware::{TowerLayerCompatExt, Tracing},
+    openapi::{self, SecurityRequirement},
     payload::{Form, Json},
     response::Download,
     response_error::ResponseError,
-    Tag, ToParameters, ToSchema,
+    route::Router,
+    SecurityScheme, Tag, ToParameters, ToSchema,
 };
 use rudi::{Context, Singleton};
 use serde::{Deserialize, Serialize};
@@ -33,7 +38,21 @@ impl Hooks for App {
         (cx, router)
     }
 
-    fn after_routes(router: &predawn::route::Router) {
+    // set global security requirements
+    fn openapi_security_requirements(_: &mut Context) -> Option<Vec<SecurityRequirement>> {
+        let mut map = SecurityRequirement::default();
+        map.insert(MyScheme1::NAME.to_string(), Vec::new());
+        Some(vec![map])
+    }
+
+    // set global security schemes
+    fn openapi_security_schemes(_: &mut Context) -> BTreeMap<String, openapi::SecurityScheme> {
+        let mut map = BTreeMap::new();
+        map.insert(MyScheme1::NAME.to_string(), MyScheme1::create());
+        map
+    }
+
+    fn after_routes(router: &Router) {
         router.routes().iter().for_each(|(route, methods)| {
             println!("{}: {:?}", route, methods);
         });
@@ -58,6 +77,14 @@ struct Controller;
 #[derive(Tag)]
 struct Hello;
 
+#[derive(SecurityScheme)]
+#[http(scheme = bearer)]
+struct MyScheme1;
+
+#[derive(SecurityScheme)]
+#[http(scheme = basic)]
+struct MyScheme2;
+
 #[controller(tags = [Controller])]
 impl MyController {
     /// no argument, no return
@@ -67,7 +94,7 @@ impl MyController {
     /// ```shell
     /// curl http://localhost:9612/no_arg
     /// ```
-    #[handler(paths = ["/no_arg"], methods = [GET])]
+    #[handler(paths = ["/no_arg"], methods = [GET], security = [{}, { MyScheme2: [] }])] // override the global security
     async fn no_arg(&self) {}
 
     #[handler(methods = [GET, POST, PUT], middleware = add_middlewares, tags = [Hello])]
@@ -75,7 +102,7 @@ impl MyController {
         Ok(format!("hello, {}", name))
     }
 
-    #[handler(paths = ["/json"], methods = [POST])]
+    #[handler(paths = ["/json"], methods = [POST], security = [{ MyScheme2: ["read", "write"] }])]
     async fn json_person(&self, mut person: Json<Person>) -> Json<Person> {
         person.age += 1;
         person

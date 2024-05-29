@@ -38,11 +38,12 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
 
     let expand = quote_use! {
         # use std::vec::Vec;
-        # use predawn::openapi::{ParameterData, Components};
+        # use predawn::openapi::{ParameterData, ReferenceOr, Schema};
         # use predawn::ToParameters;
+        # use predawn::__internal::indexmap::IndexMap;
 
         impl #impl_generics ToParameters for #ident #ty_generics #where_clause {
-            fn parameters(components: &mut Components) -> Vec<ParameterData> {
+            fn parameters(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Vec<ParameterData> {
                 [
                     #(#parameter_impls)*
                 ]
@@ -82,7 +83,7 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
             description: #description,
             required: <#ty as ToSchema>::REQUIRED,
             deprecated: Default::default(),
-            format: ParameterSchemaOrContent::Schema(<#ty as ToSchema>::schema_ref(components)),
+            format: ParameterSchemaOrContent::Schema(<#ty as ToSchema>::schema_ref(schemas)),
             example: Default::default(),
             examples: Default::default(),
             explode: Default::default(),
