@@ -111,7 +111,7 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
 
     let mut route_table = BTreeMap::new();
     let mut paths = BTreeMap::new();
-    let mut schemas = IndexMap::new();
+    let mut schemas = BTreeMap::new();
     let mut security_schemes = BTreeMap::new();
     let mut tags = BTreeMap::new();
 
@@ -132,6 +132,11 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
     let info = H::openapi_info(&mut cx);
     let servers = H::openapi_servers(&mut cx);
     let security = H::openapi_security_requirements(&mut cx);
+
+    let schemas = schemas
+        .into_iter()
+        .map(|(name, schema)| (name, ReferenceOr::Item(schema)))
+        .collect();
 
     let mut duplicate_endpoints = Vec::new();
 

@@ -1,5 +1,6 @@
-use indexmap::IndexMap;
-use openapiv3::{ReferenceOr, Schema};
+use std::collections::BTreeMap;
+
+use openapiv3::Schema;
 
 use crate::ToSchema;
 
@@ -9,7 +10,7 @@ macro_rules! wrapper_impl {
         where
             T: ToSchema
         {
-            fn schema(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Schema {
+            fn schema(schemas: &mut BTreeMap<String, Schema>) -> Schema {
                 T::schema(schemas)
             }
         }

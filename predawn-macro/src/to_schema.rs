@@ -49,12 +49,12 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
 
     let expand = quote_use! {
         # use core::default::Default;
+        # use std::collections::BTreeMap;
         # use predawn::ToSchema;
-        # use predawn::openapi::{ReferenceOr, Schema, ObjectType, SchemaData, SchemaKind, Type};
-        # use predawn::__internal::indexmap::IndexMap;
+        # use predawn::openapi::{Schema, ObjectType, SchemaData, SchemaKind, Type};
 
         impl #impl_generics ToSchema for #ident #ty_generics #where_clause {
-            fn schema(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Schema {
+            fn schema(schemas: &mut BTreeMap<String, Schema>) -> Schema {
                 let mut data = SchemaData::default();
 
                 let title = #schema_title;

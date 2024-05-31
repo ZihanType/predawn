@@ -1,11 +1,11 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, collections::BTreeMap};
 
 use bytes::{Bytes, BytesMut};
 use indexmap::IndexMap;
 use mime::{Mime, APPLICATION, CHARSET, OCTET_STREAM, PLAIN, TEXT, UTF_8};
 use predawn_schema::ToSchema;
 
-use crate::openapi::{self, ReferenceOr, Schema};
+use crate::openapi::{self, Schema};
 
 #[doc(hidden)]
 pub fn assert_response_media_type<T: ResponseMediaType>() {}
@@ -42,19 +42,15 @@ pub trait RequestMediaType {
 pub trait ResponseMediaType {}
 
 pub trait SingleMediaType {
-    fn media_type(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> openapi::MediaType;
+    fn media_type(schemas: &mut BTreeMap<String, Schema>) -> openapi::MediaType;
 }
 
 pub trait MultiRequestMediaType {
-    fn content(
-        schemas: &mut IndexMap<String, ReferenceOr<Schema>>,
-    ) -> IndexMap<String, openapi::MediaType>;
+    fn content(schemas: &mut BTreeMap<String, Schema>) -> IndexMap<String, openapi::MediaType>;
 }
 
 pub trait MultiResponseMediaType {
-    fn content(
-        schemas: &mut IndexMap<String, ReferenceOr<Schema>>,
-    ) -> IndexMap<String, openapi::MediaType>;
+    fn content(schemas: &mut BTreeMap<String, Schema>) -> IndexMap<String, openapi::MediaType>;
 }
 
 macro_rules! default_impl {
@@ -64,7 +60,7 @@ macro_rules! default_impl {
             T: MediaType + SingleMediaType + $bound,
         {
             fn content(
-                schemas: &mut IndexMap<String, ReferenceOr<Schema>>,
+                schemas: &mut BTreeMap<String, Schema>,
             ) -> IndexMap<String, openapi::MediaType> {
                 let mut map = IndexMap::with_capacity(1);
                 map.insert(T::MEDIA_TYPE.to_string(), T::media_type(schemas));
@@ -99,7 +95,7 @@ macro_rules! impl_for_str {
             impl ResponseMediaType for $ty {}
 
             impl SingleMediaType for $ty {
-                fn media_type(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> openapi::MediaType {
+                fn media_type(schemas: &mut BTreeMap<String, Schema>) -> openapi::MediaType {
                     openapi::MediaType {
                         schema: Some(<String as ToSchema>::schema_ref(schemas)),
                         ..Default::default()
@@ -134,7 +130,7 @@ macro_rules! impl_for_bytes {
             impl ResponseMediaType for $ty {}
 
             impl SingleMediaType for $ty {
-                fn media_type(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> openapi::MediaType {
+                fn media_type(schemas: &mut BTreeMap<String, Schema>) -> openapi::MediaType {
                     openapi::MediaType {
                         schema: Some(<Vec<u8> as ToSchema>::schema_ref(schemas)),
                         ..Default::default()
@@ -170,7 +166,7 @@ macro_rules! impl_for_const_n_usize {
             impl<const N: usize> ResponseMediaType for $ty {}
 
             impl<const N: usize> SingleMediaType for $ty {
-                fn media_type(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> openapi::MediaType {
+                fn media_type(schemas: &mut BTreeMap<String, Schema>) -> openapi::MediaType {
                     openapi::MediaType {
                         schema: Some(<[u8; N] as ToSchema>::schema_ref(schemas)),
                         ..Default::default()

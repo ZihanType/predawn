@@ -1,12 +1,13 @@
-use indexmap::IndexMap;
-use openapiv3::{ReferenceOr, Schema};
+use std::collections::BTreeMap;
+
+use openapiv3::Schema;
 
 use crate::ToSchema;
 
 impl<T: ToSchema> ToSchema for Option<T> {
     const REQUIRED: bool = false;
 
-    fn schema(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Schema {
+    fn schema(schemas: &mut BTreeMap<String, Schema>) -> Schema {
         let mut schema = T::schema(schemas);
 
         schema.schema_data.nullable = true;

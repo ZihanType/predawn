@@ -130,8 +130,7 @@ pub(crate) fn generate(
         # use predawn::normalized_path::NormalizedPath;
         # use predawn::__internal::http::Method;
         # use predawn::__internal::rudi::Context;
-        # use predawn::openapi::{SecurityScheme, Operation, Tag, ReferenceOr, Schema};
-        # use predawn::__internal::indexmap::IndexMap;
+        # use predawn::openapi::{SecurityScheme, Operation, Tag, Schema};
 
         impl Controller for #self_ty {
             fn insert_routes(
@@ -139,7 +138,7 @@ pub(crate) fn generate(
                 cx: &mut Context,
                 route_table: &mut BTreeMap<NormalizedPath, Vec<(Method, DynHandler)>>,
                 paths: &mut BTreeMap<NormalizedPath, Vec<(Method, Operation)>>,
-                schemas: & mut IndexMap<String, ReferenceOr<Schema>>,
+                schemas: & mut BTreeMap<String, Schema>,
                 security_schemes: &mut BTreeMap<&'static str, (&'static str, SecurityScheme)>,
                 tags: &mut BTreeMap<&'static str, (&'static str, Tag)>,
             ) {

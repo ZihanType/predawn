@@ -4,12 +4,11 @@ use http::{
     header::{CONTENT_DISPOSITION, CONTENT_TYPE},
     HeaderValue, StatusCode,
 };
-use indexmap::IndexMap;
 use predawn_core::{
     api_response::ApiResponse,
     into_response::IntoResponse,
     media_type::{MediaType, MultiResponseMediaType, ResponseMediaType, SingleMediaType},
-    openapi::{self, ReferenceOr, Schema},
+    openapi::{self, Schema},
     response::{MultiResponse, Response, SingleResponse},
 };
 use predawn_schema::ToSchema;
@@ -113,7 +112,7 @@ impl<T: IntoResponse + MediaType> IntoResponse for Download<T> {
 
 impl<T: MediaType + ResponseMediaType> ApiResponse for Download<T> {
     fn responses(
-        schemas: &mut IndexMap<String, ReferenceOr<Schema>>,
+        schemas: &mut BTreeMap<String, Schema>,
     ) -> Option<BTreeMap<StatusCode, openapi::Response>> {
         Some(<Self as MultiResponse>::responses(schemas))
     }
@@ -130,7 +129,7 @@ impl<T> ToSchema for Download<T> {
             .to_string()
     }
 
-    fn schema(_: &mut IndexMap<String, ReferenceOr<Schema>>) -> openapi::Schema {
+    fn schema(_: &mut BTreeMap<String, Schema>) -> openapi::Schema {
         crate::util::binary_schema("Download")
     }
 }
@@ -142,7 +141,7 @@ impl<T: MediaType> MediaType for Download<T> {
 impl<T: ResponseMediaType> ResponseMediaType for Download<T> {}
 
 impl<T> SingleMediaType for Download<T> {
-    fn media_type(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> openapi::MediaType {
+    fn media_type(schemas: &mut BTreeMap<String, Schema>) -> openapi::MediaType {
         openapi::MediaType {
             schema: Some(<Self as ToSchema>::schema_ref(schemas)),
             ..Default::default()
@@ -151,7 +150,7 @@ impl<T> SingleMediaType for Download<T> {
 }
 
 impl<T: MediaType + ResponseMediaType> SingleResponse for Download<T> {
-    fn response(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> openapi::Response {
+    fn response(schemas: &mut BTreeMap<String, Schema>) -> openapi::Response {
         openapi::Response {
             content: <Self as MultiResponseMediaType>::content(schemas),
             ..Default::default()

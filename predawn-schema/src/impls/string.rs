@@ -1,12 +1,10 @@
 use std::{
+    collections::BTreeMap,
     net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
     path::{Path, PathBuf},
 };
 
-use indexmap::IndexMap;
-use openapiv3::{
-    ReferenceOr, Schema, SchemaData, SchemaKind, StringType, Type, VariantOrUnknownOrEmpty,
-};
+use openapiv3::{Schema, SchemaData, SchemaKind, StringType, Type, VariantOrUnknownOrEmpty};
 
 use crate::ToSchema;
 
@@ -19,7 +17,7 @@ macro_rules! string_impl {
     };
     ($ty:ty, $format:expr) => {
         impl ToSchema for $ty {
-            fn schema(_: &mut IndexMap<String, ReferenceOr<Schema>>) -> Schema {
+            fn schema(_: &mut BTreeMap<String, Schema>) -> Schema {
                 let ty = StringType {
                     format: $format,
                     ..Default::default()
@@ -49,7 +47,7 @@ string_impl!(SocketAddrV6);
 macro_rules! one_of_string_impl {
     ($ty:ty; [$($elem:ty),+ $(,)?]) => {
         impl ToSchema for $ty {
-            fn schema(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Schema {
+            fn schema(schemas: &mut BTreeMap<String, Schema>) -> Schema {
                 Schema {
                     schema_data: SchemaData {
                         title: Some(stringify!($ty).to_string()),

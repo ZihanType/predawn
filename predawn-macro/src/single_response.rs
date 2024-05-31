@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use from_attr::{AttrsValue, FromAttr};
 use http::HeaderName;
 use proc_macro2::TokenStream;
+use quote::quote;
 use quote_use::quote_use;
 use syn::{
     parse_quote, spanned::Spanned, Attribute, Data, DataEnum, DataStruct, DataUnion, DeriveInput,
@@ -135,6 +136,9 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
 
     let headers_len = response_bodies.len();
 
+    let description = util::extract_description(&attrs);
+    let description = util::generate_lit_str(&description);
+
     let expand = quote_use! {
         # use core::default::Default;
         # use std::collections::BTreeMap;
@@ -142,20 +146,20 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         # use predawn::into_response::IntoResponse;
         # use predawn::api_response::ApiResponse;
         # use predawn::response::Response;
-        # use predawn::openapi::{self, ReferenceOr, Schema};
+        # use predawn::openapi::{self, Schema};
         # use predawn::__internal::indexmap::IndexMap;
         # use predawn::__internal::http::StatusCode;
 
         impl #impl_generics SingleResponse for #ident #ty_generics #where_clause {
             const STATUS_CODE: u16 = #status_code_value;
 
-            fn response(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> openapi::Response {
+            fn response(schemas: &mut BTreeMap<String, Schema>) -> openapi::Response {
                 let mut headers = IndexMap::with_capacity(#headers_len);
 
                 #(#response_bodies)*
 
                 openapi::Response {
-                    description: Default::default(),
+                    description: #description,
                     headers,
                     content: #content_field_value,
                     links: Default::default(),
@@ -179,7 +183,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         }
 
         impl #impl_generics ApiResponse for #ident #ty_generics #where_clause {
-            fn responses(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Option<BTreeMap<StatusCode, openapi::Response>> {
+            fn responses(schemas: &mut BTreeMap<String, Schema>) -> Option<BTreeMap<StatusCode, openapi::Response>> {
                 Some(<Self as MultiResponse>::responses(schemas))
             }
         }
@@ -196,14 +200,13 @@ fn generate_unit(struct_ident: &Ident, status_code_value: u16) -> TokenStream {
         # use predawn::into_response::IntoResponse;
         # use predawn::api_response::ApiResponse;
         # use predawn::response::Response;
-        # use predawn::openapi::{self, ReferenceOr, Schema};
+        # use predawn::openapi::{self, Schema};
         # use predawn::__internal::http::StatusCode;
-        # use predawn::__internal::indexmap::IndexMap;
 
         impl SingleResponse for #struct_ident {
             const STATUS_CODE: u16 = #status_code_value;
 
-            fn response(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> openapi::Response {
+            fn response(schemas: &mut BTreeMap<String, Schema>) -> openapi::Response {
                 Default::default()
             }
         }
@@ -221,7 +224,7 @@ fn generate_unit(struct_ident: &Ident, status_code_value: u16) -> TokenStream {
         }
 
         impl ApiResponse for #struct_ident {
-            fn responses(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Option<BTreeMap<StatusCode, openapi::Response>> {
+            fn responses(schemas: &mut BTreeMap<String, Schema>) -> Option<BTreeMap<StatusCode, openapi::Response>> {
                 Some(<Self as MultiResponse>::responses(schemas))
             }
         }
@@ -249,7 +252,11 @@ fn handle_single_field(
         None => Member::from(idx),
     };
 
-    Ok(generate_bodies(&ty, &header, &member))
+    let description = util::extract_description(&attrs);
+    let description = util::generate_optional_lit_str(&description)
+        .unwrap_or_else(|| quote!(::core::option::Option::None));
+
+    Ok(generate_bodies(&ty, &header, &member, description))
 }
 
 enum Last {
@@ -281,7 +288,11 @@ fn handle_last_field(
         return Ok(Last::Body { member, ty });
     };
 
-    let (response_body, into_response_body) = generate_bodies(&ty, &header, &member);
+    let description = util::extract_description(&attrs);
+    let description = util::generate_optional_lit_str(&description)
+        .unwrap_or_else(|| quote!(::core::option::Option::None));
+
+    let (response_body, into_response_body) = generate_bodies(&ty, &header, &member, description);
 
     Ok(Last::Header {
         response_body,
@@ -293,6 +304,7 @@ fn generate_bodies<'a>(
     ty: &'a Type,
     header_name: &'a str,
     member: &'a Member,
+    description: TokenStream,
 ) -> (TokenStream, TokenStream) {
     let response_body = quote_use! {
         # use core::default::Default;
@@ -301,7 +313,7 @@ fn generate_bodies<'a>(
         # use predawn::ToSchema;
 
         let header = Header {
-            description: Default::default(),
+            description: #description,
             style: Default::default(),
             required: <#ty as ToSchema>::REQUIRED,
             deprecated: Default::default(),

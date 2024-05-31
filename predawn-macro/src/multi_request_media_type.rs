@@ -75,23 +75,27 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         }
     };
 
+    let description = util::extract_description(&attrs);
+    let description = util::generate_optional_lit_str(&description)
+        .unwrap_or_else(|| quote!(::core::option::Option::None));
+
     let expand = quote_use! {
         # use core::convert::From;
         # use std::vec::Vec;
+        # use std::collections::BTreeMap;
         # use std::string::String;
         # use predawn::MultiRequestMediaType;
         # use predawn::media_type::InvalidContentType;
-        # use predawn::openapi::{self, ReferenceOr, Schema, Parameter};
+        # use predawn::openapi::{self, Schema, Parameter};
         # use predawn::__internal::indexmap::IndexMap;
         # use predawn::__internal::http::header::CONTENT_TYPE;
         # use predawn::from_request::FromRequest;
         # use predawn::api_request::ApiRequest;
         # use predawn::request::Head;
         # use predawn::body::RequestBody;
-        # use predawn::__internal::indexmap::IndexMap;
 
         impl #impl_generics MultiRequestMediaType for #ident #ty_generics #where_clause {
-            fn content(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> IndexMap<String, openapi::MediaType> {
+            fn content(schemas: &mut BTreeMap<String, Schema>) -> IndexMap<String, openapi::MediaType> {
                 let mut map = IndexMap::with_capacity(#variants_size);
                 #(#content_bodies)*
                 map
@@ -114,13 +118,13 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         }
 
         impl #impl_generics ApiRequest for #ident #ty_generics #where_clause {
-            fn parameters(_: &mut IndexMap<String, ReferenceOr<Schema>>) -> Option<Vec<Parameter>> {
+            fn parameters(_: &mut BTreeMap<String, Schema>) -> Option<Vec<Parameter>> {
                 None
             }
 
-            fn request_body(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Option<openapi::RequestBody> {
+            fn request_body(schemas: &mut BTreeMap<String, Schema>) -> Option<openapi::RequestBody> {
                 Some(openapi::RequestBody {
-                    description: Default::default(),
+                    description: #description,
                     content: <Self as MultiRequestMediaType>::content(schemas),
                     required: true,
                     extensions: Default::default(),

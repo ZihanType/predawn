@@ -1,13 +1,12 @@
 mod de;
 
-use std::fmt::Display;
+use std::{collections::BTreeMap, fmt::Display};
 
-use indexmap::IndexMap;
 use predawn_core::{
     api_request::ApiRequestHead,
     from_request::FromRequestHead,
     impl_deref,
-    openapi::{Parameter, ReferenceOr, Schema},
+    openapi::{Parameter, Schema},
     request::Head,
 };
 use serde::Deserialize;
@@ -45,7 +44,7 @@ where
 }
 
 impl<T: ToParameters> ApiRequestHead for Path<T> {
-    fn parameters(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Option<Vec<Parameter>> {
+    fn parameters(schemas: &mut BTreeMap<String, Schema>) -> Option<Vec<Parameter>> {
         Some(
             <T as ToParameters>::parameters(schemas)
                 .into_iter()

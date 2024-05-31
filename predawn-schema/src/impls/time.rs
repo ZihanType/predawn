@@ -1,12 +1,14 @@
-use std::time::{Duration, SystemTime};
+use std::{
+    collections::BTreeMap,
+    time::{Duration, SystemTime},
+};
 
-use indexmap::IndexMap;
-use openapiv3::{ObjectType, ReferenceOr, Schema, SchemaData, SchemaKind, Type};
+use openapiv3::{ObjectType, Schema, SchemaData, SchemaKind, Type};
 
 use crate::ToSchema;
 
 impl ToSchema for SystemTime {
-    fn schema(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Schema {
+    fn schema(schemas: &mut BTreeMap<String, Schema>) -> Schema {
         let mut ty = ObjectType::default();
 
         ty.properties
@@ -30,7 +32,7 @@ impl ToSchema for SystemTime {
 }
 
 impl ToSchema for Duration {
-    fn schema(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Schema {
+    fn schema(schemas: &mut BTreeMap<String, Schema>) -> Schema {
         let mut ty = ObjectType::default();
 
         ty.properties

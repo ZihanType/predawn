@@ -1,14 +1,13 @@
 use std::collections::BTreeMap;
 
-use indexmap::IndexMap;
-use openapiv3::{AnySchema, NumberType, ReferenceOr, Schema, SchemaData, SchemaKind, Type};
+use openapiv3::{AnySchema, NumberType, Schema, SchemaData, SchemaKind, Type};
 use serde_json::{Map, Number, Value};
 
 use super::forward_impl;
 use crate::ToSchema;
 
 impl ToSchema for Value {
-    fn schema(_: &mut IndexMap<String, ReferenceOr<Schema>>) -> Schema {
+    fn schema(_: &mut BTreeMap<String, Schema>) -> Schema {
         Schema {
             schema_data: SchemaData {
                 title: Some("Any".to_string()),
@@ -22,7 +21,7 @@ impl ToSchema for Value {
 forward_impl!(Map<String, Value> => BTreeMap<String, Value>);
 
 impl ToSchema for Number {
-    fn schema(_: &mut IndexMap<String, ReferenceOr<Schema>>) -> Schema {
+    fn schema(_: &mut BTreeMap<String, Schema>) -> Schema {
         Schema {
             schema_data: SchemaData {
                 title: Some("Number".to_string()),

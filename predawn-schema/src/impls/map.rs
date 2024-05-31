@@ -1,7 +1,6 @@
-use indexmap::IndexMap;
-use openapiv3::{
-    AdditionalProperties, ObjectType, ReferenceOr, Schema, SchemaData, SchemaKind, Type,
-};
+use std::collections::BTreeMap;
+
+use openapiv3::{AdditionalProperties, ObjectType, Schema, SchemaData, SchemaKind, Type};
 
 use crate::ToSchema;
 
@@ -11,7 +10,7 @@ macro_rules! map_impl {
         where
             V: ToSchema
         {
-            fn schema(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Schema {
+            fn schema(schemas: &mut BTreeMap<String, Schema>) -> Schema {
                 let schema = V::schema(schemas);
                 let title = schema.schema_data.title.as_deref().unwrap_or("Unknown");
                 let title = format!("Map<String, {}>", title);

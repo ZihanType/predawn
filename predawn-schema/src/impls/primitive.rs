@@ -1,14 +1,15 @@
-use indexmap::IndexMap;
+use std::collections::BTreeMap;
+
 use openapiv3::{
-    ArrayType, BooleanType, IntegerType, NumberType, ReferenceOr, Schema, SchemaData, SchemaKind,
-    StringType, Type, VariantOrUnknownOrEmpty,
+    ArrayType, BooleanType, IntegerType, NumberType, Schema, SchemaData, SchemaKind, StringType,
+    Type, VariantOrUnknownOrEmpty,
 };
 use paste::paste;
 
 use crate::ToSchema;
 
 impl ToSchema for bool {
-    fn schema(_: &mut IndexMap<String, ReferenceOr<Schema>>) -> Schema {
+    fn schema(_: &mut BTreeMap<String, Schema>) -> Schema {
         Schema {
             schema_data: SchemaData {
                 title: Some("bool".to_string()),
@@ -20,7 +21,7 @@ impl ToSchema for bool {
 }
 
 impl ToSchema for char {
-    fn schema(_: &mut IndexMap<String, ReferenceOr<Schema>>) -> Schema {
+    fn schema(_: &mut BTreeMap<String, Schema>) -> Schema {
         Schema {
             schema_data: SchemaData {
                 title: Some("char".to_string()),
@@ -38,7 +39,7 @@ impl ToSchema for char {
 macro_rules! simple_impl {
     ($ty:ty, $ty_variant:ident, $format:literal) => {
         impl ToSchema for $ty {
-            fn schema(_: &mut IndexMap<String, ReferenceOr<Schema>>) -> Schema {
+            fn schema(_: &mut BTreeMap<String, Schema>) -> Schema {
                 Schema {
                     schema_data: SchemaData {
                         title: Some(stringify!($ty).to_string()),
@@ -68,7 +69,7 @@ simple_impl!(isize, Integer, "int");
 macro_rules! unsigned_impl {
     ($ty:ty, $format:literal) => {
         impl ToSchema for $ty {
-            fn schema(_: &mut IndexMap<String, ReferenceOr<Schema>>) -> Schema {
+            fn schema(_: &mut BTreeMap<String, Schema>) -> Schema {
                 Schema {
                     schema_data: SchemaData {
                         title: Some(stringify!($ty).to_string()),
@@ -93,7 +94,7 @@ unsigned_impl!(u128, "uint128");
 unsigned_impl!(usize, "uint");
 
 impl<T: ToSchema, const N: usize> ToSchema for [T; N] {
-    fn schema(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Schema {
+    fn schema(schemas: &mut BTreeMap<String, Schema>) -> Schema {
         let schema = T::schema(schemas);
         let title = schema.schema_data.title.as_deref().unwrap_or("Unknown");
         let title = format!("Array{}<{}>", N, title);

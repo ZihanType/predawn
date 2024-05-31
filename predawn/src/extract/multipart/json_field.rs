@@ -1,10 +1,8 @@
+use std::collections::BTreeMap;
+
 use bytes::Bytes;
-use indexmap::IndexMap;
 use multer::Field;
-use predawn_core::{
-    impl_deref,
-    openapi::{ReferenceOr, Schema},
-};
+use predawn_core::{impl_deref, openapi::Schema};
 use predawn_schema::ToSchema;
 use serde::de::DeserializeOwned;
 
@@ -21,7 +19,7 @@ impl<T: ToSchema> ToSchema for JsonField<T> {
         T::name()
     }
 
-    fn schema(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Schema {
+    fn schema(schemas: &mut BTreeMap<String, Schema>) -> Schema {
         T::schema(schemas)
     }
 }

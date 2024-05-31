@@ -1,5 +1,6 @@
-use indexmap::IndexMap;
-use openapiv3::{ArrayType, ReferenceOr, Schema, SchemaData, SchemaKind, Type};
+use std::collections::BTreeMap;
+
+use openapiv3::{ArrayType, Schema, SchemaData, SchemaKind, Type};
 
 use crate::ToSchema;
 
@@ -9,7 +10,7 @@ macro_rules! seq_impl {
         where
             T: ToSchema
         {
-            fn schema(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Schema {
+            fn schema(schemas: &mut BTreeMap<String, Schema>) -> Schema {
                 let schema = T::schema(schemas);
                 let title = schema.schema_data.title.as_deref().unwrap_or("Unknown");
                 let title = format!("Vector<{}>", title);

@@ -175,3 +175,9 @@ pub(crate) fn generate_optional_lit_str(s: &str) -> Option<TokenStream> {
         None
     }
 }
+
+pub(crate) fn generate_lit_str(s: &str) -> TokenStream {
+    quote! {
+       ::std::string::ToString::to_string(#s)
+    }
+}

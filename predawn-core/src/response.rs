@@ -2,28 +2,29 @@ use std::{borrow::Cow, collections::BTreeMap};
 
 use bytes::{Bytes, BytesMut};
 use http::StatusCode;
-use indexmap::IndexMap;
-use openapiv3::{ReferenceOr, Schema};
 
-use crate::{body::ResponseBody, media_type::MultiResponseMediaType, openapi};
+use crate::{
+    body::ResponseBody,
+    media_type::MultiResponseMediaType,
+    openapi::{self, Schema},
+};
 
 pub type Response<T = ResponseBody> = http::Response<T>;
 
 pub trait SingleResponse {
     const STATUS_CODE: u16 = 200;
 
-    fn response(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> openapi::Response;
+    fn response(schemas: &mut BTreeMap<String, Schema>) -> openapi::Response;
 }
 
 pub trait MultiResponse {
-    fn responses(
-        schemas: &mut IndexMap<String, ReferenceOr<Schema>>,
-    ) -> BTreeMap<StatusCode, openapi::Response>;
+    fn responses(schemas: &mut BTreeMap<String, Schema>)
+        -> BTreeMap<StatusCode, openapi::Response>;
 }
 
 impl<T: SingleResponse> MultiResponse for T {
     fn responses(
-        schemas: &mut IndexMap<String, ReferenceOr<Schema>>,
+        schemas: &mut BTreeMap<String, Schema>,
     ) -> BTreeMap<StatusCode, openapi::Response> {
         let mut map = BTreeMap::new();
 
@@ -43,7 +44,7 @@ impl<T: SingleResponse> MultiResponse for T {
 }
 
 impl SingleResponse for () {
-    fn response(_: &mut IndexMap<String, ReferenceOr<Schema>>) -> openapi::Response {
+    fn response(_: &mut BTreeMap<String, Schema>) -> openapi::Response {
         openapi::Response::default()
     }
 }
@@ -52,7 +53,7 @@ macro_rules! some_impl {
     ($ty:ty; $($desc:tt)+) => {
         impl $($desc)+
         {
-            fn response(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> openapi::Response {
+            fn response(schemas: &mut BTreeMap<String, Schema>) -> openapi::Response {
                 openapi::Response {
                     content: <$ty as MultiResponseMediaType>::content(schemas),
                     ..Default::default()

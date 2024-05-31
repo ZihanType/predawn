@@ -1,10 +1,11 @@
-use indexmap::IndexMap;
-use predawn_core::openapi::{ParameterData, ReferenceOr, Schema};
+use std::collections::BTreeMap;
+
+use predawn_core::openapi::{ParameterData, Schema};
 
 use crate::openapi;
 
 pub trait ToParameters {
-    fn parameters(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Vec<ParameterData>;
+    fn parameters(schemas: &mut BTreeMap<String, Schema>) -> Vec<ParameterData>;
 }
 
 pub trait Tag {

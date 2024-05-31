@@ -7,7 +7,7 @@ use std::{
     time::Duration,
 };
 
-use futures_util::{pin_mut, FutureExt};
+use futures_util::pin_mut;
 use hyper::{body::Incoming, service::service_fn};
 use hyper_util::{
     rt::{TokioExecutor, TokioIo},
@@ -160,6 +160,7 @@ async fn handle_conn<H: Handler + Clone>(
 
     tokio::spawn(async move {
         let builder = Builder::new(TokioExecutor::new());
+
         let conn = builder.serve_connection_with_upgrades(
             tcp_stream,
             service_fn(|request: http::Request<Incoming>| {
@@ -176,18 +177,14 @@ async fn handle_conn<H: Handler + Clone>(
         );
         pin_mut!(conn);
 
-        let signal_closed = signal_sender.closed().fuse();
-        pin_mut!(signal_closed);
-
-        loop {
-            tokio::select! {
-                _ = conn.as_mut() => {
-                    break;
-                }
-                _ = &mut signal_closed => {
-                    trace!("signal received in task, starting graceful shutdown");
-                    conn.as_mut().graceful_shutdown();
-                }
+        tokio::select! {
+            _ = conn.as_mut() => {
+            }
+            _ = signal_sender.closed() => {
+                trace!("signal received in task, starting graceful shutdown");
+                conn.as_mut().graceful_shutdown();
+                // This `conn` should continue to be polled until shutdown can finish.
+                let _ = conn.as_mut().await;
             }
         }
 

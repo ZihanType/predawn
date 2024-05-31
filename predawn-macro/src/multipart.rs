@@ -7,6 +7,7 @@ use crate::{serde_attr::SerdeAttr, util};
 
 pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
     let DeriveInput {
+        attrs,
         ident,
         generics,
         data,
@@ -53,9 +54,14 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         }
     };
 
+    let description = util::extract_description(&attrs);
+    let description = util::generate_optional_lit_str(&description)
+        .unwrap_or_else(|| quote!(::core::option::Option::None));
+
     let expand = quote_use! {
         # use core::default::Default;
         # use std::vec::Vec;
+        # use std::collections::BTreeMap;
         # use predawn::{MultiRequestMediaType, ToSchema};
         # use predawn::media_type::{MediaType, RequestMediaType, has_media_type, SingleMediaType};
         # use predawn::from_request::FromRequest;
@@ -64,8 +70,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         # use predawn::body::RequestBody;
         # use predawn::extract::multipart::Multipart;
         # use predawn::api_request::ApiRequest;
-        # use predawn::openapi::{self, ReferenceOr, Schema, Parameter};
-        # use predawn::__internal::indexmap::IndexMap;
+        # use predawn::openapi::{self, Schema, Parameter};
 
         impl #impl_generics_with_lifetime FromRequest<'a> for #ident #ty_generics #where_clause {
             type Error = MultipartError;
@@ -86,13 +91,13 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         }
 
         impl #impl_generics ApiRequest for #ident #ty_generics #where_clause {
-            fn parameters(_: &mut IndexMap<String, ReferenceOr<Schema>>) -> Option<Vec<openapi::Parameter>> {
+            fn parameters(_: &mut BTreeMap<String, Schema>) -> Option<Vec<openapi::Parameter>> {
                 None
             }
 
-            fn request_body(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Option<openapi::RequestBody> {
+            fn request_body(schemas: &mut BTreeMap<String, Schema>) -> Option<openapi::RequestBody> {
                 Some(openapi::RequestBody {
-                    description: Default::default(),
+                    description: #description,
                     content: <Self as MultiRequestMediaType>::content(schemas),
                     required: true,
                     extensions: Default::default(),
@@ -111,7 +116,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         }
 
         impl #impl_generics SingleMediaType for #ident #ty_generics #where_clause {
-            fn media_type(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> openapi::MediaType {
+            fn media_type(schemas: &mut BTreeMap<String, Schema>) -> openapi::MediaType {
                 openapi::MediaType {
                     schema: Some(<Self as ToSchema>::schema_ref(schemas)),
                     example: Default::default(),

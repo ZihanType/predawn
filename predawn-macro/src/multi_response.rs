@@ -67,15 +67,14 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
     let expand = quote_use! {
         # use std::collections::BTreeMap;
         # use predawn::MultiResponse;
-        # use predawn::openapi::{self, ReferenceOr, Schema};
+        # use predawn::openapi::{self, Schema};
         # use predawn::response::Response;
         # use predawn::into_response::IntoResponse;
         # use predawn::api_response::ApiResponse;
         # use predawn::__internal::http::StatusCode;
-        # use predawn::__internal::indexmap::IndexMap;
 
         impl #impl_generics MultiResponse for #ident #ty_generics #where_clause {
-            fn responses(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> BTreeMap<StatusCode, openapi::Response> {
+            fn responses(schemas: &mut BTreeMap<String, Schema>) -> BTreeMap<StatusCode, openapi::Response> {
                 let mut map = BTreeMap::new();
 
                 #(#responses_bodies)*
@@ -99,7 +98,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         }
 
         impl #impl_generics ApiResponse for #ident #ty_generics #where_clause {
-            fn responses(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Option<BTreeMap<StatusCode, openapi::Response>> {
+            fn responses(schemas: &mut BTreeMap<String, Schema>) -> Option<BTreeMap<StatusCode, openapi::Response>> {
                 Some(<Self as MultiResponse>::responses(schemas))
             }
         }

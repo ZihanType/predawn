@@ -1,7 +1,8 @@
+use std::collections::BTreeMap;
+
 use bytes::Bytes;
-use indexmap::IndexMap;
 use multer::Field;
-use predawn_core::openapi::{ReferenceOr, Schema};
+use predawn_core::openapi::Schema;
 use predawn_schema::ToSchema;
 
 use super::ParseField;
@@ -46,7 +47,7 @@ impl Upload {
 }
 
 impl ToSchema for Upload {
-    fn schema(_: &mut IndexMap<String, ReferenceOr<Schema>>) -> Schema {
+    fn schema(_: &mut BTreeMap<String, Schema>) -> Schema {
         crate::util::binary_schema("Upload")
     }
 }

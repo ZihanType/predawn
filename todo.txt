@@ -2,8 +2,14 @@ Authorization
 TypedHeader
 
 flatten
-
 Enum
+Hooks::init_logger
+WebSocket
+SSE
+
+serde_path_to_error
+serde_html_form query form
+path
 
 tempfile
 
@@ -44,7 +50,6 @@ ToSchema / ToParameter
 
 default,
 flatten
-description,
 example,
 deprecated,
 actual_type
@@ -61,12 +66,9 @@ Html
 split controller trait
 more openapi ui
 more ToSchema impl
-SSE
 FILE
-WebSocket
 Listener trait
 ExternalDocumentation
-Hooks::init_logger
 end-to-end test-helper edition 2
 startup message
 handle .unwrap()

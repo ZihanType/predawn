@@ -19,10 +19,7 @@ macro_rules! forward_impl {
     ($left:ty => $right:ty) => {
         impl $crate::ToSchema for $left {
             fn schema(
-                schemas: &mut ::indexmap::IndexMap<
-                    String,
-                    ::openapiv3::ReferenceOr<::openapiv3::Schema>,
-                >,
+                schemas: &mut ::std::collections::BTreeMap<String, ::openapiv3::Schema>,
             ) -> ::openapiv3::Schema {
                 <$right as $crate::ToSchema>::schema(schemas)
             }

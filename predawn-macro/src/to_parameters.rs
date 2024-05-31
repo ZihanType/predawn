@@ -38,12 +38,12 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
 
     let expand = quote_use! {
         # use std::vec::Vec;
-        # use predawn::openapi::{ParameterData, ReferenceOr, Schema};
+        # use std::collections::BTreeMap;
+        # use predawn::openapi::{ParameterData, Schema};
         # use predawn::ToParameters;
-        # use predawn::__internal::indexmap::IndexMap;
 
         impl #impl_generics ToParameters for #ident #ty_generics #where_clause {
-            fn parameters(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> Vec<ParameterData> {
+            fn parameters(schemas: &mut BTreeMap<String, Schema>) -> Vec<ParameterData> {
                 [
                     #(#parameter_impls)*
                 ]

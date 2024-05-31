@@ -2,7 +2,6 @@ use std::{collections::BTreeMap, convert::Infallible};
 
 use bytes::Bytes;
 use http::{header::CONTENT_TYPE, HeaderValue, StatusCode};
-use indexmap::IndexMap;
 use mime::{APPLICATION, WWW_FORM_URLENCODED};
 use predawn_core::{
     api_request::ApiRequest,
@@ -15,7 +14,7 @@ use predawn_core::{
         has_media_type, MediaType, MultiRequestMediaType, MultiResponseMediaType, RequestMediaType,
         ResponseMediaType, SingleMediaType,
     },
-    openapi::{self, Parameter, ReferenceOr, Schema},
+    openapi::{self, Parameter, Schema},
     request::Head,
     response::{MultiResponse, Response, SingleResponse},
 };
@@ -52,13 +51,11 @@ where
 }
 
 impl<T: ToSchema> ApiRequest for Form<T> {
-    fn parameters(_: &mut IndexMap<String, ReferenceOr<Schema>>) -> Option<Vec<Parameter>> {
+    fn parameters(_: &mut BTreeMap<String, Schema>) -> Option<Vec<Parameter>> {
         None
     }
 
-    fn request_body(
-        schemas: &mut IndexMap<String, ReferenceOr<Schema>>,
-    ) -> Option<openapi::RequestBody> {
+    fn request_body(schemas: &mut BTreeMap<String, Schema>) -> Option<openapi::RequestBody> {
         Some(openapi::RequestBody {
             content: <Self as MultiRequestMediaType>::content(schemas),
             required: true,
@@ -90,7 +87,7 @@ where
 
 impl<T: ToSchema> ApiResponse for Form<T> {
     fn responses(
-        schemas: &mut IndexMap<String, ReferenceOr<Schema>>,
+        schemas: &mut BTreeMap<String, Schema>,
     ) -> Option<BTreeMap<StatusCode, openapi::Response>> {
         Some(<Self as MultiResponse>::responses(schemas))
     }
@@ -115,7 +112,7 @@ impl<T> RequestMediaType for Form<T> {
 impl<T> ResponseMediaType for Form<T> {}
 
 impl<T: ToSchema> SingleMediaType for Form<T> {
-    fn media_type(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> openapi::MediaType {
+    fn media_type(schemas: &mut BTreeMap<String, Schema>) -> openapi::MediaType {
         openapi::MediaType {
             schema: Some(T::schema_ref(schemas)),
             ..Default::default()
@@ -124,9 +121,8 @@ impl<T: ToSchema> SingleMediaType for Form<T> {
 }
 
 impl<T: ToSchema> SingleResponse for Form<T> {
-    fn response(schemas: &mut IndexMap<String, ReferenceOr<Schema>>) -> openapi::Response {
+    fn response(schemas: &mut BTreeMap<String, Schema>) -> openapi::Response {
         openapi::Response {
-            description: "FORM response".to_owned(),
             content: <Self as MultiResponseMediaType>::content(schemas),
             ..Default::default()
         }
