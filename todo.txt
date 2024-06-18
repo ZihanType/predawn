@@ -1,5 +1,6 @@
-Authorization
-TypedHeader
+Plugin create_routes `self: Arc<Self> -> self: Box<Self>`
+
+refactor `Middleware`
 
 flatten
 Enum
@@ -10,6 +11,10 @@ SSE
 serde_path_to_error
 serde_html_form query form
 path
+
+nested schema
+
+features
 
 tempfile
 

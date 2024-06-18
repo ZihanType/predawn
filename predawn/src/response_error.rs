@@ -2,7 +2,7 @@ use std::{collections::HashSet, error::Error, fmt, str::Utf8Error, sync::Arc};
 
 use http::{
     header::{CONTENT_DISPOSITION, CONTENT_TYPE},
-    StatusCode,
+    HeaderName, StatusCode,
 };
 use http_body_util::LengthLimitError;
 use predawn_core::media_type::MediaType;
@@ -383,5 +383,27 @@ impl<T: ResponseError> ResponseError for DownloadError<T> {
         let mut status_codes = T::status_codes();
         status_codes.insert(StatusCode::INTERNAL_SERVER_ERROR);
         status_codes
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum TypedHeaderError {
+    #[error("missing header `{name}`")]
+    Missing { name: &'static HeaderName },
+    #[error("failed to decode header `{name}`: {error}")]
+    DecodeError {
+        name: &'static HeaderName,
+        #[source]
+        error: headers::Error,
+    },
+}
+
+impl ResponseError for TypedHeaderError {
+    fn as_status(&self) -> StatusCode {
+        StatusCode::BAD_REQUEST
+    }
+
+    fn status_codes() -> HashSet<StatusCode> {
+        [StatusCode::BAD_REQUEST].into()
     }
 }

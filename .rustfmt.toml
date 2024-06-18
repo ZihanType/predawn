@@ -1,7 +1,6 @@
 edition = "2021"
 unstable_features = true
 combine_control_expr = false
-enum_discrim_align_threshold = 60
 format_macro_matchers = true
 newline_style = "Unix"
 reorder_impl_items = true

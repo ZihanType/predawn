@@ -67,3 +67,4 @@ multer = { version = "3", default-features = false }
 sea-orm = { version = "0.12", default-features = false }
 scc = { version = "2", default-features = false }
 url = { version = "2", default-features = false }
+headers = { version = "0.4", default-features = false }

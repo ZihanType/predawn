@@ -17,7 +17,11 @@ const TEMPLATE: &str = r###"
     <script type="module" src="{{js_url}}"></script>
   </head>
   <body>
-    <openapi-explorer spec-url="{{spec_url}}">
+    <openapi-explorer
+      spec-url="{{spec_url}}"
+      hide-defaults
+      default-schema-tab="body"
+    >
     </openapi-explorer>
   </body>
 </html>

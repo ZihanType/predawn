@@ -45,6 +45,7 @@ tracing-subscriber = { workspace = true, features = ["std", "fmt", "ansi"] }
 reqwest = { workspace = true }
 http-body-util = { workspace = true }
 multer = { workspace = true }
+headers = { workspace = true }
 
 # Optional dependencies
 tower = { workspace = true, optional = true }

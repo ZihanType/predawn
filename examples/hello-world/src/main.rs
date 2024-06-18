@@ -166,7 +166,7 @@ impl MyController {
     async fn download_from_disk(&self) -> Download<Vec<u8>> {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("test.json");
 
-        let bytes = tokio::fs::read(path).await.unwrap();
+        let bytes = std::fs::read(path).unwrap();
 
         Download::attachment(bytes, "test.json")
     }

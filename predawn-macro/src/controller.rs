@@ -228,14 +228,15 @@ fn generate_single_fn_impl<'a>(
     })
     .enumerate()
     .for_each(|(idx, ty)| {
-        let arg = format_ident!("a{}", idx);
-        arg_idents.push(arg.clone());
+        let arg_ident = format_ident!("a{}", idx);
 
         let from_request_head = quote_use! {
             # use predawn::from_request::FromRequestHead;
 
-            let #arg = <#ty as FromRequestHead>::from_request_head(&head).await?;
+            let #arg_ident = <#ty as FromRequestHead>::from_request_head(&head).await?;
         };
+
+        arg_idents.push(arg_ident);
 
         let parameters = quote_use! {
             # use predawn::api_request::ApiRequestHead;
