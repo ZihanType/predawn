@@ -85,7 +85,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         # use std::collections::BTreeMap;
         # use std::string::String;
         # use predawn::MultiRequestMediaType;
-        # use predawn::media_type::InvalidContentType;
+        # use predawn::response_error::InvalidContentTypeError;
         # use predawn::openapi::{self, Schema, Parameter};
         # use predawn::__internal::indexmap::IndexMap;
         # use predawn::__internal::http::header::CONTENT_TYPE;
@@ -110,7 +110,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
 
                 #(#from_request_bodies)*
 
-                Err(<#from_request_error as From<_>>::from(InvalidContentType {
+                Err(<#from_request_error as From<_>>::from(InvalidContentTypeError {
                     actual: content_type.into(),
                     expected: [#(#media_type_exprs,)*],
                 }))

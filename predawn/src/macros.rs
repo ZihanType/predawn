@@ -17,7 +17,7 @@ macro_rules! define_from_request_error {
                 $error($error),
             )+
 
-            InvalidContentType($crate::media_type::InvalidContentType<{ $crate::count!($($error,)+) }>),
+            InvalidContentTypeError($crate::response_error::InvalidContentTypeError<{ $crate::count!($($error,)+) }>),
         }
 
         impl ::core::fmt::Display for $name {
@@ -27,7 +27,7 @@ macro_rules! define_from_request_error {
                         $name::$error(e) => ::core::fmt::Display::fmt(e, f),
                     )+
 
-                    $name::InvalidContentType(e) => ::core::fmt::Display::fmt(e, f),
+                    $name::InvalidContentTypeError(e) => ::core::fmt::Display::fmt(e, f),
                 }
             }
         }
@@ -39,7 +39,7 @@ macro_rules! define_from_request_error {
                         $name::$error(e) => Some(e),
                     )+
 
-                    $name::InvalidContentType(e) => Some(e),
+                    $name::InvalidContentTypeError(e) => Some(e),
                 }
             }
         }
@@ -52,9 +52,9 @@ macro_rules! define_from_request_error {
             }
         )+
 
-        impl ::core::convert::From<$crate::media_type::InvalidContentType<{ $crate::count!($($error,)+) }>> for $name {
-            fn from(e: $crate::media_type::InvalidContentType<{ $crate::count!($($error,)+) }>) -> Self {
-                $name::InvalidContentType(e)
+        impl ::core::convert::From<$crate::response_error::InvalidContentTypeError<{ $crate::count!($($error,)+) }>> for $name {
+            fn from(e: $crate::response_error::InvalidContentTypeError<{ $crate::count!($($error,)+) }>) -> Self {
+                $name::InvalidContentTypeError(e)
             }
         }
 
@@ -71,7 +71,10 @@ macro_rules! define_from_request_error {
                         $name::$error(e) => <$error as $crate::response_error::ResponseError>::as_status(e),
                     )+
 
-                    $name::InvalidContentType(_) => $crate::__internal::http::StatusCode::UNSUPPORTED_MEDIA_TYPE,
+                    $name::InvalidContentTypeError(e) => <
+                        $crate::response_error::InvalidContentTypeError<{ $crate::count!($($error,)+) }>
+                        as $crate::response_error::ResponseError
+                    >::as_status(e),
                 }
             }
 
@@ -82,32 +85,29 @@ macro_rules! define_from_request_error {
                     status_codes.extend(<$error as $crate::response_error::ResponseError>::status_codes());
                 )+
 
-                status_codes.insert($crate::__internal::http::StatusCode::UNSUPPORTED_MEDIA_TYPE);
+                status_codes.extend(
+                    <
+                        $crate::response_error::InvalidContentTypeError<{ $crate::count!($($error,)+) }>
+                        as $crate::response_error::ResponseError
+                    >::status_codes()
+                );
 
                 status_codes
             }
 
             #[doc(hidden)]
-            fn inner(self) -> $crate::error::BoxError {
-                match self {
-                    $(
-                        $name::$error(e) => <$error as $crate::response_error::ResponseError>::inner(e),
-                    )+
-
-                    $name::InvalidContentType(e) => ::std::boxed::Box::new(e),
-                }
-            }
-
-            #[doc(hidden)]
-            fn wrappers(&self, type_names: &mut ::std::vec::Vec<&'static str>) {
-                type_names.push(::std::any::type_name::<Self>());
+            fn inner(self, error_chain: &mut ::std::vec::Vec<&'static str>) -> $crate::error::BoxError {
+                error_chain.push(::std::any::type_name::<Self>());
 
                 match self {
                     $(
-                        $name::$error(e) => <$error as $crate::response_error::ResponseError>::wrappers(e, type_names),
+                        $name::$error(e) => <$error as $crate::response_error::ResponseError>::inner(e, error_chain),
                     )+
 
-                    $name::InvalidContentType(e) => type_names.push(::std::any::type_name_of_val(e)),
+                    $name::InvalidContentTypeError(e) => <
+                        $crate::response_error::InvalidContentTypeError<{ $crate::count!($($error,)+) }>
+                        as $crate::response_error::ResponseError
+                    >::inner(e, error_chain),
                 }
             }
         }
@@ -181,21 +181,12 @@ macro_rules! define_into_response_error {
             }
 
             #[doc(hidden)]
-            fn inner(self) -> $crate::error::BoxError {
-                match self {
-                    $(
-                        $name::$error(e) => <$error as $crate::response_error::ResponseError>::inner(e),
-                    )+
-                }
-            }
-
-            #[doc(hidden)]
-            fn wrappers(&self, type_names: &mut ::std::vec::Vec<&'static str>) {
-                type_names.push(::std::any::type_name::<Self>());
+            fn inner(self, error_chain: &mut ::std::vec::Vec<&'static str>) -> $crate::error::BoxError {
+                error_chain.push(::std::any::type_name::<Self>());
 
                 match self {
                     $(
-                        $name::$error(e) => <$error as $crate::response_error::ResponseError>::wrappers(e, type_names),
+                        $name::$error(e) => <$error as $crate::response_error::ResponseError>::inner(e, error_chain),
                     )+
                 }
             }

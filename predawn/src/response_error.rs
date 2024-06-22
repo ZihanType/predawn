@@ -407,3 +407,38 @@ impl ResponseError for TypedHeaderError {
         [StatusCode::BAD_REQUEST].into()
     }
 }
+
+#[derive(Debug, thiserror::Error)]
+#[error("invalid `{CONTENT_TYPE}`: expected one of {expected:?} but actual {actual:?}")]
+pub struct InvalidContentTypeError<const N: usize> {
+    pub actual: Box<str>,
+    pub expected: [&'static str; N],
+}
+
+impl<const N: usize> ResponseError for InvalidContentTypeError<N> {
+    fn as_status(&self) -> StatusCode {
+        StatusCode::UNSUPPORTED_MEDIA_TYPE
+    }
+
+    fn status_codes() -> HashSet<StatusCode> {
+        [StatusCode::UNSUPPORTED_MEDIA_TYPE].into()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_invalid_content_type() {
+        let err = InvalidContentTypeError {
+            actual: "application/json".into(),
+            expected: ["text/plain", "text/html"],
+        };
+
+        assert_eq!(
+            err.to_string(),
+            "invalid `content-type`: expected one of [\"text/plain\", \"text/html\"] but actual \"application/json\""
+        );
+    }
+}

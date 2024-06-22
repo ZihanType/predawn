@@ -19,7 +19,7 @@ where
     async fn call(&self, req: Request) -> Result<Response, Error> {
         self.inner.call(req).await.inspect_err(|e| {
             if let Some(err) = e.downcast_ref::<Err>() {
-                (self.f)(err, e.wrappers());
+                (self.f)(err, e.error_chain());
             }
         })
     }

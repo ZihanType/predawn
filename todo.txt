@@ -1,8 +1,5 @@
-Plugin create_routes `self: Arc<Self> -> self: Box<Self>`
-
-refactor `Middleware`
-
 flatten
+default
 Enum
 Hooks::init_logger
 WebSocket
@@ -61,6 +58,7 @@ actual_type
 
 update references in doc comments by search `https://docs.rs`
 
+refactor `Plugin`
 service attribute macro
 operation id [repeated]
 Extension

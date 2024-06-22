@@ -79,20 +79,12 @@ where
     }
 
     #[doc(hidden)]
-    fn inner(self) -> BoxError {
-        match self {
-            Either::Left(l) => l.inner(),
-            Either::Right(r) => r.inner(),
-        }
-    }
-
-    #[doc(hidden)]
-    fn wrappers(&self, type_name: &mut Vec<&'static str>) {
+    fn inner(self, type_name: &mut Vec<&'static str>) -> BoxError {
         type_name.push(std::any::type_name::<Self>());
 
         match self {
-            Either::Left(l) => l.wrappers(type_name),
-            Either::Right(r) => r.wrappers(type_name),
+            Either::Left(l) => l.inner(type_name),
+            Either::Right(r) => r.inner(type_name),
         }
     }
 }

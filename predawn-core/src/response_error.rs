@@ -51,13 +51,9 @@ pub trait ResponseError: Error + Send + Sync + Sized + 'static {
     }
 
     #[doc(hidden)]
-    fn inner(self) -> BoxError {
+    fn inner(self, error_chain: &mut Vec<&'static str>) -> BoxError {
+        error_chain.push(std::any::type_name::<Self>());
         Box::new(self)
-    }
-
-    #[doc(hidden)]
-    fn wrappers(&self, type_names: &mut Vec<&'static str>) {
-        type_names.push(std::any::type_name::<Self>());
     }
 }
 

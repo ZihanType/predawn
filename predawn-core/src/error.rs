@@ -12,7 +12,7 @@ pub type BoxError = Box<dyn StdError + Send + Sync>;
 pub struct Error {
     response: Response,
     inner: BoxError,
-    wrappers: Box<[&'static str]>,
+    error_chain: Box<[&'static str]>,
 }
 
 impl Error {
@@ -37,15 +37,15 @@ impl Error {
         let Self {
             response,
             inner,
-            wrappers,
+            error_chain,
         } = self;
 
         match inner.downcast() {
-            Ok(err) => Ok((response, *err, wrappers)),
+            Ok(err) => Ok((response, *err, error_chain)),
             Err(err) => Err(Self {
                 response,
                 inner: err,
-                wrappers,
+                error_chain,
             }),
         }
     }
@@ -58,8 +58,8 @@ impl Error {
         self.response
     }
 
-    pub fn wrappers(&self) -> &[&'static str] {
-        &self.wrappers
+    pub fn error_chain(&self) -> &[&'static str] {
+        &self.error_chain
     }
 }
 
@@ -70,13 +70,13 @@ where
     fn from(error: T) -> Self {
         let response = error.as_response();
 
-        let mut type_names = Vec::with_capacity(1); // at least one error
-        error.wrappers(&mut type_names);
+        let mut error_chain = Vec::with_capacity(1); // at least one error
+        let inner = error.inner(&mut error_chain);
 
         Self {
             response,
-            inner: error.inner(),
-            wrappers: type_names.into(),
+            inner,
+            error_chain: error_chain.into(),
         }
     }
 }
@@ -98,7 +98,7 @@ impl From<(StatusCode, BoxError)> for Error {
                 Self {
                     response,
                     inner: e,
-                    wrappers: [std::any::type_name::<BoxError>()].into(),
+                    error_chain: [std::any::type_name::<BoxError>()].into(),
                 }
             }
         }
