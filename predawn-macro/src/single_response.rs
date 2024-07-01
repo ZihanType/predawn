@@ -7,7 +7,8 @@ use quote::quote;
 use quote_use::quote_use;
 use syn::{
     parse_quote, spanned::Spanned, Attribute, Data, DataEnum, DataStruct, DataUnion, DeriveInput,
-    Expr, ExprLit, Field, Fields, FieldsNamed, FieldsUnnamed, Ident, Lit, LitInt, Member, Type,
+    Expr, ExprLit, Field, Fields, FieldsNamed, FieldsUnnamed, Generics, Ident, Lit, LitInt, Member,
+    Type,
 };
 
 use crate::util;
@@ -55,14 +56,14 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         }
     };
 
-    let maybe_named = match fields {
+    let fields = match fields {
         Fields::Named(FieldsNamed { named, .. }) if !named.is_empty() => named,
         Fields::Unnamed(FieldsUnnamed { unnamed, .. }) if !unnamed.is_empty() => unnamed,
         _ => return Ok(generate_unit(&ident, status_code_value)),
     };
 
-    let fields_len = maybe_named.len();
-    let mut fields = maybe_named.into_iter();
+    let fields_len = fields.len();
+    let mut fields = fields.into_iter();
 
     let last = fields
         .next_back()
@@ -70,15 +71,15 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
 
     let mut header_names = HashMap::new();
 
-    let mut response_bodies = Vec::new();
-    let mut into_response_bodies = Vec::new();
+    let mut insert_api_headers = Vec::new();
+    let mut insert_http_headers = Vec::new();
     let mut errors = Vec::new();
 
     fields.enumerate().for_each(|(idx, field)| {
         match handle_single_field(field, idx, &mut header_names) {
-            Ok((response_body, into_response_body)) => {
-                response_bodies.push(response_body);
-                into_response_bodies.push(into_response_body);
+            Ok((insert_api_header, insert_http_header)) => {
+                insert_api_headers.push(insert_api_header);
+                insert_http_headers.push(insert_http_header);
             }
             Err(e) => {
                 errors.push(e);
@@ -86,33 +87,72 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         }
     });
 
-    let content_field_value: Expr;
-    let response_ty: Type;
-    let into_response_arg: Expr;
+    let description = util::extract_description(&attrs);
+    let description = util::generate_lit_str(&description);
 
     match handle_last_field(last, fields_len - 1, &mut header_names) {
         Ok(Last::Header {
-            response_body,
-            into_response_body,
+            insert_api_header,
+            insert_http_header,
         }) => {
-            response_bodies.push(response_body);
-            into_response_bodies.push(into_response_body);
+            insert_api_headers.push(insert_api_header);
+            insert_http_headers.push(insert_http_header);
 
-            content_field_value = parse_quote!(::core::default::Default::default());
-            response_ty = parse_quote!(());
-            into_response_arg = parse_quote!(());
+            if let Some(e) = errors.into_iter().reduce(|mut a, b| {
+                a.combine(b);
+                a
+            }) {
+                return Err(e);
+            }
+
+            let expand = generate_only_headers(
+                &generics,
+                &ident,
+                status_code_value,
+                description,
+                insert_api_headers,
+                insert_http_headers,
+            );
+
+            Ok(expand)
         }
         Ok(Last::Body { member, ty }) => {
-            content_field_value =
-                parse_quote!(<#ty as ::predawn::MultiResponseMediaType>::content(schemas));
-            response_ty = ty;
-            into_response_arg = parse_quote!(self.#member);
+            let into_response_arg = parse_quote!(self.#member);
+
+            if let Some(e) = errors.into_iter().reduce(|mut a, b| {
+                a.combine(b);
+                a
+            }) {
+                return Err(e);
+            }
+
+            let expand = if insert_api_headers.is_empty() {
+                generate_only_body(
+                    &generics,
+                    &ident,
+                    status_code_value,
+                    description,
+                    ty,
+                    into_response_arg,
+                )
+            } else {
+                generate_body_and_headers(
+                    &generics,
+                    &ident,
+                    status_code_value,
+                    description,
+                    insert_api_headers,
+                    insert_http_headers,
+                    ty,
+                    into_response_arg,
+                )
+            };
+
+            Ok(expand)
         }
         Err(e) => {
             errors.push(e);
 
-            // avoid throwing `used binding `into_response_arg` is possibly-uninitialized` error messages,
-            // which need to be returned early here
             let e = errors
                 .into_iter()
                 .reduce(|mut a, b| {
@@ -121,78 +161,12 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
                 })
                 .expect("unreachable: errors at least one element");
 
-            return Err(e);
+            Err(e)
         }
     }
-
-    if let Some(e) = errors.into_iter().reduce(|mut a, b| {
-        a.combine(b);
-        a
-    }) {
-        return Err(e);
-    }
-
-    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
-
-    let headers_len = response_bodies.len();
-
-    let description = util::extract_description(&attrs);
-    let description = util::generate_lit_str(&description);
-
-    let expand = quote_use! {
-        # use core::default::Default;
-        # use std::collections::BTreeMap;
-        # use predawn::{SingleResponse, MultiResponse};
-        # use predawn::into_response::IntoResponse;
-        # use predawn::api_response::ApiResponse;
-        # use predawn::response::Response;
-        # use predawn::openapi::{self, Schema};
-        # use predawn::__internal::indexmap::IndexMap;
-        # use predawn::__internal::http::StatusCode;
-
-        impl #impl_generics SingleResponse for #ident #ty_generics #where_clause {
-            const STATUS_CODE: u16 = #status_code_value;
-
-            fn response(schemas: &mut BTreeMap<String, Schema>) -> openapi::Response {
-                let mut headers = IndexMap::with_capacity(#headers_len);
-
-                #(#response_bodies)*
-
-                openapi::Response {
-                    description: #description,
-                    headers,
-                    content: #content_field_value,
-                    links: Default::default(),
-                    extensions: Default::default(),
-                }
-            }
-        }
-
-        impl #impl_generics IntoResponse for #ident #ty_generics #where_clause {
-            type Error = <#response_ty as IntoResponse>::Error;
-
-            fn into_response(self) -> Result<Response, Self::Error> {
-                let mut response = <#response_ty as IntoResponse>::into_response(#into_response_arg)?;
-
-                *response.status_mut() = StatusCode::from_u16(#status_code_value).unwrap();
-
-                #(#into_response_bodies)*
-
-                Ok(response)
-            }
-        }
-
-        impl #impl_generics ApiResponse for #ident #ty_generics #where_clause {
-            fn responses(schemas: &mut BTreeMap<String, Schema>) -> Option<BTreeMap<StatusCode, openapi::Response>> {
-                Some(<Self as MultiResponse>::responses(schemas))
-            }
-        }
-    };
-
-    Ok(expand)
 }
 
-fn generate_unit(struct_ident: &Ident, status_code_value: u16) -> TokenStream {
+fn generate_unit(ident: &Ident, status_code_value: u16) -> TokenStream {
     quote_use! {
         # use core::default::Default;
         # use std::collections::BTreeMap;
@@ -203,7 +177,7 @@ fn generate_unit(struct_ident: &Ident, status_code_value: u16) -> TokenStream {
         # use predawn::openapi::{self, Schema};
         # use predawn::__internal::http::StatusCode;
 
-        impl SingleResponse for #struct_ident {
+        impl SingleResponse for #ident {
             const STATUS_CODE: u16 = #status_code_value;
 
             fn response(schemas: &mut BTreeMap<String, Schema>) -> openapi::Response {
@@ -211,19 +185,207 @@ fn generate_unit(struct_ident: &Ident, status_code_value: u16) -> TokenStream {
             }
         }
 
-        impl IntoResponse for #struct_ident {
+        impl IntoResponse for #ident {
             type Error = <() as IntoResponse>::Error;
 
             fn into_response(self) -> Result<Response, Self::Error> {
                 let mut response = <() as IntoResponse>::into_response(())?;
+                *response.status_mut() = StatusCode::from_u16(#status_code_value).unwrap();
+                Ok(response)
+            }
+        }
+
+        impl ApiResponse for #ident {
+            fn responses(schemas: &mut BTreeMap<String, Schema>) -> Option<BTreeMap<StatusCode, openapi::Response>> {
+                Some(<Self as MultiResponse>::responses(schemas))
+            }
+        }
+    }
+}
+
+fn generate_only_headers(
+    generics: &Generics,
+    ident: &Ident,
+    status_code_value: u16,
+    description: TokenStream,
+    insert_api_headers: Vec<TokenStream>,
+    insert_http_headers: Vec<TokenStream>,
+) -> TokenStream {
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+    let headers_len = insert_api_headers.len();
+
+    quote_use! {
+        # use core::default::Default;
+        # use std::collections::BTreeMap;
+        # use predawn::{SingleResponse, MultiResponse};
+        # use predawn::into_response::IntoResponse;
+        # use predawn::api_response::ApiResponse;
+        # use predawn::response::Response;
+        # use predawn::openapi::{self, Schema};
+        # use predawn::response_error::InvalidHeaderValue;
+        # use predawn::__internal::indexmap::IndexMap;
+        # use predawn::__internal::http::StatusCode;
+
+        impl #impl_generics SingleResponse for #ident #ty_generics #where_clause {
+            const STATUS_CODE: u16 = #status_code_value;
+
+            fn response(schemas: &mut BTreeMap<String, Schema>) -> openapi::Response {
+                let mut headers = IndexMap::with_capacity(#headers_len);
+
+                #(#insert_api_headers)*
+
+                openapi::Response {
+                    description: #description,
+                    headers,
+                    content: Default::default(),
+                    links: Default::default(),
+                    extensions: Default::default(),
+                }
+            }
+        }
+
+        impl #impl_generics IntoResponse for #ident #ty_generics #where_clause {
+            type Error = InvalidHeaderValue;
+
+            fn into_response(self) -> Result<Response, <Self as IntoResponse>::Error> {
+                let mut response = <() as IntoResponse>::into_response(()).unwrap();
 
                 *response.status_mut() = StatusCode::from_u16(#status_code_value).unwrap();
+
+                #(
+                    let _: () = #insert_http_headers?;
+                )*
 
                 Ok(response)
             }
         }
 
-        impl ApiResponse for #struct_ident {
+        impl #impl_generics ApiResponse for #ident #ty_generics #where_clause {
+            fn responses(schemas: &mut BTreeMap<String, Schema>) -> Option<BTreeMap<StatusCode, openapi::Response>> {
+                Some(<Self as MultiResponse>::responses(schemas))
+            }
+        }
+    }
+}
+
+fn generate_only_body(
+    generics: &Generics,
+    ident: &Ident,
+    status_code_value: u16,
+    description: TokenStream,
+    body_type: Type,
+    into_response_arg: Expr,
+) -> TokenStream {
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+    quote_use! {
+        # use core::default::Default;
+        # use std::collections::BTreeMap;
+        # use predawn::{SingleResponse, MultiResponse};
+        # use predawn::into_response::IntoResponse;
+        # use predawn::api_response::ApiResponse;
+        # use predawn::response::Response;
+        # use predawn::MultiResponseMediaType;
+        # use predawn::openapi::{self, Schema};
+        # use predawn::__internal::http::StatusCode;
+
+        impl #impl_generics SingleResponse for #ident #ty_generics #where_clause {
+            const STATUS_CODE: u16 = #status_code_value;
+
+            fn response(schemas: &mut BTreeMap<String, Schema>) -> openapi::Response {
+                openapi::Response {
+                    description: #description,
+                    headers: Default::default(),
+                    content: <#body_type as MultiResponseMediaType>::content(schemas),
+                    links: Default::default(),
+                    extensions: Default::default(),
+                }
+            }
+        }
+
+        impl #impl_generics IntoResponse for #ident #ty_generics #where_clause {
+            type Error = <#body_type as IntoResponse>::Error;
+
+            fn into_response(self) -> Result<Response, <Self as IntoResponse>::Error> {
+                let mut response = <#body_type as IntoResponse>::into_response(#into_response_arg)?;
+                *response.status_mut() = StatusCode::from_u16(#status_code_value).unwrap();
+                Ok(response)
+            }
+        }
+
+        impl #impl_generics ApiResponse for #ident #ty_generics #where_clause {
+            fn responses(schemas: &mut BTreeMap<String, Schema>) -> Option<BTreeMap<StatusCode, openapi::Response>> {
+                Some(<Self as MultiResponse>::responses(schemas))
+            }
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn generate_body_and_headers(
+    generics: &Generics,
+    ident: &Ident,
+    status_code_value: u16,
+    description: TokenStream,
+    insert_api_headers: Vec<TokenStream>,
+    insert_http_headers: Vec<TokenStream>,
+    body_type: Type,
+    into_response_arg: Expr,
+) -> TokenStream {
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+    let headers_len = insert_api_headers.len();
+
+    quote_use! {
+        # use core::default::Default;
+        # use std::collections::BTreeMap;
+        # use predawn::{SingleResponse, MultiResponse};
+        # use predawn::into_response::IntoResponse;
+        # use predawn::api_response::ApiResponse;
+        # use predawn::response::Response;
+        # use predawn::MultiResponseMediaType;
+        # use predawn::openapi::{self, Schema};
+        # use predawn::either::Either;
+        # use predawn::response_error::InvalidHeaderValue;
+        # use predawn::__internal::indexmap::IndexMap;
+        # use predawn::__internal::http::StatusCode;
+
+        impl #impl_generics SingleResponse for #ident #ty_generics #where_clause {
+            const STATUS_CODE: u16 = #status_code_value;
+
+            fn response(schemas: &mut BTreeMap<String, Schema>) -> openapi::Response {
+                let mut headers = IndexMap::with_capacity(#headers_len);
+
+                #(#insert_api_headers)*
+
+                openapi::Response {
+                    description: #description,
+                    headers,
+                    content: <#body_type as MultiResponseMediaType>::content(schemas),
+                    links: Default::default(),
+                    extensions: Default::default(),
+                }
+            }
+        }
+
+        impl #impl_generics IntoResponse for #ident #ty_generics #where_clause {
+            type Error = Either<<#body_type as IntoResponse>::Error, InvalidHeaderValue>;
+
+            fn into_response(self) -> Result<Response, <Self as IntoResponse>::Error> {
+                let mut response = <#body_type as IntoResponse>::into_response(#into_response_arg).map_err(Either::Left)?;
+
+                *response.status_mut() = StatusCode::from_u16(#status_code_value).unwrap();
+
+                #(
+                    let _: () = #insert_http_headers.map_err(Either::Right)?;
+                )*
+
+                Ok(response)
+            }
+        }
+
+        impl #impl_generics ApiResponse for #ident #ty_generics #where_clause {
             fn responses(schemas: &mut BTreeMap<String, Schema>) -> Option<BTreeMap<StatusCode, openapi::Response>> {
                 Some(<Self as MultiResponse>::responses(schemas))
             }
@@ -242,7 +404,7 @@ fn handle_single_field(
         attrs, ident, ty, ..
     } = field;
 
-    let Some(header) = extract_header_name(&attrs, header_names)? else {
+    let Some(header_name) = extract_header_name(&attrs, header_names)? else {
         let e = syn::Error::new(span, "missing `#[header = \"xxx\"]` attribute");
         return Err(e);
     };
@@ -256,13 +418,13 @@ fn handle_single_field(
     let description = util::generate_optional_lit_str(&description)
         .unwrap_or_else(|| quote!(::core::option::Option::None));
 
-    Ok(generate_bodies(&ty, &header, &member, description))
+    Ok(generate_headers(&ty, &header_name, &member, description))
 }
 
 enum Last {
     Header {
-        response_body: TokenStream,
-        into_response_body: TokenStream,
+        insert_api_header: TokenStream,
+        insert_http_header: TokenStream,
     },
     Body {
         member: Member,
@@ -284,7 +446,7 @@ fn handle_last_field(
         None => Member::from(idx),
     };
 
-    let Some(header) = extract_header_name(&attrs, header_names)? else {
+    let Some(header_name) = extract_header_name(&attrs, header_names)? else {
         return Ok(Last::Body { member, ty });
     };
 
@@ -292,21 +454,22 @@ fn handle_last_field(
     let description = util::generate_optional_lit_str(&description)
         .unwrap_or_else(|| quote!(::core::option::Option::None));
 
-    let (response_body, into_response_body) = generate_bodies(&ty, &header, &member, description);
+    let (insert_api_header, insert_http_header) =
+        generate_headers(&ty, &header_name, &member, description);
 
     Ok(Last::Header {
-        response_body,
-        into_response_body,
+        insert_api_header,
+        insert_http_header,
     })
 }
 
-fn generate_bodies<'a>(
+fn generate_headers<'a>(
     ty: &'a Type,
     header_name: &'a str,
     member: &'a Member,
     description: TokenStream,
 ) -> (TokenStream, TokenStream) {
-    let response_body = quote_use! {
+    let insert_api_header = quote_use! {
         # use core::default::Default;
         # use std::string::ToString;
         # use predawn::openapi::{Header, ParameterSchemaOrContent, ReferenceOr};
@@ -326,25 +489,32 @@ fn generate_bodies<'a>(
         headers.insert(ToString::to_string(#header_name), ReferenceOr::Item(header));
     };
 
-    let into_response_body = quote_use! {
-        # use predawn::response::{panic_on_err, panic_on_none, ToHeaderValue};
+    let insert_http_header = quote_use! {
+        # use predawn::response::{MaybeHeaderValue, ToHeaderValue};
         # use predawn::ToSchema;
+        # use predawn::outcome::Outcome;
+        # use predawn::response_error::InvalidHeaderValue;
         # use predawn::__internal::http::HeaderName;
 
         match <#ty as ToHeaderValue>::to_header_value(&self.#member) {
-            Some(Ok(val)) => {
+            MaybeHeaderValue::Value(val) => {
                 response.headers_mut().insert(HeaderName::from_static(#header_name), val);
+                Ok(())
             }
-            Some(Err(_)) => panic_on_err(&self.#member),
-            None => {
+            MaybeHeaderValue::Error => {
+                Err(InvalidHeaderValue::error(#header_name, &self.#member))
+            },
+            MaybeHeaderValue::None => {
                 if <#ty as ToSchema>::REQUIRED {
-                    panic_on_none::<#ty>()
+                    Err(InvalidHeaderValue::none(#header_name, &self.#member))
+                } else {
+                    Ok(())
                 }
             }
         }
     };
 
-    (response_body, into_response_body)
+    (insert_api_header, insert_http_header)
 }
 
 fn extract_header_name<'a>(
@@ -356,6 +526,12 @@ fn extract_header_name<'a>(
 
     for attr in attrs {
         if !attr.path().is_ident("header") {
+            continue;
+        }
+
+        if found.is_some() {
+            let e = syn::Error::new(attr.span(), "only one `header` attribute is allowed");
+            errors.push(e);
             continue;
         }
 
@@ -376,12 +552,6 @@ fn extract_header_name<'a>(
             errors.push(e);
             continue;
         };
-
-        if found.is_some() {
-            let e = syn::Error::new(attr.span(), "only one `header` attribute is allowed");
-            errors.push(e);
-            continue;
-        }
 
         let raw_header_name = lit_str.value();
         let lit_str_span = lit_str.span();

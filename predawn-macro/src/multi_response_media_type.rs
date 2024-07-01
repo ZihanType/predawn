@@ -40,7 +40,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
 
     let variants = util::extract_variants(data, "MultiRequestMediaType")?;
 
-    let variants_size = variants.len();
+    let variants_len = variants.len();
     let mut content_bodies = Vec::new();
     let mut into_response_arms = Vec::new();
     let mut errors = Vec::new();
@@ -82,7 +82,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
 
         impl #impl_generics MultiResponseMediaType for #ident #ty_generics #where_clause {
             fn content(schemas: &mut BTreeMap<String, Schema>) -> IndexMap<String, openapi::MediaType> {
-                let mut map = IndexMap::with_capacity(#variants_size);
+                let mut map = IndexMap::with_capacity(#variants_len);
                 #(#content_bodies)*
                 map
             }

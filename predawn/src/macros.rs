@@ -17,7 +17,7 @@ macro_rules! define_from_request_error {
                 $error($error),
             )+
 
-            InvalidContentTypeError($crate::response_error::InvalidContentTypeError<{ $crate::count!($($error,)+) }>),
+            InvalidContentType($crate::response_error::InvalidContentType<{ $crate::count!($($error,)+) }>),
         }
 
         impl ::core::fmt::Display for $name {
@@ -27,7 +27,7 @@ macro_rules! define_from_request_error {
                         $name::$error(e) => ::core::fmt::Display::fmt(e, f),
                     )+
 
-                    $name::InvalidContentTypeError(e) => ::core::fmt::Display::fmt(e, f),
+                    $name::InvalidContentType(e) => ::core::fmt::Display::fmt(e, f),
                 }
             }
         }
@@ -39,7 +39,7 @@ macro_rules! define_from_request_error {
                         $name::$error(e) => Some(e),
                     )+
 
-                    $name::InvalidContentTypeError(e) => Some(e),
+                    $name::InvalidContentType(e) => Some(e),
                 }
             }
         }
@@ -52,9 +52,9 @@ macro_rules! define_from_request_error {
             }
         )+
 
-        impl ::core::convert::From<$crate::response_error::InvalidContentTypeError<{ $crate::count!($($error,)+) }>> for $name {
-            fn from(e: $crate::response_error::InvalidContentTypeError<{ $crate::count!($($error,)+) }>) -> Self {
-                $name::InvalidContentTypeError(e)
+        impl ::core::convert::From<$crate::response_error::InvalidContentType<{ $crate::count!($($error,)+) }>> for $name {
+            fn from(e: $crate::response_error::InvalidContentType<{ $crate::count!($($error,)+) }>) -> Self {
+                $name::InvalidContentType(e)
             }
         }
 
@@ -71,8 +71,8 @@ macro_rules! define_from_request_error {
                         $name::$error(e) => <$error as $crate::response_error::ResponseError>::as_status(e),
                     )+
 
-                    $name::InvalidContentTypeError(e) => <
-                        $crate::response_error::InvalidContentTypeError<{ $crate::count!($($error,)+) }>
+                    $name::InvalidContentType(e) => <
+                        $crate::response_error::InvalidContentType<{ $crate::count!($($error,)+) }>
                         as $crate::response_error::ResponseError
                     >::as_status(e),
                 }
@@ -87,7 +87,7 @@ macro_rules! define_from_request_error {
 
                 status_codes.extend(
                     <
-                        $crate::response_error::InvalidContentTypeError<{ $crate::count!($($error,)+) }>
+                        $crate::response_error::InvalidContentType<{ $crate::count!($($error,)+) }>
                         as $crate::response_error::ResponseError
                     >::status_codes()
                 );
@@ -104,8 +104,8 @@ macro_rules! define_from_request_error {
                         $name::$error(e) => <$error as $crate::response_error::ResponseError>::inner(e, error_chain),
                     )+
 
-                    $name::InvalidContentTypeError(e) => <
-                        $crate::response_error::InvalidContentTypeError<{ $crate::count!($($error,)+) }>
+                    $name::InvalidContentType(e) => <
+                        $crate::response_error::InvalidContentType<{ $crate::count!($($error,)+) }>
                         as $crate::response_error::ResponseError
                     >::inner(e, error_chain),
                 }

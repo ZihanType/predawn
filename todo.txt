@@ -1,9 +1,12 @@
-flatten
 default
 Enum
 Hooks::init_logger
 WebSocket
 SSE
+
+`Multipart` macro: refactor `rename` attribute
+
+change `From::from` to `new` method, it will panic
 
 serde_path_to_error
 serde_html_form query form
@@ -41,6 +44,10 @@ ToSchema 没有修改属性的schema时，调用属性的 schema_ref_box 方法
 
 3.
 数据库连接参数
+
+4.
+set_username
+set_password
 
 predawn schema macro
 

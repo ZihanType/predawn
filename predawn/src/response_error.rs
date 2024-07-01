@@ -11,6 +11,7 @@ pub use predawn_core::response_error::*;
 use crate::{
     extract::multipart::Multipart,
     payload::{Form, Json},
+    response::ToHeaderValue,
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -330,7 +331,7 @@ fn status_code_from_multer_error(err: &multer::Error) -> StatusCode {
                 return status_code_from_multer_error(err);
             }
 
-            if err.downcast_ref::<LengthLimitError>().is_some() {
+            if err.is::<LengthLimitError>() {
                 return StatusCode::PAYLOAD_TOO_LARGE;
             }
 
@@ -341,48 +342,17 @@ fn status_code_from_multer_error(err: &multer::Error) -> StatusCode {
     }
 }
 
-#[derive(Debug)]
-pub enum DownloadError<T> {
-    Inner(T),
-    InvalidContentDisposition { value: Box<str> },
-}
+#[derive(Debug, thiserror::Error)]
+#[error("invalid `{CONTENT_DISPOSITION}` header value: `{0}`")]
+pub struct InvalidContentDisposition(pub Box<str>);
 
-impl<T: fmt::Display> fmt::Display for DownloadError<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            DownloadError::Inner(e) => fmt::Display::fmt(e, f),
-            DownloadError::InvalidContentDisposition { value } => {
-                write!(
-                    f,
-                    "invalid `{}` header value: `{}`",
-                    CONTENT_DISPOSITION, value
-                )
-            }
-        }
-    }
-}
-
-impl<T: Error + 'static> Error for DownloadError<T> {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            DownloadError::Inner(e) => Some(e),
-            DownloadError::InvalidContentDisposition { .. } => None,
-        }
-    }
-}
-
-impl<T: ResponseError> ResponseError for DownloadError<T> {
+impl ResponseError for InvalidContentDisposition {
     fn as_status(&self) -> StatusCode {
-        match self {
-            DownloadError::Inner(e) => e.as_status(),
-            DownloadError::InvalidContentDisposition { .. } => StatusCode::INTERNAL_SERVER_ERROR,
-        }
+        StatusCode::INTERNAL_SERVER_ERROR
     }
 
     fn status_codes() -> HashSet<StatusCode> {
-        let mut status_codes = T::status_codes();
-        status_codes.insert(StatusCode::INTERNAL_SERVER_ERROR);
-        status_codes
+        [StatusCode::INTERNAL_SERVER_ERROR].into()
     }
 }
 
@@ -409,13 +379,15 @@ impl ResponseError for TypedHeaderError {
 }
 
 #[derive(Debug, thiserror::Error)]
-#[error("invalid `{CONTENT_TYPE}`: expected one of {expected:?} but actual {actual:?}")]
-pub struct InvalidContentTypeError<const N: usize> {
+#[error(
+    "invalid `{CONTENT_TYPE}` header value: expected to be one of {expected:?} but actually {actual:?}"
+)]
+pub struct InvalidContentType<const N: usize> {
     pub actual: Box<str>,
     pub expected: [&'static str; N],
 }
 
-impl<const N: usize> ResponseError for InvalidContentTypeError<N> {
+impl<const N: usize> ResponseError for InvalidContentType<N> {
     fn as_status(&self) -> StatusCode {
         StatusCode::UNSUPPORTED_MEDIA_TYPE
     }
@@ -425,20 +397,100 @@ impl<const N: usize> ResponseError for InvalidContentTypeError<N> {
     }
 }
 
+#[derive(Debug)]
+enum Kind {
+    Error,
+    None,
+}
+
+#[derive(Debug)]
+pub struct InvalidHeaderValue {
+    name: &'static str,
+    value: Box<str>,
+    type_name: &'static str,
+    kind: Kind,
+}
+
+impl InvalidHeaderValue {
+    pub fn error<T: ToHeaderValue>(name: &'static str, value: &T) -> Self {
+        Self::new(name, value, Kind::Error)
+    }
+
+    pub fn none<T: ToHeaderValue>(name: &'static str, value: &T) -> Self {
+        Self::new(name, value, Kind::None)
+    }
+
+    fn new<T: ToHeaderValue>(name: &'static str, value: &T, kind: Kind) -> Self {
+        fn inner(
+            name: &'static str,
+            value: Box<str>,
+            type_name: &'static str,
+            kind: Kind,
+        ) -> InvalidHeaderValue {
+            InvalidHeaderValue {
+                name,
+                value,
+                type_name,
+                kind,
+            }
+        }
+
+        inner(
+            name,
+            format!("{:?}", value).into(),
+            std::any::type_name::<T>(),
+            kind,
+        )
+    }
+}
+
+impl fmt::Display for InvalidHeaderValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.kind {
+            Kind::Error => write!(
+                f,
+                "cannot get a valid `{name}` header value, convert `{ty}` value `{v}` to a `HeaderValue` got `Error`",
+                name = self.name,
+                ty = self.type_name,
+                v = self.value
+            ),
+            Kind::None => write!(
+                f,
+                "cannot get a valid `{name}` header value, convert `{ty}` value `{v}` to a `HeaderValue` got `None`, but `<{ty} as ToSchema>::REQUIRED` is `true`",
+                name = self.name,
+                ty = self.type_name,
+                v = self.value
+            ),
+        }
+    }
+}
+
+impl Error for InvalidHeaderValue {}
+
+impl ResponseError for InvalidHeaderValue {
+    fn as_status(&self) -> StatusCode {
+        StatusCode::INTERNAL_SERVER_ERROR
+    }
+
+    fn status_codes() -> HashSet<StatusCode> {
+        [StatusCode::INTERNAL_SERVER_ERROR].into()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_invalid_content_type() {
-        let err = InvalidContentTypeError {
+        let err = InvalidContentType {
             actual: "application/json".into(),
             expected: ["text/plain", "text/html"],
         };
 
         assert_eq!(
             err.to_string(),
-            "invalid `content-type`: expected one of [\"text/plain\", \"text/html\"] but actual \"application/json\""
+            "invalid `content-type` header value: expected to be one of [\"text/plain\", \"text/html\"] but actually \"application/json\""
         );
     }
 }

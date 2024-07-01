@@ -138,7 +138,7 @@ fn generate_single_field(
         attrs, ident, ty, ..
     } = field;
 
-    let SerdeAttr { rename } = SerdeAttr::new(&attrs)?;
+    let SerdeAttr { rename, flatten: _ } = SerdeAttr::new(&attrs)?;
 
     let struct_field_ident = ident.expect("unreachable: named field must have an identifier");
 

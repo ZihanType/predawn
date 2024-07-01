@@ -38,7 +38,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
 
     let variants = util::extract_variants(data, "MultiRequestMediaType")?;
 
-    let variants_size = variants.len();
+    let variants_len = variants.len();
     let mut media_type_exprs = Vec::new();
     let mut content_bodies = Vec::new();
     let mut from_request_bodies = Vec::new();
@@ -85,7 +85,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         # use std::collections::BTreeMap;
         # use std::string::String;
         # use predawn::MultiRequestMediaType;
-        # use predawn::response_error::InvalidContentTypeError;
+        # use predawn::response_error::InvalidContentType;
         # use predawn::openapi::{self, Schema, Parameter};
         # use predawn::__internal::indexmap::IndexMap;
         # use predawn::__internal::http::header::CONTENT_TYPE;
@@ -96,7 +96,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
 
         impl #impl_generics MultiRequestMediaType for #ident #ty_generics #where_clause {
             fn content(schemas: &mut BTreeMap<String, Schema>) -> IndexMap<String, openapi::MediaType> {
-                let mut map = IndexMap::with_capacity(#variants_size);
+                let mut map = IndexMap::with_capacity(#variants_len);
                 #(#content_bodies)*
                 map
             }
@@ -110,7 +110,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
 
                 #(#from_request_bodies)*
 
-                Err(<#from_request_error as From<_>>::from(InvalidContentTypeError {
+                Err(<#from_request_error as From<_>>::from(InvalidContentType {
                     actual: content_type.into(),
                     expected: [#(#media_type_exprs,)*],
                 }))

@@ -5,48 +5,36 @@ use std::{
 };
 
 use bytes::Bytes;
-use http::{header::InvalidHeaderValue, HeaderValue, Uri};
+use http::{HeaderValue, Uri};
 
-#[doc(hidden)]
-#[inline(always)]
-pub fn panic_on_err<T: ToHeaderValue>(t: &T) -> ! {
-    panic!(
-        "`<{} as ToHeaderValue>::to_header_value` method returns `Some(Err(_))`, the instance that called this method cannot be converted to a valid `HeaderValue`: {:?}",
-        std::any::type_name::<T>(),
-        t
-    )
-}
-
-#[doc(hidden)]
-#[inline(always)]
-pub fn panic_on_none<T: ToHeaderValue>() -> ! {
-    panic!(
-        "`<{ty} as ToHeaderValue>::to_header_value` method returns `None`, but judging by the `<{ty} as ToSchema>::REQUIRED` constant, it should return `Some(_)`",
-        ty = std::any::type_name::<T>()
-    )
+#[derive(Debug, Clone)]
+pub enum MaybeHeaderValue {
+    Value(HeaderValue),
+    None,
+    Error,
 }
 
 pub trait ToHeaderValue: Debug {
-    fn to_header_value(&self) -> Option<Result<HeaderValue, InvalidHeaderValue>>;
+    fn to_header_value(&self) -> MaybeHeaderValue;
 }
 
 impl<T: ToHeaderValue> ToHeaderValue for Option<T> {
-    fn to_header_value(&self) -> Option<Result<HeaderValue, InvalidHeaderValue>> {
+    fn to_header_value(&self) -> MaybeHeaderValue {
         match self {
             Some(v) => v.to_header_value(),
-            None => None,
+            None => MaybeHeaderValue::None,
         }
     }
 }
 
 impl ToHeaderValue for bool {
-    fn to_header_value(&self) -> Option<Result<HeaderValue, InvalidHeaderValue>> {
+    fn to_header_value(&self) -> MaybeHeaderValue {
         let s = match self {
             true => "true",
             false => "false",
         };
 
-        Some(Ok(HeaderValue::from_static(s)))
+        MaybeHeaderValue::Value(HeaderValue::from_static(s))
     }
 }
 
@@ -54,8 +42,8 @@ macro_rules! impl_to_header_value_directly {
     ($($ty:ty),+ $(,)?) => {
         $(
             impl ToHeaderValue for $ty {
-                fn to_header_value(&self) -> Option<Result<HeaderValue, InvalidHeaderValue>> {
-                    Some(Ok(HeaderValue::from(*self)))
+                fn to_header_value(&self) -> MaybeHeaderValue {
+                    MaybeHeaderValue::Value(HeaderValue::from(*self))
                 }
             }
         )+
@@ -68,36 +56,45 @@ macro_rules! impl_to_header_value_str {
     ($($ty:ty),+ $(,)?) => {
         $(
             impl ToHeaderValue for $ty {
-                fn to_header_value(&self) -> Option<Result<HeaderValue, InvalidHeaderValue>> {
-                    Some(HeaderValue::from_str(self))
+                fn to_header_value(&self) -> MaybeHeaderValue {
+                    match HeaderValue::from_str(self) {
+                        Ok(o) => MaybeHeaderValue::Value(o),
+                        Err(_) => MaybeHeaderValue::Error,
+                    }
                 }
             }
         )+
     };
 }
 
-impl_to_header_value_str![&'static str, Cow<'static, str>, String];
+impl_to_header_value_str![&'static str, Cow<'static, str>, String, Box<str>];
 
 macro_rules! impl_to_header_value_bytes {
     ($($ty:ty),+ $(,)?) => {
         $(
             impl ToHeaderValue for $ty {
-                fn to_header_value(&self) -> Option<Result<HeaderValue, InvalidHeaderValue>> {
-                    Some(HeaderValue::from_bytes(self))
+                fn to_header_value(&self) -> MaybeHeaderValue {
+                    match HeaderValue::from_bytes(self) {
+                        Ok(o) => MaybeHeaderValue::Value(o),
+                        Err(_) => MaybeHeaderValue::Error,
+                    }
                 }
             }
         )+
     };
 }
 
-impl_to_header_value_bytes![&'static [u8], Cow<'static, [u8]>, Vec<u8>, Bytes];
+impl_to_header_value_bytes![&'static [u8], Cow<'static, [u8]>, Vec<u8>, Box<[u8]>, Bytes];
 
 macro_rules! impl_to_header_value_by_to_string {
     ($($ty:ty),+ $(,)?) => {
         $(
             impl ToHeaderValue for $ty {
-                fn to_header_value(&self) -> Option<Result<HeaderValue, InvalidHeaderValue>> {
-                    Some(HeaderValue::try_from(self.to_string()))
+                fn to_header_value(&self) -> MaybeHeaderValue {
+                    match HeaderValue::try_from(self.to_string()) {
+                        Ok(o) => MaybeHeaderValue::Value(o),
+                        Err(_) => MaybeHeaderValue::Error,
+                    }
                 }
             }
         )+

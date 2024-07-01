@@ -6,6 +6,7 @@ use http::{
 };
 use predawn_core::{
     api_response::ApiResponse,
+    either::Either,
     into_response::IntoResponse,
     media_type::{MediaType, MultiResponseMediaType, ResponseMediaType, SingleMediaType},
     openapi::{self, Schema},
@@ -13,7 +14,7 @@ use predawn_core::{
 };
 use predawn_schema::ToSchema;
 
-use crate::response_error::DownloadError;
+use crate::response_error::InvalidContentDisposition;
 
 #[derive(Debug)]
 enum DownloadType {
@@ -68,22 +69,18 @@ impl<T> Download<T> {
         inner_attachment(data, file_name.into())
     }
 
-    fn content_disposition<E>(
+    fn content_disposition(
         ty: DownloadType,
         file_name: Box<str>,
-    ) -> Result<HeaderValue, DownloadError<E>> {
-        let content_disposition = format!("{}; filename=\"{}\"", ty.as_str(), file_name);
+    ) -> Result<HeaderValue, InvalidContentDisposition> {
+        let value = format!("{}; filename=\"{}\"", ty.as_str(), file_name);
 
-        HeaderValue::from_str(&content_disposition).map_err(|_| {
-            DownloadError::InvalidContentDisposition {
-                value: content_disposition.into(),
-            }
-        })
+        HeaderValue::from_str(&value).map_err(|_| InvalidContentDisposition(value.into()))
     }
 }
 
 impl<T: IntoResponse + MediaType> IntoResponse for Download<T> {
-    type Error = DownloadError<T::Error>;
+    type Error = Either<T::Error, InvalidContentDisposition>;
 
     fn into_response(self) -> Result<Response, Self::Error> {
         let Download {
@@ -92,7 +89,7 @@ impl<T: IntoResponse + MediaType> IntoResponse for Download<T> {
             file_name,
         } = self;
 
-        let mut response = data.into_response().map_err(DownloadError::Inner)?;
+        let mut response = data.into_response().map_err(Either::Left)?;
 
         let headers = response.headers_mut();
 
@@ -103,7 +100,7 @@ impl<T: IntoResponse + MediaType> IntoResponse for Download<T> {
 
         headers.insert(
             CONTENT_DISPOSITION,
-            Self::content_disposition::<T::Error>(ty, file_name)?,
+            Self::content_disposition(ty, file_name).map_err(Either::Right)?,
         );
 
         Ok(response)

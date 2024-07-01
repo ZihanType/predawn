@@ -62,13 +62,13 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
 
                 #add_description
 
-                let mut ty = ObjectType::default();
+                let mut obj = ObjectType::default();
 
                 #(#properties)*
 
                 Schema {
                     schema_data: data,
-                    schema_kind: SchemaKind::Type(Type::Object(ty)),
+                    schema_kind: SchemaKind::Type(Type::Object(obj)),
                 }
             }
         }
@@ -82,7 +82,31 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
         attrs, ident, ty, ..
     } = field;
 
-    let SerdeAttr { rename } = SerdeAttr::new(&attrs)?;
+    let SerdeAttr { rename, flatten } = SerdeAttr::new(&attrs)?;
+
+    if flatten {
+        return Ok(quote_use! {
+            # use predawn::ToSchema;
+            # use predawn::openapi::{AnySchema, ObjectType, SchemaKind, Type};
+
+            match <#ty as ToSchema>::schema(schemas).schema_kind {
+                SchemaKind::Any(AnySchema {
+                    properties,
+                    required,
+                    ..
+                })
+                | SchemaKind::Type(Type::Object(ObjectType {
+                    properties,
+                    required,
+                    ..
+                })) => {
+                    obj.properties.extend(properties);
+                    obj.required.extend(required);
+                }
+                _ => {},
+            };
+        });
+    }
 
     let ident = rename.unwrap_or_else(|| {
         ident
@@ -131,11 +155,11 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
 
         let schema = #generate_schema;
 
-        ty.properties
+        obj.properties
             .insert(ToString::to_string(#ident), schema);
 
         if <#ty as ToSchema>::REQUIRED {
-            ty.required.push(ToString::to_string(#ident));
+            obj.required.push(ToString::to_string(#ident));
         }
     };
 

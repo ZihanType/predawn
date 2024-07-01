@@ -2,11 +2,13 @@ use syn::{punctuated::Punctuated, Attribute, Expr, ExprLit, Lit, Meta, MetaNameV
 
 pub(crate) struct SerdeAttr {
     pub(crate) rename: Option<String>,
+    pub(crate) flatten: bool,
 }
 
 impl SerdeAttr {
     pub(crate) fn new(attrs: &[Attribute]) -> syn::Result<Self> {
         let mut rename = None;
+        let mut flatten = false;
 
         for attr in attrs {
             if !attr.path().is_ident("serde") {
@@ -21,9 +23,13 @@ impl SerdeAttr {
                 meta_list.parse_args_with(Punctuated::<Meta, Token![,]>::parse_terminated)?;
 
             for meta in nested {
-                match meta {
-                    Meta::NameValue(MetaNameValue { path, value, .. }) => {
-                        if path.is_ident("rename") {
+                let Some(ident) = meta.path().get_ident() else {
+                    continue;
+                };
+
+                match &meta {
+                    Meta::NameValue(MetaNameValue { value, .. }) => {
+                        if ident == "rename" {
                             match value {
                                 Expr::Lit(ExprLit {
                                     lit: Lit::Str(lit_str),
@@ -35,11 +41,16 @@ impl SerdeAttr {
                             }
                         }
                     }
-                    _ => continue,
+                    Meta::Path(_) => {
+                        if ident == "flatten" {
+                            flatten = true;
+                        }
+                    }
+                    Meta::List(_) => continue,
                 }
             }
         }
 
-        Ok(Self { rename })
+        Ok(Self { rename, flatten })
     }
 }

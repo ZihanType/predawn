@@ -40,7 +40,7 @@ impl Error {
             error_chain,
         } = self;
 
-        match inner.downcast() {
+        match inner.downcast::<T>() {
             Ok(err) => Ok((response, *err, error_chain)),
             Err(err) => Err(Self {
                 response,
@@ -82,25 +82,36 @@ where
 }
 
 impl From<(StatusCode, BoxError)> for Error {
-    fn from((status, error): (StatusCode, BoxError)) -> Self {
-        match error.downcast::<Self>() {
-            Ok(o) => *o,
-            Err(e) => {
-                let response = Response::builder()
-                    .status(status)
-                    .header(
-                        CONTENT_TYPE,
-                        HeaderValue::from_static(TEXT_PLAIN_UTF_8.as_ref()),
-                    )
-                    .body(e.to_string().into())
-                    .unwrap();
-
-                Self {
-                    response,
-                    inner: e,
-                    error_chain: [std::any::type_name::<BoxError>()].into(),
+    fn from((status, mut error): (StatusCode, BoxError)) -> Self {
+        loop {
+            match error.downcast::<Error>() {
+                Ok(o) => {
+                    if o.inner.is::<Error>() {
+                        error = o.inner;
+                    } else {
+                        return *o;
+                    }
+                }
+                Err(e) => {
+                    error = e;
+                    break;
                 }
             }
+        }
+
+        let response = Response::builder()
+            .status(status)
+            .header(
+                CONTENT_TYPE,
+                HeaderValue::from_static(TEXT_PLAIN_UTF_8.as_ref()),
+            )
+            .body(error.to_string().into())
+            .unwrap();
+
+        Self {
+            response,
+            inner: error,
+            error_chain: [std::any::type_name::<BoxError>()].into(),
         }
     }
 }

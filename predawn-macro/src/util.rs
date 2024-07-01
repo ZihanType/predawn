@@ -42,10 +42,27 @@ pub(crate) fn extract_named_struct_fields(
     derive_macro_name: &'static str,
 ) -> syn::Result<Punctuated<Field, Token![,]>> {
     match data {
-        Data::Struct(DataStruct { fields, .. }) => match fields {
-            Fields::Named(FieldsNamed { named, .. }) => Ok(named),
-            Fields::Unnamed(_) | Fields::Unit => Err(syn::Error::new_spanned(
-                fields,
+        Data::Struct(DataStruct {
+            struct_token,
+            fields,
+            ..
+        }) => match fields {
+            Fields::Named(FieldsNamed { brace_token, named }) => {
+                if named.is_empty() {
+                    Err(syn::Error::new(
+                        brace_token.span.join(),
+                        "must have at least one field",
+                    ))
+                } else {
+                    Ok(named)
+                }
+            }
+            Fields::Unnamed(FieldsUnnamed { paren_token, .. }) => Err(syn::Error::new(
+                paren_token.span.join(),
+                format!("`{derive_macro_name}` can only be derived for structs with named fields"),
+            )),
+            Fields::Unit => Err(syn::Error::new(
+                struct_token.span,
                 format!("`{derive_macro_name}` can only be derived for structs with named fields"),
             )),
         },
@@ -107,11 +124,8 @@ pub(crate) fn extract_status_code_value(status_code: Option<LitInt>) -> syn::Res
         Some(status_code) => {
             let status_code_value = status_code.base10_parse()?;
 
-            if StatusCode::from_u16(status_code_value).is_err() {
-                return Err(syn::Error::new(
-                    status_code.span(),
-                    "it is not a valid status code",
-                ));
+            if let Err(e) = StatusCode::from_u16(status_code_value) {
+                return Err(syn::Error::new(status_code.span(), e));
             }
 
             status_code_value
