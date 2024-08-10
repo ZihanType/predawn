@@ -4,6 +4,7 @@ mod multi_request_media_type;
 mod multi_response;
 mod multi_response_media_type;
 mod multipart;
+mod schema_attr;
 mod security_scheme;
 mod serde_attr;
 mod single_response;
@@ -38,7 +39,7 @@ pub fn to_schema(input: TokenStream) -> TokenStream {
         .into()
 }
 
-#[proc_macro_derive(ToParameters, attributes(parameters))]
+#[proc_macro_derive(ToParameters, attributes(schema))]
 pub fn to_parameters(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
@@ -88,7 +89,7 @@ pub fn multi_response(input: TokenStream) -> TokenStream {
 }
 
 #[doc = include_str!("docs/multipart.md")]
-#[proc_macro_derive(Multipart, attributes(multipart))]
+#[proc_macro_derive(Multipart, attributes(schema))]
 pub fn multipart(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 

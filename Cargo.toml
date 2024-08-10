@@ -61,10 +61,9 @@ percent-encoding = { version = "2", default-features = false }
 tower = { version = "0.4", default-features = false }
 tower-http = { version = "0.5", default-features = false }
 config = { version = "0.14", default-features = false }
-once_cell = { version = "1", default-features = false }
 reqwest = { version = "0.12", default-features = false }
 multer = { version = "3", default-features = false }
-sea-orm = { version = "0.12", default-features = false }
+sea-orm = { version = "1", default-features = false }
 scc = { version = "2", default-features = false }
 url = { version = "2", default-features = false }
 headers = { version = "0.4", default-features = false }

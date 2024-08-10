@@ -13,7 +13,9 @@ use multer::Field;
 use crate::response_error::MultipartError;
 
 pub trait ParseField: Sized + Send {
-    type Holder: Default + Send;
+    type Holder: Send;
+
+    fn default_holder(name: &'static str) -> Self::Holder;
 
     fn parse_field(
         holder: Self::Holder,
@@ -27,6 +29,10 @@ pub trait ParseField: Sized + Send {
 impl<T: ParseField> ParseField for Option<T> {
     type Holder = T::Holder;
 
+    fn default_holder(name: &'static str) -> Self::Holder {
+        T::default_holder(name)
+    }
+
     async fn parse_field(
         holder: Self::Holder,
         field: Field<'static>,
@@ -38,55 +44,59 @@ impl<T: ParseField> ParseField for Option<T> {
     fn extract(holder: Self::Holder, name: &'static str) -> Result<Self, MultipartError> {
         match T::extract(holder, name) {
             Ok(o) => Ok(Some(o)),
-            Err(e) => match e {
-                MultipartError::MissingField { .. } => Ok(None),
-                _ => Err(e),
-            },
+            Err(MultipartError::MissingField { .. }) => Ok(None),
+            Err(e) => Err(e),
         }
     }
 }
 
 impl<T: ParseField> ParseField for Vec<T> {
-    type Holder = Option<Self>;
+    type Holder = Result<Self, MultipartError>;
+
+    fn default_holder(name: &'static str) -> Self::Holder {
+        Err(MultipartError::MissingField { name })
+    }
 
     async fn parse_field(
         holder: Self::Holder,
         field: Field<'static>,
         name: &'static str,
     ) -> Result<Self::Holder, MultipartError> {
-        let item_holder = T::parse_field(Default::default(), field, name).await?;
+        let item_holder = T::parse_field(T::default_holder(name), field, name).await?;
         let item = T::extract(item_holder, name)?;
 
         let mut holder = holder.unwrap_or_default();
         holder.push(item);
-        Ok(Some(holder))
+        Ok(Ok(holder))
     }
 
-    fn extract(holder: Self::Holder, name: &'static str) -> Result<Self, MultipartError> {
-        holder.ok_or(MultipartError::MissingField { name })
+    fn extract(holder: Self::Holder, _: &'static str) -> Result<Self, MultipartError> {
+        holder
     }
 }
 
 impl<T: ParseField, const N: usize> ParseField for [T; N] {
-    type Holder = Option<Vec<T>>;
+    type Holder = Result<Vec<T>, MultipartError>;
+
+    fn default_holder(name: &'static str) -> Self::Holder {
+        Err(MultipartError::MissingField { name })
+    }
 
     async fn parse_field(
         holder: Self::Holder,
         field: Field<'static>,
         name: &'static str,
     ) -> Result<Self::Holder, MultipartError> {
-        let item_holder = T::parse_field(Default::default(), field, name).await?;
+        let item_holder = T::parse_field(T::default_holder(name), field, name).await?;
         let item = T::extract(item_holder, name)?;
 
-        let mut holder = holder.unwrap_or_else(|| Vec::with_capacity(N));
+        let mut holder = holder.unwrap_or_else(|_| Vec::with_capacity(N));
         holder.push(item);
-        Ok(Some(holder))
+        Ok(Ok(holder))
     }
 
     fn extract(holder: Self::Holder, name: &'static str) -> Result<Self, MultipartError> {
-        let holder = holder.ok_or(MultipartError::MissingField { name })?;
-
-        Self::try_from(holder).map_err(|v| MultipartError::IncorrectNumberOfFields {
+        Self::try_from(holder?).map_err(|v| MultipartError::IncorrectNumberOfFields {
             name,
             expected: N,
             actual: v.len(),
@@ -99,69 +109,81 @@ where
     T: ParseField + Hash + Eq,
     S: Send + Default + BuildHasher,
 {
-    type Holder = Option<Self>;
+    type Holder = Result<Self, MultipartError>;
+
+    fn default_holder(name: &'static str) -> Self::Holder {
+        Err(MultipartError::MissingField { name })
+    }
 
     async fn parse_field(
         holder: Self::Holder,
         field: Field<'static>,
         name: &'static str,
     ) -> Result<Self::Holder, MultipartError> {
-        let item_holder = T::parse_field(Default::default(), field, name).await?;
+        let item_holder = T::parse_field(T::default_holder(name), field, name).await?;
         let item = T::extract(item_holder, name)?;
 
         let mut holder = holder.unwrap_or_default();
         holder.insert(item);
-        Ok(Some(holder))
+        Ok(Ok(holder))
     }
 
-    fn extract(holder: Self::Holder, name: &'static str) -> Result<Self, MultipartError> {
-        holder.ok_or(MultipartError::MissingField { name })
+    fn extract(holder: Self::Holder, _: &'static str) -> Result<Self, MultipartError> {
+        holder
     }
 }
 
 impl<T: ParseField + Ord> ParseField for BTreeSet<T> {
-    type Holder = Option<Self>;
+    type Holder = Result<Self, MultipartError>;
+
+    fn default_holder(name: &'static str) -> Self::Holder {
+        Err(MultipartError::MissingField { name })
+    }
 
     async fn parse_field(
         holder: Self::Holder,
         field: Field<'static>,
         name: &'static str,
     ) -> Result<Self::Holder, MultipartError> {
-        let item_holder = T::parse_field(Default::default(), field, name).await?;
+        let item_holder = T::parse_field(T::default_holder(name), field, name).await?;
         let item = T::extract(item_holder, name)?;
 
         let mut holder = holder.unwrap_or_default();
         holder.insert(item);
-        Ok(Some(holder))
+        Ok(Ok(holder))
     }
 
-    fn extract(holder: Self::Holder, name: &'static str) -> Result<Self, MultipartError> {
-        holder.ok_or(MultipartError::MissingField { name })
+    fn extract(holder: Self::Holder, _: &'static str) -> Result<Self, MultipartError> {
+        holder
     }
 }
 
 macro_rules! some_impl {
     ($ty:ty, $ident:ident) => {
         impl ParseField for $ty {
-            type Holder = Option<Self>;
+            type Holder = Result<Self, MultipartError>;
+
+            fn default_holder(name: &'static str) -> Self::Holder {
+                Err(MultipartError::MissingField { name })
+            }
 
             async fn parse_field(
                 holder: Self::Holder,
                 field: Field<'static>,
                 name: &'static str,
             ) -> Result<Self::Holder, MultipartError> {
-                if holder.is_some() {
+                if holder.is_ok() {
                     return Err(MultipartError::DuplicateField { name });
                 }
 
                 match field.$ident().await {
-                    Ok(o) => Ok(Some(o)),
+                    Ok(o) => Ok(Ok(o)),
                     Err(e) => Err(MultipartError::ByParseField { name, error: e }),
                 }
             }
 
-            fn extract(holder: Self::Holder, name: &'static str) -> Result<Self, MultipartError> {
-                holder.ok_or(MultipartError::MissingField { name })
+            fn extract(holder: Self::Holder, _: &'static str) -> Result<Self, MultipartError> {
+                holder
             }
         }
     };
@@ -174,23 +196,30 @@ macro_rules! some_impl_by_parse_str {
     ($($ty:ty),+ $(,)?) => {
         $(
             impl ParseField for $ty {
-                type Holder = Option<Self>;
+                type Holder = Result<Self, MultipartError>;
+
+                fn default_holder(name: &'static str) -> Self::Holder {
+                    Err(MultipartError::MissingField { name })
+                }
 
                 async fn parse_field(
                     holder: Self::Holder,
                     field: Field<'static>,
                     name: &'static str,
                 ) -> Result<Self::Holder, MultipartError> {
-                    if holder.is_some() {
+                    if holder.is_ok() {
                         return Err(MultipartError::DuplicateField { name });
                     }
 
-                    let text = <String as ParseField>::parse_field(None, field, name)
-                        .await? // <- `Ok` here must be `Some`
-                        .expect("unreachable: when it is `Ok`, it must be `Some`");
+                    let text = <String as ParseField>::parse_field(
+                        <String as ParseField>::default_holder(name),
+                        field,
+                        name,
+                    )
+                    .await??;
 
                     match text.parse() {
-                        Ok(o) => Ok(Some(o)),
+                        Ok(o) => Ok(Ok(o)),
                         Err(_) => Err(MultipartError::ParseErrorAtName {
                             name,
                             value: text.into(),
@@ -199,8 +228,8 @@ macro_rules! some_impl_by_parse_str {
                     }
                 }
 
-                fn extract(holder: Self::Holder, name: &'static str) -> Result<Self, MultipartError> {
-                    holder.ok_or(MultipartError::MissingField { name })
+                fn extract(holder: Self::Holder, _: &'static str) -> Result<Self, MultipartError> {
+                    holder
                 }
             }
         )+

@@ -1,9 +1,10 @@
+use from_attr::{AttrsValue, FromAttr};
 use proc_macro2::TokenStream;
 use quote::quote;
 use quote_use::quote_use;
 use syn::{DeriveInput, Field, Ident};
 
-use crate::{serde_attr::SerdeAttr, util};
+use crate::{schema_attr::SchemaAttr, serde_attr::SerdeAttr, util};
 
 pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
     let DeriveInput {
@@ -55,8 +56,12 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
     };
 
     let description = util::extract_description(&attrs);
-    let description = util::generate_optional_lit_str(&description)
-        .unwrap_or_else(|| quote!(::core::option::Option::None));
+    let description = if description.is_empty() {
+        quote! { None }
+    } else {
+        let description = util::generate_string_expr(&description);
+        quote! { Some(#description) }
+    };
 
     let expand = quote_use! {
         # use core::default::Default;
@@ -138,17 +143,43 @@ fn generate_single_field(
         attrs, ident, ty, ..
     } = field;
 
-    let SerdeAttr { rename, flatten: _ } = SerdeAttr::new(&attrs)?;
+    let SerdeAttr {
+        rename: serde_rename,
+        flatten: _,
+        default: serde_default,
+    } = SerdeAttr::new(&attrs);
+
+    let SchemaAttr {
+        rename: schema_rename,
+        flatten: _,
+        default: schema_default,
+    } = match SchemaAttr::from_attributes(&attrs) {
+        Ok(Some(AttrsValue {
+            value: field_attr, ..
+        })) => field_attr,
+        Ok(None) => Default::default(),
+        Err(AttrsValue { value: e, .. }) => return Err(e),
+    };
 
     let struct_field_ident = ident.expect("unreachable: named field must have an identifier");
 
-    let multipart_field = rename.unwrap_or_else(|| struct_field_ident.to_string());
+    let multipart_field = schema_rename
+        .unwrap_or_else(|| serde_rename.unwrap_or_else(|| struct_field_ident.to_string()));
+
+    let default_expr = util::generate_default_expr(&ty, serde_default, schema_default)?;
+    let missing_field_arm = default_expr.map(|expr| {
+        quote_use! {
+            # use predawn::response_error::MultipartError;
+
+            Err(MultipartError::MissingField { .. }) => #expr,
+        }
+    });
 
     let define_var = quote_use! {
         # use core::default::Default;
         # use predawn::extract::multipart::ParseField;
 
-        let mut #struct_field_ident = <<#ty as ParseField>::Holder as Default>::default();
+        let mut #struct_field_ident = <#ty as ParseField>::default_holder(#multipart_field);
     };
 
     let parse_field = quote_use! {
@@ -163,7 +194,11 @@ fn generate_single_field(
     let extract_var = quote_use! {
         # use predawn::extract::multipart::ParseField;
 
-        let #struct_field_ident = <#ty as ParseField>::extract(#struct_field_ident, #multipart_field)?;
+        let #struct_field_ident = match <#ty as ParseField>::extract(#struct_field_ident, #multipart_field) {
+            Ok(v) => v,
+            #missing_field_arm
+            Err(e) => return Err(e),
+        };
     };
 
     Ok((struct_field_ident, define_var, parse_field, extract_var))

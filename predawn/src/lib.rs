@@ -50,4 +50,5 @@ pub mod __internal {
     pub use indexmap;
     pub use paste;
     pub use rudi;
+    pub use serde_json;
 }

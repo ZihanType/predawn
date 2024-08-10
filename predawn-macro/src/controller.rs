@@ -364,17 +364,23 @@ fn generate_single_fn_impl<'a>(
 
     let (summary, description) = util::extract_summary_and_description(&f.attrs);
 
-    let add_summary = util::generate_optional_lit_str(&summary).map(|summary| {
+    let add_summary = if summary.is_empty() {
+        TokenStream::new()
+    } else {
+        let summary = util::generate_string_expr(&summary);
         quote! {
-            operation.summary = #summary;
+            operation.summary = Some(#summary);
         }
-    });
+    };
 
-    let add_description = util::generate_optional_lit_str(&description).map(|description| {
+    let add_description = if description.is_empty() {
+        TokenStream::new()
+    } else {
+        let description = util::generate_string_expr(&description);
         quote! {
-            operation.description = #description;
+            operation.description = Some(#description);
         }
-    });
+    };
 
     let add_tags = if controller_tags.is_empty() && method_tags.is_empty() {
         TokenStream::new()

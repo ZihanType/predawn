@@ -155,8 +155,12 @@ fn generate_api_key(
     let location = location.as_ident();
 
     let description = util::extract_description(attrs);
-    let description = util::generate_optional_lit_str(&description)
-        .unwrap_or_else(|| quote!(::core::option::Option::None));
+    let description = if description.is_empty() {
+        quote! { None }
+    } else {
+        let description = util::generate_string_expr(&description);
+        quote! { Some(#description) }
+    };
 
     let expand = quote_use! {
         # use core::default::Default;
@@ -200,8 +204,12 @@ fn generate_http(attrs: &[Attribute], ident: &Ident, http: HttpAttr) -> syn::Res
     };
 
     let description = util::extract_description(attrs);
-    let description = util::generate_optional_lit_str(&description)
-        .unwrap_or_else(|| quote!(::core::option::Option::None));
+    let description = if description.is_empty() {
+        quote! { None }
+    } else {
+        let description = util::generate_string_expr(&description);
+        quote! { Some(#description) }
+    };
 
     let expand = quote_use! {
         # use core::default::Default;

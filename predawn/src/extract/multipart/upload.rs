@@ -53,14 +53,18 @@ impl ToSchema for Upload {
 }
 
 impl ParseField for Upload {
-    type Holder = Option<Self>;
+    type Holder = Result<Self, MultipartError>;
+
+    fn default_holder(name: &'static str) -> Self::Holder {
+        Err(MultipartError::MissingField { name })
+    }
 
     async fn parse_field(
         holder: Self::Holder,
         field: Field<'static>,
         name: &'static str,
     ) -> Result<Self::Holder, MultipartError> {
-        if holder.is_some() {
+        if holder.is_ok() {
             return Err(MultipartError::DuplicateField { name });
         }
 
@@ -75,11 +79,14 @@ impl ParseField for Upload {
             .as_ref()
             .into();
 
-        let bytes = <Bytes as ParseField>::parse_field(None, field, name)
-            .await? // <- `Ok` here must be `Some`
-            .expect("unreachable: when it is `Ok`, it must be `Some`");
+        let bytes = <Bytes as ParseField>::parse_field(
+            <Bytes as ParseField>::default_holder(name),
+            field,
+            name,
+        )
+        .await??;
 
-        Ok(Some(Upload {
+        Ok(Ok(Upload {
             field_name: name,
             file_name,
             content_type,
@@ -87,7 +94,7 @@ impl ParseField for Upload {
         }))
     }
 
-    fn extract(holder: Self::Holder, name: &'static str) -> Result<Self, MultipartError> {
-        holder.ok_or(MultipartError::MissingField { name })
+    fn extract(holder: Self::Holder, _: &'static str) -> Result<Self, MultipartError> {
+        holder
     }
 }

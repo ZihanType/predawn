@@ -88,7 +88,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
     });
 
     let description = util::extract_description(&attrs);
-    let description = util::generate_lit_str(&description);
+    let description = util::generate_string_expr(&description);
 
     match handle_last_field(last, fields_len - 1, &mut header_names) {
         Ok(Last::Header {
@@ -207,7 +207,7 @@ fn generate_only_headers(
     generics: &Generics,
     ident: &Ident,
     status_code_value: u16,
-    description: TokenStream,
+    description: Expr,
     insert_api_headers: Vec<TokenStream>,
     insert_http_headers: Vec<TokenStream>,
 ) -> TokenStream {
@@ -273,7 +273,7 @@ fn generate_only_body(
     generics: &Generics,
     ident: &Ident,
     status_code_value: u16,
-    description: TokenStream,
+    description: Expr,
     body_type: Type,
     into_response_arg: Expr,
 ) -> TokenStream {
@@ -327,7 +327,7 @@ fn generate_body_and_headers(
     generics: &Generics,
     ident: &Ident,
     status_code_value: u16,
-    description: TokenStream,
+    description: Expr,
     insert_api_headers: Vec<TokenStream>,
     insert_http_headers: Vec<TokenStream>,
     body_type: Type,
@@ -415,8 +415,12 @@ fn handle_single_field(
     };
 
     let description = util::extract_description(&attrs);
-    let description = util::generate_optional_lit_str(&description)
-        .unwrap_or_else(|| quote!(::core::option::Option::None));
+    let description = if description.is_empty() {
+        quote! { None }
+    } else {
+        let description = util::generate_string_expr(&description);
+        quote! { Some(#description) }
+    };
 
     Ok(generate_headers(&ty, &header_name, &member, description))
 }
@@ -451,8 +455,12 @@ fn handle_last_field(
     };
 
     let description = util::extract_description(&attrs);
-    let description = util::generate_optional_lit_str(&description)
-        .unwrap_or_else(|| quote!(::core::option::Option::None));
+    let description = if description.is_empty() {
+        quote! { None }
+    } else {
+        let description = util::generate_string_expr(&description);
+        quote! { Some(#description) }
+    };
 
     let (insert_api_header, insert_http_header) =
         generate_headers(&ty, &header_name, &member, description);

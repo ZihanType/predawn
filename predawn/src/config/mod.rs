@@ -6,10 +6,10 @@ use std::{
     env,
     ops::Deref,
     path::{Path, PathBuf},
+    sync::LazyLock,
 };
 
 use config::{ConfigError, File, ValueKind};
-use once_cell::sync::Lazy;
 use serde::Deserialize;
 
 use crate::environment::Environment;
@@ -25,24 +25,23 @@ impl Config {
     }
 
     pub fn load(env: &Environment) -> Result<Self, ConfigError> {
-        static DEFAULT_FOLDER: Lazy<PathBuf> = Lazy::new(|| {
-            let mut parent = match env::var("CARGO_MANIFEST_DIR") {
+        static DEFAULT_FOLDER: LazyLock<PathBuf> = LazyLock::new(|| {
+            let mut dir_path = match env::var("CARGO_MANIFEST_DIR") {
                 Ok(dir) => PathBuf::from(dir),
                 Err(_) => {
-                    let binary_file_path = env::args()
-                        .next()
-                        .expect("unreachable: there must be a binary file path");
+                    let binary_file_path =
+                        env::args().next().expect("failed to get binary file path");
 
                     Path::new(&binary_file_path)
                         .parent()
-                        .expect("unreachable: there must be a parent directory")
+                        .expect("failed to get parent directory of binary file")
                         .canonicalize()
-                        .expect("unreachable: the parent directory must be valid")
+                        .expect("failed to get canonical, absolute form of the path to the parent directory of binary file")
                 }
             };
 
-            parent.push("config");
-            parent
+            dir_path.push("config");
+            dir_path
         });
 
         Self::from_folder(env, DEFAULT_FOLDER.as_path())

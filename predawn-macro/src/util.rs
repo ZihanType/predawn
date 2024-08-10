@@ -1,10 +1,11 @@
+use from_attr::FlagOrValue;
 use http::StatusCode;
 use proc_macro2::{Span, TokenStream};
-use quote::quote;
+use quote_use::quote_use;
 use syn::{
-    punctuated::Punctuated, spanned::Spanned, Attribute, Data, DataEnum, DataStruct, DataUnion,
-    Expr, ExprLit, Field, Fields, FieldsNamed, FieldsUnnamed, Lit, LitInt, Meta, MetaNameValue,
-    Token, Type, Variant,
+    parse_quote, punctuated::Punctuated, spanned::Spanned, Attribute, Data, DataEnum, DataStruct,
+    DataUnion, Expr, ExprLit, Field, Fields, FieldsNamed, FieldsUnnamed, Lit, LitInt, Meta,
+    MetaNameValue, Path, Token, Type, Variant,
 };
 
 pub(crate) fn extract_variants(
@@ -180,18 +181,56 @@ pub(crate) fn extract_summary_and_description(attrs: &[Attribute]) -> (String, S
     }
 }
 
-pub(crate) fn generate_optional_lit_str(s: &str) -> Option<TokenStream> {
-    if !s.is_empty() {
-        Some(quote! {
-           ::core::option::Option::Some(::std::string::ToString::to_string(#s))
-        })
-    } else {
-        None
+pub(crate) fn generate_string_expr(s: &str) -> Expr {
+    parse_quote! {
+        ::std::string::ToString::to_string(#s)
     }
 }
 
-pub(crate) fn generate_lit_str(s: &str) -> TokenStream {
-    quote! {
-       ::std::string::ToString::to_string(#s)
+pub(crate) fn generate_default_expr(
+    ty: &Type,
+    serde_default: FlagOrValue<String>,
+    schema_default: FlagOrValue<Expr>,
+) -> syn::Result<Option<Expr>> {
+    let default_expr: Expr = match (serde_default, schema_default) {
+        (FlagOrValue::None, FlagOrValue::None) => return Ok(None),
+
+        (FlagOrValue::None, FlagOrValue::Flag { .. })
+        | (FlagOrValue::Flag { .. }, FlagOrValue::Flag { .. })
+        | (FlagOrValue::Flag { .. }, FlagOrValue::None) => {
+            parse_quote! {
+                <#ty as ::core::default::Default>::default()
+            }
+        }
+
+        (FlagOrValue::Value { value, .. }, FlagOrValue::None)
+        | (FlagOrValue::Value { value, .. }, FlagOrValue::Flag { .. }) => {
+            let path = syn::parse_str::<Path>(&value)?;
+
+            parse_quote! {
+                #path()
+            }
+        }
+
+        (FlagOrValue::None, FlagOrValue::Value { value: expr, .. })
+        | (FlagOrValue::Flag { .. }, FlagOrValue::Value { value: expr, .. })
+        | (FlagOrValue::Value { .. }, FlagOrValue::Value { value: expr, .. }) => expr,
+    };
+
+    Ok(Some(default_expr))
+}
+
+pub(crate) fn generate_add_default_to_schema(ty: &Type, default_expr: Option<Expr>) -> TokenStream {
+    match default_expr {
+        Some(expr) => quote_use! {
+            # use std::{concat, stringify, file, line, column};
+            # use predawn::__internal::serde_json;
+
+            schema.schema_data.default = Some(
+                serde_json::to_value::<#ty>(#expr)
+                    .expect(concat!("failed to serialize `", stringify!(#ty), "` type at ", file!(), ":", line!(), ":", column!()))
+            );
+        },
+        None => TokenStream::new(),
     }
 }

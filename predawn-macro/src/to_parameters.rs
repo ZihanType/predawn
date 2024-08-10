@@ -1,9 +1,10 @@
+use from_attr::{AttrsValue, FromAttr};
 use proc_macro2::TokenStream;
 use quote::quote;
 use quote_use::quote_use;
 use syn::{DeriveInput, Field};
 
-use crate::{serde_attr::SerdeAttr, util};
+use crate::{schema_attr::SchemaAttr, serde_attr::SerdeAttr, util};
 
 pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
     let DeriveInput {
@@ -60,9 +61,25 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
         attrs, ident, ty, ..
     } = field;
 
-    let SerdeAttr { rename, flatten } = SerdeAttr::new(&attrs)?;
+    let SerdeAttr {
+        rename: serde_rename,
+        flatten: serde_flatten,
+        default: serde_default,
+    } = SerdeAttr::new(&attrs);
 
-    if flatten {
+    let SchemaAttr {
+        rename: schema_rename,
+        flatten: schema_flatten,
+        default: schema_default,
+    } = match SchemaAttr::from_attributes(&attrs) {
+        Ok(Some(AttrsValue {
+            value: field_attr, ..
+        })) => field_attr,
+        Ok(None) => Default::default(),
+        Err(AttrsValue { value: e, .. }) => return Err(e),
+    };
+
+    if serde_flatten || schema_flatten {
         return Ok(quote_use! {
             # use predawn::ToParameters;
 
@@ -70,15 +87,43 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
         });
     }
 
-    let ident = rename.unwrap_or_else(|| {
-        ident
-            .expect("unreachable: named field must have an identifier")
-            .to_string()
+    let ident = schema_rename.unwrap_or_else(|| {
+        serde_rename.unwrap_or_else(|| {
+            ident
+                .expect("unreachable: named field must have an identifier")
+                .to_string()
+        })
     });
 
+    let default_expr = util::generate_default_expr(&ty, serde_default, schema_default)?;
+    let add_default = util::generate_add_default_to_schema(&ty, default_expr);
+
     let description = util::extract_description(&attrs);
-    let description = util::generate_optional_lit_str(&description)
-        .unwrap_or_else(|| quote!(::core::option::Option::None));
+    let description = if description.is_empty() {
+        quote! { None }
+    } else {
+        let description = util::generate_string_expr(&description);
+        quote! { Some(#description) }
+    };
+
+    let generate_schema = if add_default.is_empty() {
+        quote_use! {
+            # use predawn::ToSchema;
+
+            <#ty as ToSchema>::schema_ref(schemas)
+        }
+    } else {
+        quote_use! {
+            # use predawn::ToSchema;
+            # use predawn::openapi::ReferenceOr;
+
+            {
+                let mut schema = <#ty as ToSchema>::schema(schemas);
+                #add_default
+                ReferenceOr::Item(schema)
+            }
+        }
+    };
 
     let expand = quote_use! {
         # use core::default::Default;
@@ -86,12 +131,14 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
         # use predawn::ToSchema;
         # use predawn::openapi::{ParameterData, ParameterSchemaOrContent};
 
+        let schema = #generate_schema;
+
         let param = ParameterData {
             name: ToString::to_string(#ident),
             description: #description,
             required: <#ty as ToSchema>::REQUIRED,
             deprecated: Default::default(),
-            format: ParameterSchemaOrContent::Schema(<#ty as ToSchema>::schema_ref(schemas)),
+            format: ParameterSchemaOrContent::Schema(schema),
             example: Default::default(),
             examples: Default::default(),
             explode: Default::default(),

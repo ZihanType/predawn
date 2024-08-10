@@ -1,14 +1,20 @@
-use syn::{punctuated::Punctuated, Attribute, Expr, ExprLit, Lit, Meta, MetaNameValue, Token};
+use from_attr::FlagOrValue;
+use syn::{
+    punctuated::Punctuated, spanned::Spanned, Attribute, Expr, ExprLit, Lit, Meta, MetaNameValue,
+    Token,
+};
 
 pub(crate) struct SerdeAttr {
     pub(crate) rename: Option<String>,
     pub(crate) flatten: bool,
+    pub(crate) default: FlagOrValue<String>,
 }
 
 impl SerdeAttr {
-    pub(crate) fn new(attrs: &[Attribute]) -> syn::Result<Self> {
+    pub(crate) fn new(attrs: &[Attribute]) -> Self {
         let mut rename = None;
         let mut flatten = false;
+        let mut default = FlagOrValue::None;
 
         for attr in attrs {
             if !attr.path().is_ident("serde") {
@@ -19,38 +25,73 @@ impl SerdeAttr {
                 continue;
             };
 
-            let nested =
-                meta_list.parse_args_with(Punctuated::<Meta, Token![,]>::parse_terminated)?;
+            let Ok(nested) =
+                meta_list.parse_args_with(Punctuated::<Meta, Token![,]>::parse_terminated)
+            else {
+                continue;
+            };
 
             for meta in nested {
-                let Some(ident) = meta.path().get_ident() else {
-                    continue;
+                let (path, ident) = {
+                    let path = meta.path();
+
+                    let Some(ident) = path.get_ident() else {
+                        continue;
+                    };
+
+                    (path.span(), ident.to_string())
                 };
 
-                match &meta {
-                    Meta::NameValue(MetaNameValue { value, .. }) => {
-                        if ident == "rename" {
-                            match value {
+                match ident.as_str() {
+                    "rename" => match &meta {
+                        Meta::NameValue(MetaNameValue {
+                            value:
                                 Expr::Lit(ExprLit {
                                     lit: Lit::Str(lit_str),
                                     ..
-                                }) => {
-                                    rename = Some(lit_str.value());
-                                }
-                                _ => continue,
-                            }
+                                }),
+                            ..
+                        }) => {
+                            rename = Some(lit_str.value());
                         }
-                    }
-                    Meta::Path(_) => {
-                        if ident == "flatten" {
+                        _ => continue,
+                    },
+                    "flatten" => match &meta {
+                        Meta::Path(_) => {
                             flatten = true;
                         }
-                    }
-                    Meta::List(_) => continue,
+                        _ => continue,
+                    },
+                    "default" => match &meta {
+                        Meta::Path(_) => {
+                            default = FlagOrValue::Flag { path };
+                        }
+                        Meta::NameValue(MetaNameValue {
+                            value:
+                                Expr::Lit(ExprLit {
+                                    lit: Lit::Str(lit_str),
+                                    ..
+                                }),
+                            ..
+                        }) => {
+                            default = FlagOrValue::Value {
+                                path,
+                                value: lit_str.value(),
+                            };
+                        }
+                        _ => {
+                            continue;
+                        }
+                    },
+                    _ => continue,
                 }
             }
         }
 
-        Ok(Self { rename, flatten })
+        Self {
+            rename,
+            flatten,
+            default,
+        }
     }
 }

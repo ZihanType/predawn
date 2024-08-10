@@ -1,10 +1,7 @@
-default
 Enum
 Hooks::init_logger
 WebSocket
 SSE
-
-`Multipart` macro: refactor `rename` attribute
 
 change `From::from` to `new` method, it will panic
 
