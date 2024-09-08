@@ -5,7 +5,10 @@ use predawn_core::openapi::{ParameterData, Schema};
 use crate::openapi;
 
 pub trait ToParameters {
-    fn parameters(schemas: &mut BTreeMap<String, Schema>) -> Vec<ParameterData>;
+    fn parameters(
+        schemas: &mut BTreeMap<String, Schema>,
+        schemas_in_progress: &mut Vec<String>,
+    ) -> Vec<ParameterData>;
 }
 
 pub trait Tag {

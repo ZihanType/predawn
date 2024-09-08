@@ -44,9 +44,12 @@ where
 }
 
 impl<T: ToParameters> ApiRequestHead for Path<T> {
-    fn parameters(schemas: &mut BTreeMap<String, Schema>) -> Option<Vec<Parameter>> {
+    fn parameters(
+        schemas: &mut BTreeMap<String, Schema>,
+        schemas_in_progress: &mut Vec<String>,
+    ) -> Option<Vec<Parameter>> {
         Some(
-            <T as ToParameters>::parameters(schemas)
+            <T as ToParameters>::parameters(schemas, schemas_in_progress)
                 .into_iter()
                 .map(|parameter_data| Parameter::Path {
                     parameter_data,

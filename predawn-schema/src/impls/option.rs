@@ -7,8 +7,11 @@ use crate::ToSchema;
 impl<T: ToSchema> ToSchema for Option<T> {
     const REQUIRED: bool = false;
 
-    fn schema(schemas: &mut BTreeMap<String, Schema>) -> Schema {
-        let mut schema = T::schema(schemas);
+    fn schema(
+        schemas: &mut BTreeMap<String, Schema>,
+        schemas_in_progress: &mut Vec<String>,
+    ) -> Schema {
+        let mut schema = T::schema(schemas, schemas_in_progress);
 
         schema.schema_data.nullable = true;
 

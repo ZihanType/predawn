@@ -139,6 +139,7 @@ pub(crate) fn generate(
                 route_table: &mut BTreeMap<NormalizedPath, Vec<(Method, DynHandler)>>,
                 paths: &mut BTreeMap<NormalizedPath, Vec<(Method, Operation)>>,
                 schemas: & mut BTreeMap<String, Schema>,
+                schemas_in_progress: &mut Vec<String>,
                 security_schemes: &mut BTreeMap<&'static str, (&'static str, SecurityScheme)>,
                 tags: &mut BTreeMap<&'static str, (&'static str, Tag)>,
             ) {
@@ -242,7 +243,7 @@ fn generate_single_fn_impl<'a>(
             # use predawn::api_request::ApiRequestHead;
             # use predawn::openapi::transform_parameters;
 
-            if let Some(parameters) = <#ty as ApiRequestHead>::parameters(schemas) {
+            if let Some(parameters) = <#ty as ApiRequestHead>::parameters(schemas, schemas_in_progress) {
                 operation
                     .parameters
                     .extend(transform_parameters(parameters));
@@ -256,7 +257,7 @@ fn generate_single_fn_impl<'a>(
 
             merge_responses(
                 &mut responses,
-                <<#ty as FromRequestHead>::Error as ResponseError>::responses(schemas),
+                <<#ty as FromRequestHead>::Error as ResponseError>::responses(schemas, schemas_in_progress),
             );
         };
 
@@ -283,7 +284,7 @@ fn generate_single_fn_impl<'a>(
             # use predawn::api_request::ApiRequest;
             # use predawn::openapi::transform_parameters;
 
-            if let Some(parameters) = <#ty as ApiRequest<_>>::parameters(schemas) {
+            if let Some(parameters) = <#ty as ApiRequest<_>>::parameters(schemas, schemas_in_progress) {
                 operation
                     .parameters
                     .extend(transform_parameters(parameters));
@@ -294,7 +295,7 @@ fn generate_single_fn_impl<'a>(
             # use predawn::api_request::ApiRequest;
             # use predawn::openapi::transform_request_body;
 
-            operation.request_body = transform_request_body(<#ty as ApiRequest<_>>::request_body(schemas));
+            operation.request_body = transform_request_body(<#ty as ApiRequest<_>>::request_body(schemas, schemas_in_progress));
         };
 
         last_error_responses = quote_use! {
@@ -304,7 +305,7 @@ fn generate_single_fn_impl<'a>(
 
             merge_responses(
                 &mut responses,
-                <<#ty as FromRequest<_>>::Error as ResponseError>::responses(schemas),
+                <<#ty as FromRequest<_>>::Error as ResponseError>::responses(schemas, schemas_in_progress),
             );
         };
     } else {
@@ -326,7 +327,7 @@ fn generate_single_fn_impl<'a>(
 
         merge_responses(
             &mut responses,
-            <<#return_ty as IntoResponse>::Error as ResponseError>::responses(schemas),
+            <<#return_ty as IntoResponse>::Error as ResponseError>::responses(schemas, schemas_in_progress),
         );
     };
 
@@ -334,7 +335,7 @@ fn generate_single_fn_impl<'a>(
         # use predawn::api_response::ApiResponse;
         # use predawn::openapi::merge_responses;
 
-        if let Some(new) = <#return_ty as ApiResponse>::responses(schemas) {
+        if let Some(new) = <#return_ty as ApiResponse>::responses(schemas, schemas_in_progress) {
             merge_responses(&mut responses, new);
         }
     };

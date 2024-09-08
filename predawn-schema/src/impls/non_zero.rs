@@ -16,7 +16,7 @@ use crate::ToSchema;
 macro_rules! nonzero_signed_impl {
     ($ty:ty, $format:literal) => {
         impl ToSchema for $ty {
-            fn schema(_: &mut BTreeMap<String, Schema>) -> Schema {
+            fn schema(_: &mut BTreeMap<String, Schema>, _: &mut Vec<String>) -> Schema {
                 Schema {
                     schema_data: SchemaData {
                         title: Some(stringify!($ty).to_string()),
@@ -52,7 +52,7 @@ nonzero_signed_impl!(NonZeroIsize, "int");
 macro_rules! nonzero_unsigned_impl {
     ($ty:ty, $format:literal) => {
         impl ToSchema for $ty {
-            fn schema(_: &mut BTreeMap<String, Schema>) -> Schema {
+            fn schema(_: &mut BTreeMap<String, Schema>, _: &mut Vec<String>) -> Schema {
                 Schema {
                     schema_data: SchemaData {
                         title: Some(stringify!($ty).to_string()),

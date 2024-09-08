@@ -180,7 +180,7 @@ fn generate_unit(ident: &Ident, status_code_value: u16) -> TokenStream {
         impl SingleResponse for #ident {
             const STATUS_CODE: u16 = #status_code_value;
 
-            fn response(schemas: &mut BTreeMap<String, Schema>) -> openapi::Response {
+            fn response(_: &mut BTreeMap<String, Schema>, _: &mut Vec<String>) -> openapi::Response {
                 Default::default()
             }
         }
@@ -196,8 +196,8 @@ fn generate_unit(ident: &Ident, status_code_value: u16) -> TokenStream {
         }
 
         impl ApiResponse for #ident {
-            fn responses(schemas: &mut BTreeMap<String, Schema>) -> Option<BTreeMap<StatusCode, openapi::Response>> {
-                Some(<Self as MultiResponse>::responses(schemas))
+            fn responses(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> Option<BTreeMap<StatusCode, openapi::Response>> {
+                Some(<Self as MultiResponse>::responses(schemas, schemas_in_progress))
             }
         }
     }
@@ -230,7 +230,7 @@ fn generate_only_headers(
         impl #impl_generics SingleResponse for #ident #ty_generics #where_clause {
             const STATUS_CODE: u16 = #status_code_value;
 
-            fn response(schemas: &mut BTreeMap<String, Schema>) -> openapi::Response {
+            fn response(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> openapi::Response {
                 let mut headers = IndexMap::with_capacity(#headers_len);
 
                 #(#insert_api_headers)*
@@ -262,8 +262,8 @@ fn generate_only_headers(
         }
 
         impl #impl_generics ApiResponse for #ident #ty_generics #where_clause {
-            fn responses(schemas: &mut BTreeMap<String, Schema>) -> Option<BTreeMap<StatusCode, openapi::Response>> {
-                Some(<Self as MultiResponse>::responses(schemas))
+            fn responses(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> Option<BTreeMap<StatusCode, openapi::Response>> {
+                Some(<Self as MultiResponse>::responses(schemas, schemas_in_progress))
             }
         }
     }
@@ -293,11 +293,11 @@ fn generate_only_body(
         impl #impl_generics SingleResponse for #ident #ty_generics #where_clause {
             const STATUS_CODE: u16 = #status_code_value;
 
-            fn response(schemas: &mut BTreeMap<String, Schema>) -> openapi::Response {
+            fn response(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> openapi::Response {
                 openapi::Response {
                     description: #description,
                     headers: Default::default(),
-                    content: <#body_type as MultiResponseMediaType>::content(schemas),
+                    content: <#body_type as MultiResponseMediaType>::content(schemas, schemas_in_progress),
                     links: Default::default(),
                     extensions: Default::default(),
                 }
@@ -315,8 +315,8 @@ fn generate_only_body(
         }
 
         impl #impl_generics ApiResponse for #ident #ty_generics #where_clause {
-            fn responses(schemas: &mut BTreeMap<String, Schema>) -> Option<BTreeMap<StatusCode, openapi::Response>> {
-                Some(<Self as MultiResponse>::responses(schemas))
+            fn responses(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> Option<BTreeMap<StatusCode, openapi::Response>> {
+                Some(<Self as MultiResponse>::responses(schemas, schemas_in_progress))
             }
         }
     }
@@ -354,7 +354,7 @@ fn generate_body_and_headers(
         impl #impl_generics SingleResponse for #ident #ty_generics #where_clause {
             const STATUS_CODE: u16 = #status_code_value;
 
-            fn response(schemas: &mut BTreeMap<String, Schema>) -> openapi::Response {
+            fn response(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> openapi::Response {
                 let mut headers = IndexMap::with_capacity(#headers_len);
 
                 #(#insert_api_headers)*
@@ -362,7 +362,7 @@ fn generate_body_and_headers(
                 openapi::Response {
                     description: #description,
                     headers,
-                    content: <#body_type as MultiResponseMediaType>::content(schemas),
+                    content: <#body_type as MultiResponseMediaType>::content(schemas, schemas_in_progress),
                     links: Default::default(),
                     extensions: Default::default(),
                 }
@@ -386,8 +386,8 @@ fn generate_body_and_headers(
         }
 
         impl #impl_generics ApiResponse for #ident #ty_generics #where_clause {
-            fn responses(schemas: &mut BTreeMap<String, Schema>) -> Option<BTreeMap<StatusCode, openapi::Response>> {
-                Some(<Self as MultiResponse>::responses(schemas))
+            fn responses(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> Option<BTreeMap<StatusCode, openapi::Response>> {
+                Some(<Self as MultiResponse>::responses(schemas, schemas_in_progress))
             }
         }
     }
@@ -488,7 +488,7 @@ fn generate_headers<'a>(
             style: Default::default(),
             required: <#ty as ToSchema>::REQUIRED,
             deprecated: Default::default(),
-            format: ParameterSchemaOrContent::Schema(<#ty as ToSchema>::schema_ref(schemas)),
+            format: ParameterSchemaOrContent::Schema(<#ty as ToSchema>::schema_ref(schemas, schemas_in_progress)),
             example: Default::default(),
             examples: Default::default(),
             extensions: Default::default(),

@@ -51,13 +51,16 @@ where
 }
 
 impl<T: ToSchema> ApiRequest for Form<T> {
-    fn parameters(_: &mut BTreeMap<String, Schema>) -> Option<Vec<Parameter>> {
+    fn parameters(_: &mut BTreeMap<String, Schema>, _: &mut Vec<String>) -> Option<Vec<Parameter>> {
         None
     }
 
-    fn request_body(schemas: &mut BTreeMap<String, Schema>) -> Option<openapi::RequestBody> {
+    fn request_body(
+        schemas: &mut BTreeMap<String, Schema>,
+        schemas_in_progress: &mut Vec<String>,
+    ) -> Option<openapi::RequestBody> {
         Some(openapi::RequestBody {
-            content: <Self as MultiRequestMediaType>::content(schemas),
+            content: <Self as MultiRequestMediaType>::content(schemas, schemas_in_progress),
             required: true,
             ..Default::default()
         })
@@ -88,8 +91,12 @@ where
 impl<T: ToSchema> ApiResponse for Form<T> {
     fn responses(
         schemas: &mut BTreeMap<String, Schema>,
+        schemas_in_progress: &mut Vec<String>,
     ) -> Option<BTreeMap<StatusCode, openapi::Response>> {
-        Some(<Self as MultiResponse>::responses(schemas))
+        Some(<Self as MultiResponse>::responses(
+            schemas,
+            schemas_in_progress,
+        ))
     }
 }
 
@@ -112,18 +119,24 @@ impl<T> RequestMediaType for Form<T> {
 impl<T> ResponseMediaType for Form<T> {}
 
 impl<T: ToSchema> SingleMediaType for Form<T> {
-    fn media_type(schemas: &mut BTreeMap<String, Schema>) -> openapi::MediaType {
+    fn media_type(
+        schemas: &mut BTreeMap<String, Schema>,
+        schemas_in_progress: &mut Vec<String>,
+    ) -> openapi::MediaType {
         openapi::MediaType {
-            schema: Some(T::schema_ref(schemas)),
+            schema: Some(T::schema_ref(schemas, schemas_in_progress)),
             ..Default::default()
         }
     }
 }
 
 impl<T: ToSchema> SingleResponse for Form<T> {
-    fn response(schemas: &mut BTreeMap<String, Schema>) -> openapi::Response {
+    fn response(
+        schemas: &mut BTreeMap<String, Schema>,
+        schemas_in_progress: &mut Vec<String>,
+    ) -> openapi::Response {
         openapi::Response {
-            content: <Self as MultiResponseMediaType>::content(schemas),
+            content: <Self as MultiResponseMediaType>::content(schemas, schemas_in_progress),
             ..Default::default()
         }
     }

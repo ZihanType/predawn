@@ -34,6 +34,7 @@ pub trait ResponseError: Error + Send + Sync + Sized + 'static {
 
     fn responses(
         schemas: &mut BTreeMap<String, Schema>,
+        schemas_in_progress: &mut Vec<String>,
     ) -> BTreeMap<StatusCode, openapi::Response> {
         Self::status_codes()
             .into_iter()
@@ -42,7 +43,10 @@ pub trait ResponseError: Error + Send + Sync + Sized + 'static {
                     status,
                     openapi::Response {
                         description: status.canonical_reason().unwrap_or_default().to_string(),
-                        content: <String as MultiResponseMediaType>::content(schemas),
+                        content: <String as MultiResponseMediaType>::content(
+                            schemas,
+                            schemas_in_progress,
+                        ),
                         ..Default::default()
                     },
                 )
@@ -70,7 +74,10 @@ impl ResponseError for Infallible {
         match *self {}
     }
 
-    fn responses(_: &mut BTreeMap<String, Schema>) -> BTreeMap<StatusCode, openapi::Response> {
+    fn responses(
+        _: &mut BTreeMap<String, Schema>,
+        _: &mut Vec<String>,
+    ) -> BTreeMap<StatusCode, openapi::Response> {
         BTreeMap::new()
     }
 }

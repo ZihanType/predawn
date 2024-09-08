@@ -81,7 +81,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         # use predawn::__internal::indexmap::IndexMap;
 
         impl #impl_generics MultiResponseMediaType for #ident #ty_generics #where_clause {
-            fn content(schemas: &mut BTreeMap<String, Schema>) -> IndexMap<String, openapi::MediaType> {
+            fn content(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> IndexMap<String, openapi::MediaType> {
                 let mut map = IndexMap::with_capacity(#variants_len);
                 #(#content_bodies)*
                 map
@@ -91,11 +91,11 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         impl #impl_generics SingleResponse for #ident #ty_generics #where_clause {
             const STATUS_CODE: u16 = #status_code_value;
 
-            fn response(schemas: &mut BTreeMap<String, Schema>) -> openapi::Response {
+            fn response(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> openapi::Response {
                 openapi::Response {
                     description: #description,
                     headers: Default::default(),
-                    content: <Self as MultiResponseMediaType>::content(schemas),
+                    content: <Self as MultiResponseMediaType>::content(schemas, schemas_in_progress),
                     links: Default::default(),
                     extensions: Default::default(),
                 }
@@ -117,8 +117,8 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         }
 
         impl #impl_generics ApiResponse for #ident #ty_generics #where_clause {
-            fn responses(schemas: &mut BTreeMap<String, Schema>) -> Option<BTreeMap<StatusCode, openapi::Response>> {
-                Some(<Self as MultiResponse>::responses(schemas))
+            fn responses(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> Option<BTreeMap<StatusCode, openapi::Response>> {
+                Some(<Self as MultiResponse>::responses(schemas, schemas_in_progress))
             }
         }
     };
@@ -147,7 +147,7 @@ fn handle_single_variant<'a>(
 
         map.insert(
             ToString::to_string(<#ty as MediaType>::MEDIA_TYPE),
-            <#ty as SingleMediaType>::media_type(schemas),
+            <#ty as SingleMediaType>::media_type(schemas, schemas_in_progress),
         );
     };
 

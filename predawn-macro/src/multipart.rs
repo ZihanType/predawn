@@ -96,14 +96,14 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         }
 
         impl #impl_generics ApiRequest for #ident #ty_generics #where_clause {
-            fn parameters(_: &mut BTreeMap<String, Schema>) -> Option<Vec<openapi::Parameter>> {
+            fn parameters(_: &mut BTreeMap<String, Schema>, _: &mut Vec<String>) -> Option<Vec<openapi::Parameter>> {
                 None
             }
 
-            fn request_body(schemas: &mut BTreeMap<String, Schema>) -> Option<openapi::RequestBody> {
+            fn request_body(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> Option<openapi::RequestBody> {
                 Some(openapi::RequestBody {
                     description: #description,
-                    content: <Self as MultiRequestMediaType>::content(schemas),
+                    content: <Self as MultiRequestMediaType>::content(schemas, schemas_in_progress),
                     required: true,
                     extensions: Default::default(),
                 })
@@ -121,9 +121,9 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         }
 
         impl #impl_generics SingleMediaType for #ident #ty_generics #where_clause {
-            fn media_type(schemas: &mut BTreeMap<String, Schema>) -> openapi::MediaType {
+            fn media_type(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> openapi::MediaType {
                 openapi::MediaType {
-                    schema: Some(<Self as ToSchema>::schema_ref(schemas)),
+                    schema: Some(<Self as ToSchema>::schema_ref(schemas, schemas_in_progress)),
                     example: Default::default(),
                     examples: Default::default(),
                     encoding: Default::default(),

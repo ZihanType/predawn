@@ -14,17 +14,23 @@ pub type Response<T = ResponseBody> = http::Response<T>;
 pub trait SingleResponse {
     const STATUS_CODE: u16 = 200;
 
-    fn response(schemas: &mut BTreeMap<String, Schema>) -> openapi::Response;
+    fn response(
+        schemas: &mut BTreeMap<String, Schema>,
+        schemas_in_progress: &mut Vec<String>,
+    ) -> openapi::Response;
 }
 
 pub trait MultiResponse {
-    fn responses(schemas: &mut BTreeMap<String, Schema>)
-        -> BTreeMap<StatusCode, openapi::Response>;
+    fn responses(
+        schemas: &mut BTreeMap<String, Schema>,
+        schemas_in_progress: &mut Vec<String>,
+    ) -> BTreeMap<StatusCode, openapi::Response>;
 }
 
 impl<T: SingleResponse> MultiResponse for T {
     fn responses(
         schemas: &mut BTreeMap<String, Schema>,
+        schemas_in_progress: &mut Vec<String>,
     ) -> BTreeMap<StatusCode, openapi::Response> {
         let mut map = BTreeMap::new();
 
@@ -36,7 +42,7 @@ impl<T: SingleResponse> MultiResponse for T {
                     T::STATUS_CODE
                 )
             }),
-            T::response(schemas),
+            T::response(schemas, schemas_in_progress),
         );
 
         map
@@ -44,7 +50,7 @@ impl<T: SingleResponse> MultiResponse for T {
 }
 
 impl SingleResponse for () {
-    fn response(_: &mut BTreeMap<String, Schema>) -> openapi::Response {
+    fn response(_: &mut BTreeMap<String, Schema>, _: &mut Vec<String>) -> openapi::Response {
         openapi::Response::default()
     }
 }
@@ -53,9 +59,9 @@ macro_rules! some_impl {
     ($ty:ty; $($desc:tt)+) => {
         impl $($desc)+
         {
-            fn response(schemas: &mut BTreeMap<String, Schema>) -> openapi::Response {
+            fn response(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> openapi::Response {
                 openapi::Response {
-                    content: <$ty as MultiResponseMediaType>::content(schemas),
+                    content: <$ty as MultiResponseMediaType>::content(schemas, schemas_in_progress),
                     ..Default::default()
                 }
             }

@@ -20,8 +20,9 @@ macro_rules! forward_impl {
         impl $crate::ToSchema for $left {
             fn schema(
                 schemas: &mut ::std::collections::BTreeMap<String, ::openapiv3::Schema>,
+                schemas_in_progress: &mut ::std::vec::Vec<::std::string::String>,
             ) -> ::openapiv3::Schema {
-                <$right as $crate::ToSchema>::schema(schemas)
+                <$right as $crate::ToSchema>::schema(schemas, schemas_in_progress)
             }
         }
     };

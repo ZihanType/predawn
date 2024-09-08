@@ -72,9 +72,10 @@ where
 
     fn responses(
         schemas: &mut BTreeMap<String, Schema>,
+        schemas_in_progress: &mut Vec<String>,
     ) -> BTreeMap<StatusCode, openapi::Response> {
-        let mut responses = L::responses(schemas);
-        merge_responses(&mut responses, R::responses(schemas));
+        let mut responses = L::responses(schemas, schemas_in_progress);
+        merge_responses(&mut responses, R::responses(schemas, schemas_in_progress));
         responses
     }
 

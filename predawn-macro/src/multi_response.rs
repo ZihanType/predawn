@@ -74,7 +74,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         # use predawn::__internal::http::StatusCode;
 
         impl #impl_generics MultiResponse for #ident #ty_generics #where_clause {
-            fn responses(schemas: &mut BTreeMap<String, Schema>) -> BTreeMap<StatusCode, openapi::Response> {
+            fn responses(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> BTreeMap<StatusCode, openapi::Response> {
                 let mut map = BTreeMap::new();
 
                 #(#responses_bodies)*
@@ -98,8 +98,8 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         }
 
         impl #impl_generics ApiResponse for #ident #ty_generics #where_clause {
-            fn responses(schemas: &mut BTreeMap<String, Schema>) -> Option<BTreeMap<StatusCode, openapi::Response>> {
-                Some(<Self as MultiResponse>::responses(schemas))
+            fn responses(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> Option<BTreeMap<StatusCode, openapi::Response>> {
+                Some(<Self as MultiResponse>::responses(schemas, schemas_in_progress))
             }
         }
     };
@@ -135,7 +135,7 @@ fn handle_single_variant<'a>(
 
         map.insert(
             StatusCode::from_u16(#status_code).unwrap(),
-            <#ty as SingleResponse>::response(schemas),
+            <#ty as SingleResponse>::response(schemas, schemas_in_progress),
         );
     };
 

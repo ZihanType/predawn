@@ -10,8 +10,8 @@ macro_rules! wrapper_impl {
         where
             T: ToSchema
         {
-            fn schema(schemas: &mut BTreeMap<String, Schema>) -> Schema {
-                T::schema(schemas)
+            fn schema(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> Schema {
+                T::schema(schemas, schemas_in_progress)
             }
         }
     };

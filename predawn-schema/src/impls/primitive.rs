@@ -9,7 +9,7 @@ use paste::paste;
 use crate::ToSchema;
 
 impl ToSchema for bool {
-    fn schema(_: &mut BTreeMap<String, Schema>) -> Schema {
+    fn schema(_: &mut BTreeMap<String, Schema>, _: &mut Vec<String>) -> Schema {
         Schema {
             schema_data: SchemaData {
                 title: Some("bool".to_string()),
@@ -21,7 +21,7 @@ impl ToSchema for bool {
 }
 
 impl ToSchema for char {
-    fn schema(_: &mut BTreeMap<String, Schema>) -> Schema {
+    fn schema(_: &mut BTreeMap<String, Schema>, _: &mut Vec<String>) -> Schema {
         Schema {
             schema_data: SchemaData {
                 title: Some("char".to_string()),
@@ -39,7 +39,7 @@ impl ToSchema for char {
 macro_rules! simple_impl {
     ($ty:ty, $ty_variant:ident, $format:literal) => {
         impl ToSchema for $ty {
-            fn schema(_: &mut BTreeMap<String, Schema>) -> Schema {
+            fn schema(_: &mut BTreeMap<String, Schema>, _: &mut Vec<String>) -> Schema {
                 Schema {
                     schema_data: SchemaData {
                         title: Some(stringify!($ty).to_string()),
@@ -69,7 +69,7 @@ simple_impl!(isize, Integer, "int");
 macro_rules! unsigned_impl {
     ($ty:ty, $format:literal) => {
         impl ToSchema for $ty {
-            fn schema(_: &mut BTreeMap<String, Schema>) -> Schema {
+            fn schema(_: &mut BTreeMap<String, Schema>, _: &mut Vec<String>) -> Schema {
                 Schema {
                     schema_data: SchemaData {
                         title: Some(stringify!($ty).to_string()),
@@ -94,13 +94,16 @@ unsigned_impl!(u128, "uint128");
 unsigned_impl!(usize, "uint");
 
 impl<T: ToSchema, const N: usize> ToSchema for [T; N] {
-    fn schema(schemas: &mut BTreeMap<String, Schema>) -> Schema {
-        let schema = T::schema(schemas);
+    fn schema(
+        schemas: &mut BTreeMap<String, Schema>,
+        schemas_in_progress: &mut Vec<String>,
+    ) -> Schema {
+        let schema = T::schema(schemas, schemas_in_progress);
         let title = schema.schema_data.title.as_deref().unwrap_or("Unknown");
         let title = format!("Array{}<{}>", N, title);
 
         let ty = ArrayType {
-            items: Some(T::schema_ref_box(schemas)),
+            items: Some(T::schema_ref_box(schemas, schemas_in_progress)),
             min_items: Some(N),
             max_items: Some(N),
             unique_items: false,

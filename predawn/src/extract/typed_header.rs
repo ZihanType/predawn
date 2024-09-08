@@ -40,7 +40,7 @@ where
 }
 
 impl<T> ApiRequestHead for TypedHeader<T> {
-    fn parameters(_: &mut BTreeMap<String, Schema>) -> Option<Vec<Parameter>> {
+    fn parameters(_: &mut BTreeMap<String, Schema>, _: &mut Vec<String>) -> Option<Vec<Parameter>> {
         None
     }
 }

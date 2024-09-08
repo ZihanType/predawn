@@ -47,7 +47,7 @@ impl Upload {
 }
 
 impl ToSchema for Upload {
-    fn schema(_: &mut BTreeMap<String, Schema>) -> Schema {
+    fn schema(_: &mut BTreeMap<String, Schema>, _: &mut Vec<String>) -> Schema {
         crate::util::binary_schema("Upload")
     }
 }

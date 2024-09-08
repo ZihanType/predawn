@@ -77,7 +77,7 @@ fn generate_named_struct(
         # use predawn::openapi::{Schema, ObjectType, SchemaData, SchemaKind, Type};
 
         impl #impl_generics ToSchema for #ident #ty_generics #where_clause {
-            fn schema(schemas: &mut BTreeMap<String, Schema>) -> Schema {
+            fn schema(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> Schema {
                 let mut data = SchemaData::default();
 
                 let title = #schema_title;
@@ -128,7 +128,7 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
             # use predawn::ToSchema;
             # use predawn::openapi::{AnySchema, ObjectType, SchemaKind, Type};
 
-            match <#ty as ToSchema>::schema(schemas).schema_kind {
+            match <#ty as ToSchema>::schema(schemas, schemas_in_progress).schema_kind {
                 SchemaKind::Any(AnySchema {
                     properties,
                     required,
@@ -172,7 +172,7 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
         quote_use! {
             # use predawn::ToSchema;
 
-            <#ty as ToSchema>::schema_ref_box(schemas)
+            <#ty as ToSchema>::schema_ref_box(schemas, schemas_in_progress)
         }
     } else {
         quote_use! {
@@ -182,7 +182,7 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
 
             {
                 // TODO: add example
-                let mut schema = <#ty as ToSchema>::schema(schemas);
+                let mut schema = <#ty as ToSchema>::schema(schemas, schemas_in_progress);
 
                 #add_description
                 #add_default
@@ -223,7 +223,7 @@ fn generate_schema_title(name: &str, generics: &Generics) -> TokenStream {
                 let extract_title = quote_use! {
                     # use predawn::ToSchema;
 
-                    let schema = <#ty as ToSchema>::schema(schemas);
+                    let schema = <#ty as ToSchema>::schema(schemas, schemas_in_progress);
                     let title = schema.schema_data.title.as_deref().unwrap_or("Unknown");
                 };
 
@@ -357,7 +357,7 @@ fn generate_only_unit(
         # use predawn::openapi::{Schema, StringType, SchemaData, SchemaKind, Type};
 
         impl ToSchema for #ident {
-            fn schema(schemas: &mut BTreeMap<String, Schema>) -> Schema {
+            fn schema(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> Schema {
                 let mut data = SchemaData::default();
 
                 data.title = Some(#title);
@@ -469,7 +469,7 @@ fn generate_normal_enum(
         # use predawn::openapi::{Schema, ObjectType, SchemaData, SchemaKind, Type};
 
         impl #impl_generics ToSchema for #ident #ty_generics #where_clause {
-            fn schema(schemas: &mut BTreeMap<String, Schema>) -> Schema {
+            fn schema(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> Schema {
                 let mut data = SchemaData::default();
 
                 let title = #schema_title;
@@ -598,7 +598,7 @@ fn generate_unnamed_variant(
 
             let mut obj = ObjectType::default();
             obj.required.push(ToString::to_string(#ident));
-            obj.properties.insert(ToString::to_string(#ident), <#ty as ToSchema>::schema_ref_box(schemas));
+            obj.properties.insert(ToString::to_string(#ident), <#ty as ToSchema>::schema_ref_box(schemas, schemas_in_progress));
 
             let schema = Schema {
                 schema_data: data,

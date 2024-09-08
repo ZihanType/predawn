@@ -45,7 +45,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         # use predawn::ToParameters;
 
         impl #impl_generics ToParameters for #ident #ty_generics #where_clause {
-            fn parameters(schemas: &mut BTreeMap<String, Schema>) -> Vec<ParameterData> {
+            fn parameters(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> Vec<ParameterData> {
                 let mut params = Vec::with_capacity(#fields_len);
                 #(#push_params)*
                 params
@@ -110,7 +110,7 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
         quote_use! {
             # use predawn::ToSchema;
 
-            <#ty as ToSchema>::schema_ref(schemas)
+            <#ty as ToSchema>::schema_ref(schemas, schemas_in_progress)
         }
     } else {
         quote_use! {
@@ -118,7 +118,7 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
             # use predawn::openapi::ReferenceOr;
 
             {
-                let mut schema = <#ty as ToSchema>::schema(schemas);
+                let mut schema = <#ty as ToSchema>::schema(schemas, schemas_in_progress);
                 #add_default
                 ReferenceOr::Item(schema)
             }

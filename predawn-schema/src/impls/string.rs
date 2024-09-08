@@ -17,7 +17,7 @@ macro_rules! string_impl {
     };
     ($ty:ty, $format:expr) => {
         impl ToSchema for $ty {
-            fn schema(_: &mut BTreeMap<String, Schema>) -> Schema {
+            fn schema(_: &mut BTreeMap<String, Schema>, _: &mut Vec<String>) -> Schema {
                 let ty = StringType {
                     format: $format,
                     ..Default::default()
@@ -47,7 +47,7 @@ string_impl!(SocketAddrV6);
 macro_rules! one_of_string_impl {
     ($ty:ty; [$($elem:ty),+ $(,)?]) => {
         impl ToSchema for $ty {
-            fn schema(schemas: &mut BTreeMap<String, Schema>) -> Schema {
+            fn schema(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> Schema {
                 Schema {
                     schema_data: SchemaData {
                         title: Some(stringify!($ty).to_string()),
@@ -56,7 +56,7 @@ macro_rules! one_of_string_impl {
                     schema_kind: SchemaKind::OneOf {
                         one_of: [
                             $(
-                                <$elem>::schema_ref(schemas),
+                                <$elem>::schema_ref(schemas, schemas_in_progress),
                             )+
                         ]
                         .to_vec(),

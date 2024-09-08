@@ -112,6 +112,7 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
     let mut route_table = BTreeMap::new();
     let mut paths = BTreeMap::new();
     let mut schemas = BTreeMap::new();
+    let mut schemas_in_progress = Vec::with_capacity(16);
     let mut security_schemes = BTreeMap::new();
     let mut tags = BTreeMap::new();
 
@@ -124,6 +125,7 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
                 &mut route_table,
                 &mut paths,
                 &mut schemas,
+                &mut schemas_in_progress,
                 &mut security_schemes,
                 &mut tags,
             );

@@ -10,13 +10,13 @@ macro_rules! seq_impl {
         where
             T: ToSchema
         {
-            fn schema(schemas: &mut BTreeMap<String, Schema>) -> Schema {
-                let schema = T::schema(schemas);
+            fn schema(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> Schema {
+                let schema = T::schema(schemas, schemas_in_progress);
                 let title = schema.schema_data.title.as_deref().unwrap_or("Unknown");
                 let title = format!("Vector<{}>", title);
 
                 let ty = ArrayType {
-                    items: Some(T::schema_ref_box(schemas)),
+                    items: Some(T::schema_ref_box(schemas, schemas_in_progress)),
                     min_items: None,
                     max_items: None,
                     unique_items: false,

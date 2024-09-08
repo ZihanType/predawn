@@ -10,13 +10,13 @@ macro_rules! map_impl {
         where
             V: ToSchema
         {
-            fn schema(schemas: &mut BTreeMap<String, Schema>) -> Schema {
-                let schema = V::schema(schemas);
+            fn schema(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> Schema {
+                let schema = V::schema(schemas, schemas_in_progress);
                 let title = schema.schema_data.title.as_deref().unwrap_or("Unknown");
                 let title = format!("Map<String, {}>", title);
 
                 let ty = ObjectType {
-                    additional_properties: Some(AdditionalProperties::Schema(Box::new(V::schema_ref(schemas)))),
+                    additional_properties: Some(AdditionalProperties::Schema(Box::new(V::schema_ref(schemas, schemas_in_progress)))),
                     ..Default::default()
                 };
 

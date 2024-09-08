@@ -110,8 +110,12 @@ impl<T: IntoResponse + MediaType> IntoResponse for Download<T> {
 impl<T: MediaType + ResponseMediaType> ApiResponse for Download<T> {
     fn responses(
         schemas: &mut BTreeMap<String, Schema>,
+        schemas_in_progress: &mut Vec<String>,
     ) -> Option<BTreeMap<StatusCode, openapi::Response>> {
-        Some(<Self as MultiResponse>::responses(schemas))
+        Some(<Self as MultiResponse>::responses(
+            schemas,
+            schemas_in_progress,
+        ))
     }
 }
 
@@ -126,7 +130,7 @@ impl<T> ToSchema for Download<T> {
             .to_string()
     }
 
-    fn schema(_: &mut BTreeMap<String, Schema>) -> openapi::Schema {
+    fn schema(_: &mut BTreeMap<String, Schema>, _: &mut Vec<String>) -> openapi::Schema {
         crate::util::binary_schema("Download")
     }
 }
@@ -138,18 +142,24 @@ impl<T: MediaType> MediaType for Download<T> {
 impl<T: ResponseMediaType> ResponseMediaType for Download<T> {}
 
 impl<T> SingleMediaType for Download<T> {
-    fn media_type(schemas: &mut BTreeMap<String, Schema>) -> openapi::MediaType {
+    fn media_type(
+        schemas: &mut BTreeMap<String, Schema>,
+        schemas_in_progress: &mut Vec<String>,
+    ) -> openapi::MediaType {
         openapi::MediaType {
-            schema: Some(<Self as ToSchema>::schema_ref(schemas)),
+            schema: Some(<Self as ToSchema>::schema_ref(schemas, schemas_in_progress)),
             ..Default::default()
         }
     }
 }
 
 impl<T: MediaType + ResponseMediaType> SingleResponse for Download<T> {
-    fn response(schemas: &mut BTreeMap<String, Schema>) -> openapi::Response {
+    fn response(
+        schemas: &mut BTreeMap<String, Schema>,
+        schemas_in_progress: &mut Vec<String>,
+    ) -> openapi::Response {
         openapi::Response {
-            content: <Self as MultiResponseMediaType>::content(schemas),
+            content: <Self as MultiResponseMediaType>::content(schemas, schemas_in_progress),
             ..Default::default()
         }
     }

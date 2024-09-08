@@ -186,6 +186,14 @@ impl MyController {
     async fn complex_enum(&self) -> Json<ComplexEnum> {
         Json(ComplexEnum::A)
     }
+
+    #[handler(paths = ["/nested_schema"], methods = [GET])]
+    async fn nested_schema(&self) -> Json<Nested> {
+        Json(Nested {
+            name: "Hello".to_string(),
+            inner: None,
+        })
+    }
 }
 
 fn add_middlewares<H: Handler>(_: &mut Context, handler: H) -> impl Handler {
@@ -251,6 +259,12 @@ enum ComplexEnum {
         name: String,
         age: u16,
     },
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+struct Nested {
+    name: String,
+    inner: Option<Box<Nested>>,
 }
 
 #[derive(Debug, thiserror::Error)]
