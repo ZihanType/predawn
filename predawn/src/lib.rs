@@ -2,6 +2,7 @@
 
 extern crate self as predawn;
 
+pub mod any_map;
 pub mod app;
 pub mod config;
 #[doc(hidden)]

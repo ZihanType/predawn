@@ -1,17 +1,13 @@
-每个错误都加上location，打印Debug错误的时候，把每层错误都打印出来
-fn location(&self)->&'static Location<'static> {..}
-
-Hooks::init_logger
 WebSocket
 SSE
-
 change `From::from` to `new` method, it will panic
+
+每个错误都加上location，打印Debug错误的时候，把每层错误都打印出来
+fn location(&self)->&'static Location<'static> {..}
 
 serde_path_to_error
 serde_html_form query form
 path
-
-nested schema
 
 features
 
@@ -75,7 +71,7 @@ Html
 split controller trait
 more openapi ui
 more ToSchema impl
-FILE
+static_file embed_file
 Listener trait
 ExternalDocumentation
 end-to-end test-helper edition 2

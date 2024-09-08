@@ -1,6 +1,7 @@
 use std::net::SocketAddr;
 
 use reqwest::{redirect::Policy, Client, RequestBuilder};
+use rudi::Context;
 use tokio::net::TcpListener;
 
 use crate::{
@@ -22,6 +23,8 @@ macro_rules! impl_request_methods {
 pub struct TestClient {
     client: Client,
     addr: SocketAddr,
+    #[allow(dead_code)]
+    cx: Context,
 }
 
 impl TestClient {
@@ -33,7 +36,7 @@ impl TestClient {
 
         tracing::info!("listening on {}", addr);
 
-        let (_, router) = create_app::<H>(Environment::Test).await;
+        let (cx, router) = create_app::<H>(Environment::Test).await;
 
         tokio::spawn(async move {
             Server::new(listener).run(router).await.unwrap();
@@ -41,6 +44,6 @@ impl TestClient {
 
         let client = Client::builder().redirect(Policy::none()).build().unwrap();
 
-        Self { client, addr }
+        Self { client, addr, cx }
     }
 }

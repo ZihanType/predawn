@@ -16,7 +16,7 @@ pub enum Environment {
     Test,
 
     #[serde(untagged)]
-    Custom(String),
+    Custom(Box<str>),
 }
 
 impl Environment {
@@ -45,14 +45,20 @@ impl fmt::Display for Environment {
     }
 }
 
-impl From<String> for Environment {
-    fn from(s: String) -> Self {
+impl From<Box<str>> for Environment {
+    fn from(s: Box<str>) -> Self {
         match s.to_lowercase().as_str() {
             "prod" | "production" => Environment::Prod,
             "dev" | "development" => Environment::Dev,
             "test" => Environment::Test,
             _ => Environment::Custom(s),
         }
+    }
+}
+
+impl From<String> for Environment {
+    fn from(s: String) -> Self {
+        s.into_boxed_str().into()
     }
 }
 
@@ -74,7 +80,7 @@ mod tests {
         let serialized = serde_json::to_string(&env).unwrap();
         assert_eq!(serialized, "\"test\"");
 
-        let env = Environment::Custom("foo".to_string());
+        let env = Environment::Custom("foo".into());
         let serialized = serde_json::to_string(&env).unwrap();
         assert_eq!(serialized, "\"foo\"");
     }
@@ -89,7 +95,7 @@ mod tests {
         env::set_var(PREDAWN_ENV, "foo");
         assert_eq!(
             Environment::resolve_from_env(),
-            Environment::Custom("foo".to_string())
+            Environment::Custom("foo".into())
         );
 
         if let Ok(v) = original {
@@ -100,15 +106,15 @@ mod tests {
     #[test]
     fn test_display() {
         assert_eq!("prod", Environment::Prod.to_string());
-        assert_eq!("foo", Environment::Custom("foo".to_string()).to_string());
+        assert_eq!("foo", Environment::Custom("foo".into()).to_string());
     }
 
     #[test]
     fn test_into() {
-        let e: Environment = "PROD".to_string().into();
+        let e: Environment = Box::<str>::from("PROD").into();
         assert_eq!(e, Environment::Prod);
 
-        let e: Environment = "FOO".to_string().into();
-        assert_eq!(e, Environment::Custom("FOO".to_string()));
+        let e: Environment = Box::<str>::from("FOO").into();
+        assert_eq!(e, Environment::Custom("FOO".into()));
     }
 }

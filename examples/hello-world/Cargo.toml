@@ -28,3 +28,5 @@ tracing = { workspace = true }
 thiserror = { workspace = true }
 tower = { workspace = true, features = ["limit"] }
 tower-http = { workspace = true, features = ["compression-zstd"] }
+tracing-subscriber = { workspace = true, features = ["std", "fmt", "ansi"] }
+tracing-appender = { workspace = true }

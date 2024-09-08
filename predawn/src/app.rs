@@ -12,6 +12,7 @@ use rudi::Context;
 use tokio::net::TcpListener;
 
 use crate::{
+    any_map::AnyMap,
     config::{logger::LoggerConfig, server::ServerConfig, Config},
     controller::Controller,
     environment::Environment,
@@ -26,7 +27,9 @@ pub trait Hooks {
         Config::load(env)
     }
 
-    fn init_logger(config: &Config) {
+    fn init_logger(config: &Config, map: &mut AnyMap) {
+        let _map = map;
+
         let cfg = LoggerConfig::from(config);
 
         tracing_subscriber::fmt()
@@ -98,7 +101,9 @@ pub async fn run_app<H: Hooks>() {
 pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
     let config = H::load_config(&env).unwrap();
 
-    H::init_logger(&config);
+    let mut map = AnyMap::default();
+
+    H::init_logger(&config, &mut map);
 
     let config = H::load_config(&env).unwrap();
 
@@ -108,6 +113,7 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
     let full_non_application_root_path = server_cfg.full_non_application_root_path();
 
     let mut cx = H::create_context(config, env).await;
+    cx.insert_single_owner(map);
 
     let mut route_table = BTreeMap::new();
     let mut paths = BTreeMap::new();
