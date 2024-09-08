@@ -53,7 +53,7 @@ pub trait Hooks {
         Default::default()
     }
 
-    fn openapi_security_requirements(cx: &mut Context) -> Option<Vec<SecurityRequirement>> {
+    fn openapi_security_requirements(cx: &mut Context) -> Vec<SecurityRequirement> {
         let _cx = cx;
         Default::default()
     }
@@ -290,7 +290,7 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
             extensions: Default::default(),
         },
         components: Some(components),
-        security,
+        security: Some(security),
         tags,
         external_docs: Default::default(),
         extensions: Default::default(),

@@ -32,8 +32,8 @@ macro_rules! define_from_request_error {
             }
         }
 
-        impl ::std::error::Error for $name {
-            fn source(&self) -> Option<&(dyn ::std::error::Error + 'static)> {
+        impl ::core::error::Error for $name {
+            fn source(&self) -> Option<&(dyn ::core::error::Error + 'static)> {
                 match self {
                     $(
                         $name::$error(e) => Some(e),
@@ -137,8 +137,8 @@ macro_rules! define_into_response_error {
             }
         }
 
-        impl ::std::error::Error for $name {
-            fn source(&self) -> Option<&(dyn ::std::error::Error + 'static)> {
+        impl ::core::error::Error for $name {
+            fn source(&self) -> Option<&(dyn ::core::error::Error + 'static)> {
                 match self {
                     $(
                         $name::$error(e) => Some(e),

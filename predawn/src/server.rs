@@ -19,7 +19,6 @@ use tokio::{
     signal,
     sync::watch::{self, Receiver, Sender},
 };
-use tracing::{error, info, trace};
 
 use crate::handler::Handler;
 
@@ -73,13 +72,13 @@ impl Server {
         let local_addr = tcp_listener.local_addr()?;
         let handler = Arc::new(handler);
 
-        info!("listening {}", local_addr);
+        tracing::info!("listening {}", local_addr);
 
         let (signal_sender, signal_receiver) = watch::channel(());
 
         tokio::spawn(async move {
             signal.await;
-            trace!("received graceful shutdown signal. Telling tasks to shutdown");
+            tracing::info!("received graceful shutdown signal. Telling tasks to shutdown");
             drop(signal_receiver);
         });
 
@@ -102,7 +101,7 @@ impl Server {
                     }
                 }
                 _ = signal_sender.closed() => {
-                    trace!("signal received, not accepting new connections");
+                    tracing::info!("signal received, not accepting new connections");
                     break;
                 }
 
@@ -112,7 +111,7 @@ impl Server {
         drop(close_receiver);
         drop(tcp_listener);
 
-        trace!(
+        tracing::info!(
             "waiting for {} task(s) to finish",
             close_sender.receiver_count()
         );
@@ -139,7 +138,7 @@ async fn tcp_accept(listener: &TcpListener) -> Option<(TcpStream, SocketAddr)> {
                 return None;
             }
 
-            error!("accept error: {e}");
+            tracing::error!("accept error: {e}");
             tokio::time::sleep(Duration::from_secs(1)).await;
             None
         }
@@ -156,7 +155,7 @@ async fn handle_conn<H: Handler + Clone>(
 ) {
     let tcp_stream = TokioIo::new(tcp_stream);
 
-    trace!("connection {remote_addr} accepted");
+    tracing::info!("connection {remote_addr} accepted");
 
     tokio::spawn(async move {
         let builder = Builder::new(TokioExecutor::new());
@@ -181,14 +180,14 @@ async fn handle_conn<H: Handler + Clone>(
             _ = conn.as_mut() => {
             }
             _ = signal_sender.closed() => {
-                trace!("signal received in task, starting graceful shutdown");
+                tracing::info!("signal received in task, starting graceful shutdown");
                 conn.as_mut().graceful_shutdown();
                 // This `conn` should continue to be polled until shutdown can finish.
                 let _ = conn.as_mut().await;
             }
         }
 
-        trace!("connection {remote_addr} closed");
+        tracing::info!("connection {remote_addr} closed");
 
         drop(close_receiver);
     });

@@ -1,4 +1,8 @@
-Enum
+处理schema嵌套
+
+每个错误都加上location，打印Debug错误的时候，把每层错误都打印出来
+fn location(&self)->&'static Location<'static> {..}
+
 Hooks::init_logger
 WebSocket
 SSE

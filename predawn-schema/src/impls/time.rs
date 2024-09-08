@@ -9,21 +9,22 @@ use crate::ToSchema;
 
 impl ToSchema for SystemTime {
     fn schema(schemas: &mut BTreeMap<String, Schema>) -> Schema {
+        const SECS_SINCE_EPOCH: &str = "secs_since_epoch";
+        const NANOS_SINCE_EPOCH: &str = "nanos_since_epoch";
+
         let mut ty = ObjectType::default();
 
         ty.properties
-            .insert("secs_since_epoch".to_string(), i64::schema_ref_box(schemas));
-        ty.properties.insert(
-            "nanos_since_epoch".to_string(),
-            u32::schema_ref_box(schemas),
-        );
+            .insert(SECS_SINCE_EPOCH.to_string(), i64::schema_ref_box(schemas));
+        ty.properties
+            .insert(NANOS_SINCE_EPOCH.to_string(), u32::schema_ref_box(schemas));
 
-        ty.required.push("secs_since_epoch".to_string());
-        ty.required.push("nanos_since_epoch".to_string());
+        ty.required.push(SECS_SINCE_EPOCH.to_string());
+        ty.required.push(NANOS_SINCE_EPOCH.to_string());
 
         Schema {
             schema_data: SchemaData {
-                title: Some(stringify!(SystemTime).to_string()),
+                title: Some("SystemTime".to_string()),
                 ..Default::default()
             },
             schema_kind: SchemaKind::Type(Type::Object(ty)),
@@ -33,19 +34,22 @@ impl ToSchema for SystemTime {
 
 impl ToSchema for Duration {
     fn schema(schemas: &mut BTreeMap<String, Schema>) -> Schema {
+        const SECS: &str = "secs";
+        const NANOS: &str = "nanos";
+
         let mut ty = ObjectType::default();
 
         ty.properties
-            .insert("secs".to_string(), u64::schema_ref_box(schemas));
+            .insert(SECS.to_string(), u64::schema_ref_box(schemas));
         ty.properties
-            .insert("nanos".to_string(), u32::schema_ref_box(schemas));
+            .insert(NANOS.to_string(), u32::schema_ref_box(schemas));
 
-        ty.required.push("secs".to_string());
-        ty.required.push("nanos".to_string());
+        ty.required.push(SECS.to_string());
+        ty.required.push(NANOS.to_string());
 
         Schema {
             schema_data: SchemaData {
-                title: Some(stringify!(Duration).to_string()),
+                title: Some("Duration".to_string()),
                 ..Default::default()
             },
             schema_kind: SchemaKind::Type(Type::Object(ty)),

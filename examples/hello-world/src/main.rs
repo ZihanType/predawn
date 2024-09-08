@@ -39,10 +39,11 @@ impl Hooks for App {
     }
 
     // set global security requirements
-    fn openapi_security_requirements(_: &mut Context) -> Option<Vec<SecurityRequirement>> {
+    fn openapi_security_requirements(_: &mut Context) -> Vec<SecurityRequirement> {
         let mut map = SecurityRequirement::default();
         map.insert(MyScheme1::NAME.to_string(), Vec::new());
-        Some(vec![map])
+
+        vec![map]
     }
 
     // set global security schemes
@@ -170,6 +171,21 @@ impl MyController {
 
         Download::attachment(bytes, "test.json")
     }
+
+    #[handler(paths = ["/unit_enum"], methods = [GET])]
+    async fn unit_enum(&self) -> Json<UnitEnum> {
+        Json(UnitEnum::A)
+    }
+
+    #[handler(paths = ["/unit_with_description"], methods = [GET])]
+    async fn unit_with_description(&self) -> Json<UnitWithDescription> {
+        Json(UnitWithDescription::A)
+    }
+
+    #[handler(paths = ["/complex_enum"], methods = [GET])]
+    async fn complex_enum(&self) -> Json<ComplexEnum> {
+        Json(ComplexEnum::A)
+    }
 }
 
 fn add_middlewares<H: Handler>(_: &mut Context, handler: H) -> impl Handler {
@@ -207,6 +223,34 @@ struct MultipartStruct {
     person: JsonField<Person>,
     sex: String,
     files: [Upload; 2],
+}
+
+#[allow(dead_code)]
+#[derive(Debug, ToSchema, Serialize)]
+enum UnitEnum {
+    A,
+    B,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, ToSchema, Serialize)]
+enum UnitWithDescription {
+    /// Hello
+    A,
+    /// World
+    B,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, ToSchema, Serialize)]
+enum ComplexEnum {
+    /// Hello
+    A,
+    B(i32),
+    C {
+        name: String,
+        age: u16,
+    },
 }
 
 #[derive(Debug, thiserror::Error)]

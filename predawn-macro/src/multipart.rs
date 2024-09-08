@@ -176,7 +176,6 @@ fn generate_single_field(
     });
 
     let define_var = quote_use! {
-        # use core::default::Default;
         # use predawn::extract::multipart::ParseField;
 
         let mut #struct_field_ident = <#ty as ParseField>::default_holder(#multipart_field);

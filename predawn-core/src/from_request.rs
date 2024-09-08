@@ -146,6 +146,14 @@ macro_rules! impl_from_request_head_for_cloneable {
 
 macro_rules! impl_from_request_head_for_copyable {
     ($ty:ty; $($field:ident)?) => {
+        impl<'a> FromRequestHead<'a> for &'a $ty {
+            type Error = Infallible;
+
+            async fn from_request_head(head: &'a Head) -> Result<Self, Self::Error> {
+                Ok(&head $(.$field)?)
+            }
+        }
+
         impl<'a> FromRequestHead<'a> for $ty {
             type Error = Infallible;
 

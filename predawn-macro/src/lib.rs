@@ -11,6 +11,7 @@ mod single_response;
 mod tag;
 mod to_parameters;
 mod to_schema;
+mod types;
 mod util;
 
 use from_attr::FromAttr;
