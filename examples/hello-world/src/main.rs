@@ -34,7 +34,7 @@ struct App;
 
 impl Hooks for App {
     fn init_logger(config: &Config, map: &mut AnyMap) {
-        let cfg = LoggerConfig::from(config);
+        let cfg = LoggerConfig::new(config);
 
         let file_appender = tracing_appender::rolling::daily(
             concat!(env!("CARGO_MANIFEST_DIR"), "/log"),

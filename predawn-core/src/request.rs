@@ -10,7 +10,7 @@ use hyper::body::Incoming;
 
 use crate::{body::RequestBody, impl_deref, impl_display};
 
-pub const DEFAULT_BODY_LIMIT: usize = 2_097_152; // 2 mb
+pub const DEFAULT_BODY_LIMIT: usize = 2 * 1024 * 1024; // 2 mb
 
 #[derive(Debug)]
 pub struct Request {

@@ -29,8 +29,8 @@ where
 }
 
 pub(crate) fn json_path(cfg: &Config) -> NormalizedPath {
-    let server_cfg = ServerConfig::from(cfg);
-    let openapi_cfg = OpenAPIConfig::from(cfg);
+    let server_cfg = ServerConfig::new(cfg);
+    let openapi_cfg = OpenAPIConfig::new(cfg);
 
     let full_non_application_root_path = server_cfg.full_non_application_root_path();
     let normalized_json_path = openapi_cfg.json_path;

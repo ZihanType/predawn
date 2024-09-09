@@ -13,11 +13,10 @@ pub struct LoggerConfig {
 }
 
 #[Singleton]
-impl From<&Config> for LoggerConfig {
+impl LoggerConfig {
     #[di]
-    #[track_caller]
-    fn from(#[di(ref)] config: &Config) -> Self {
-        config.get().expect("failed to load `LoggerConfig`")
+    pub fn new(#[di(ref)] config: &Config) -> Self {
+        config.get().unwrap()
     }
 }
 

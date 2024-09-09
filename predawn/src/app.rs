@@ -30,7 +30,7 @@ pub trait Hooks {
     fn init_logger(config: &Config, map: &mut AnyMap) {
         let _map = map;
 
-        let cfg = LoggerConfig::from(config);
+        let cfg = LoggerConfig::new(config);
 
         tracing_subscriber::fmt()
             .with_max_level(tracing::Level::from(cfg.level))
@@ -107,7 +107,7 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
 
     let config = H::load_config(&env).unwrap();
 
-    let server_cfg = ServerConfig::from(&config);
+    let server_cfg = ServerConfig::new(&config);
     let request_body_limit = server_cfg.request_body_limit;
     let root_path = server_cfg.root_path.clone();
     let full_non_application_root_path = server_cfg.full_non_application_root_path();

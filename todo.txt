@@ -1,6 +1,5 @@
 WebSocket
 SSE
-change `From::from` to `new` method, it will panic
 
 每个错误都加上location，打印Debug错误的时候，把每层错误都打印出来
 fn location(&self)->&'static Location<'static> {..}

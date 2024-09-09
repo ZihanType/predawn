@@ -17,7 +17,6 @@ use crate::{
 pub struct OpenAPIJson;
 
 impl Plugin for OpenAPIJson {
-    #[track_caller]
     fn create_route(
         self: Arc<Self>,
         cx: &mut Context,

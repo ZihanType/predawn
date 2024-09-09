@@ -23,25 +23,22 @@ pub struct ServerConfig {
 }
 
 #[Singleton]
-impl From<&Config> for ServerConfig {
-    #[di]
-    #[track_caller]
-    fn from(#[di(ref)] config: &Config) -> Self {
-        config.get().expect("failed to load `ServerConfig`")
-    }
-}
-
 impl ServerConfig {
+    #[di]
+    pub fn new(#[di(ref)] config: &Config) -> Self {
+        config.get().unwrap()
+    }
+
     pub fn full_non_application_root_path(self) -> NormalizedPath {
         self.root_path.join(self.non_application_root_path)
     }
 }
 
-fn default_ip() -> IpAddr {
+const fn default_ip() -> IpAddr {
     IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0))
 }
 
-fn default_port() -> u16 {
+const fn default_port() -> u16 {
     9612
 }
 
@@ -53,7 +50,7 @@ fn default_non_application_root_path() -> NormalizedPath {
     "/p".into()
 }
 
-fn default_request_body_limit() -> usize {
+const fn default_request_body_limit() -> usize {
     DEFAULT_BODY_LIMIT
 }
 

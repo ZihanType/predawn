@@ -47,12 +47,19 @@ impl fmt::Display for Environment {
 
 impl From<Box<str>> for Environment {
     fn from(s: Box<str>) -> Self {
-        match s.to_lowercase().as_str() {
-            "prod" | "production" => Environment::Prod,
-            "dev" | "development" => Environment::Dev,
-            "test" => Environment::Test,
-            _ => Environment::Custom(s),
+        if s.eq_ignore_ascii_case("prod") || s.eq_ignore_ascii_case("production") {
+            return Environment::Prod;
         }
+
+        if s.eq_ignore_ascii_case("dev") || s.eq_ignore_ascii_case("development") {
+            return Environment::Dev;
+        }
+
+        if s.eq_ignore_ascii_case("test") {
+            return Environment::Test;
+        }
+
+        Environment::Custom(s)
     }
 }
 

@@ -12,11 +12,10 @@ pub struct DataSourcesConfig {
 }
 
 #[Singleton]
-impl From<&Config> for DataSourcesConfig {
+impl DataSourcesConfig {
     #[di]
-    #[track_caller]
-    fn from(#[di(ref)] config: &Config) -> Self {
-        config.get().expect("failed to load `DataSourcesConfig`")
+    pub fn new(#[di(ref)] config: &Config) -> Self {
+        config.get().unwrap()
     }
 }
 
