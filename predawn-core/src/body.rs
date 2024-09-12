@@ -2,11 +2,11 @@ use std::{
     borrow::Cow,
     convert::Infallible,
     pin::Pin,
-    task::{ready, Context, Poll},
+    task::{Context, Poll},
 };
 
 use bytes::{Bytes, BytesMut};
-use futures_util::{Stream, TryStream, TryStreamExt};
+use futures_util::{TryStream, TryStreamExt};
 use http_body::SizeHint;
 use http_body_util::{combinators::UnsyncBoxBody, BodyExt, Empty, Full, Limited, StreamBody};
 use hyper::body::{Frame, Incoming};
@@ -21,14 +21,19 @@ pub struct ResponseBody(UnsyncBoxBody<Bytes, BoxError>);
 impl ResponseBody {
     pub fn new<B>(body: B) -> Self
     where
-        B: http_body::Body<Data = Bytes> + Send + 'static,
+        B: http_body::Body + Send + 'static,
+        B::Data: Into<Bytes>,
         B::Error: Into<BoxError>,
     {
-        Self(body.map_err(Into::into).boxed_unsync())
+        Self(
+            body.map_frame(|frame| frame.map_data(Into::into))
+                .map_err(Into::into)
+                .boxed_unsync(),
+        )
     }
 
     pub fn empty() -> Self {
-        Self::new(Empty::new())
+        Self::new(Empty::<Bytes>::new())
     }
 
     pub fn from_stream<S>(stream: S) -> Self
@@ -143,32 +148,5 @@ impl From<()> for ResponseBody {
 impl From<Infallible> for ResponseBody {
     fn from(value: Infallible) -> Self {
         match value {}
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct DataStream<B> {
-    body: B,
-}
-
-impl<B> DataStream<B> {
-    pub fn new(body: B) -> Self {
-        Self { body }
-    }
-}
-
-impl<B: http_body::Body + Unpin> Stream for DataStream<B> {
-    type Item = Result<B::Data, B::Error>;
-
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        loop {
-            match ready!(Pin::new(&mut self.body).poll_frame(cx)?) {
-                Some(frame) => match frame.into_data() {
-                    Ok(data) => return Poll::Ready(Some(Ok(data))),
-                    Err(_) => continue,
-                },
-                None => return Poll::Ready(None),
-            }
-        }
     }
 }

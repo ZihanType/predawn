@@ -1,7 +1,8 @@
+use http_body_util::BodyExt;
 use mime::{FORM_DATA, MULTIPART};
 use multer::Field;
 use predawn_core::{
-    body::{DataStream, RequestBody},
+    body::RequestBody,
     from_request::FromRequest,
     media_type::{has_media_type, MediaType, RequestMediaType},
     request::Head,
@@ -23,7 +24,7 @@ impl<'a> FromRequest<'a> for Multipart {
             let boundary =
                 multer::parse_boundary(content_type).map_err(MultipartError::ByParseMultipart)?;
 
-            let multipart = multer::Multipart::new(DataStream::new(body), boundary);
+            let multipart = multer::Multipart::new(body.into_data_stream(), boundary);
             Ok(Multipart(multipart))
         } else {
             Err(MultipartError::InvalidMultipartContentType)
