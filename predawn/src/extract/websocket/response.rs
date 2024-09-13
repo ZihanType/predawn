@@ -1,5 +1,6 @@
 use std::{collections::BTreeMap, convert::Infallible, future::Future};
 
+use headers::{Connection, HeaderMapExt, SecWebsocketAccept, Upgrade};
 use http::{header, StatusCode};
 use hyper_util::rt::TokioIo;
 use predawn_core::{
@@ -9,10 +10,7 @@ use predawn_core::{
     openapi::{self, Schema},
     response::{MultiResponse, Response, SingleResponse},
 };
-use tokio_tungstenite::{
-    tungstenite::{handshake::derive_accept_key, protocol::Role},
-    WebSocketStream,
-};
+use tokio_tungstenite::{tungstenite::protocol::Role, WebSocketStream};
 
 use super::{OnFailedUpgrade, WebSocket, WebSocketRequest};
 
@@ -59,20 +57,21 @@ impl WebSocketResponse {
             });
         }
 
-        let mut builder = http::Response::builder()
+        let mut response = http::Response::builder()
             .status(StatusCode::SWITCHING_PROTOCOLS)
-            .header(header::CONNECTION, "upgrade")
-            .header(header::UPGRADE, "websocket")
-            .header(
-                header::SEC_WEBSOCKET_ACCEPT,
-                derive_accept_key(sec_websocket_key.as_bytes()),
-            );
+            .body(ResponseBody::empty())
+            .unwrap();
+
+        let headers = response.headers_mut();
+
+        headers.typed_insert(Connection::upgrade());
+        headers.typed_insert(Upgrade::websocket());
+        headers.typed_insert(SecWebsocketAccept::from(sec_websocket_key));
 
         if let Some(protocol) = protocol {
-            builder = builder.header(header::SEC_WEBSOCKET_PROTOCOL, protocol);
+            headers.insert(header::SEC_WEBSOCKET_PROTOCOL, protocol);
         }
 
-        let response = builder.body(ResponseBody::empty()).unwrap();
         WebSocketResponse(response)
     }
 }

@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, future::Future};
 
-use headers::{Connection, HeaderMapExt, SecWebsocketVersion, Upgrade};
+use headers::{Connection, HeaderMapExt, SecWebsocketKey, SecWebsocketVersion, Upgrade};
 use http::{header, HeaderValue, Method};
 use hyper::upgrade::OnUpgrade;
 use predawn_core::{
@@ -18,7 +18,7 @@ pub struct WebSocketRequest<F = DefaultOnFailedUpgrade> {
     pub config: WebSocketConfig,
     /// The chosen protocol sent in the `Sec-WebSocket-Protocol` header of the response.
     pub(crate) protocol: Option<HeaderValue>,
-    pub(crate) sec_websocket_key: HeaderValue,
+    pub(crate) sec_websocket_key: SecWebsocketKey,
     pub(crate) on_upgrade: hyper::upgrade::OnUpgrade,
     pub(crate) on_failed_upgrade: F,
     pub(crate) sec_websocket_protocol: Option<HeaderValue>,
@@ -36,11 +36,13 @@ impl<F> std::fmt::Debug for WebSocketRequest<F> {
 }
 
 impl<F> WebSocketRequest<F> {
-    pub fn protocols<I>(mut self, protocols: I) -> Result<Self, I::Item>
+    pub fn protocols<I>(mut self, protocols: I) -> (Self, Option<I::Item>)
     where
         I: IntoIterator,
         I::Item: AsRef<str>,
     {
+        let mut invalid_header_value = None;
+
         if let Some(protocols_in_request) = self
             .sec_websocket_protocol
             .as_ref()
@@ -48,16 +50,21 @@ impl<F> WebSocketRequest<F> {
         {
             self.protocol = protocols
                 .into_iter()
-                .find(|item| {
+                .find(|protocol| {
                     protocols_in_request
                         .split(',')
-                        .any(|protocol_in_request| protocol_in_request.trim() == item.as_ref())
+                        .any(|protocol_in_request| protocol_in_request.trim() == protocol.as_ref())
                 })
-                .map(|item| HeaderValue::from_str(item.as_ref()).map_err(|_| item))
-                .transpose()?;
+                .and_then(|protocol| match HeaderValue::from_str(protocol.as_ref()) {
+                    Ok(protocol) => Some(protocol),
+                    Err(_) => {
+                        invalid_header_value = Some(protocol);
+                        None
+                    }
+                });
         }
 
-        Ok(self)
+        (self, invalid_header_value)
     }
 
     pub fn on_failed_upgrade<C>(self, callback: C) -> WebSocketRequest<C>
@@ -130,7 +137,7 @@ impl<'a> FromRequestHead<'a> for WebSocketRequest {
 
         let sec_websocket_key = head
             .headers
-            .get(header::SEC_WEBSOCKET_KEY)
+            .typed_get::<SecWebsocketKey>()
             .ok_or(WebSocketError::SecWebSocketKeyHeaderNotPresent)?
             .clone();
 

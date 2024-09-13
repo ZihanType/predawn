@@ -23,18 +23,20 @@ pub trait Handler: Send + Sync + 'static {
     fn call(&self, req: Request) -> impl Future<Output = Result<Response, Error>> + Send;
 }
 
+type Inner = Arc<dyn Any + Send + Sync>;
+
 #[derive(Clone)]
 pub struct DynHandler {
-    inner: Arc<dyn Any + Send + Sync>,
-    call: fn(&DynHandler, Request) -> BoxFuture<Result<Response, Error>>,
+    inner: Inner,
+    call: fn(&Inner, Request) -> BoxFuture<Result<Response, Error>>,
 }
 
 impl DynHandler {
     pub fn new<H: Handler>(handler: H) -> Self {
         Self {
             inner: Arc::new(handler),
-            call: |this, req| {
-                let handler = this.inner.downcast_ref::<H>().unwrap();
+            call: |inner, req| {
+                let handler = inner.downcast_ref::<H>().unwrap();
                 Box::pin(handler.call(req))
             },
         }
@@ -43,7 +45,7 @@ impl DynHandler {
 
 impl Handler for DynHandler {
     async fn call(&self, req: Request) -> Result<Response, Error> {
-        (self.call)(self, req).await
+        (self.call)(&self.inner, req).await
     }
 }
 
