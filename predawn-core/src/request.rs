@@ -240,12 +240,12 @@ impl TryFrom<http::Request<Incoming>> for Request {
 
 #[derive(Debug, thiserror::Error)]
 pub enum ConvertRequestError {
-    #[error("not found body limit in request extensions")]
+    #[error("not found `body limit` in request extensions")]
     NotFoundBodyLimit,
-    #[error("not found local address in request extensions")]
+    #[error("not found `local address` in request extensions")]
     NotFoundLocalAddr,
-    #[error("not found remote address in request extensions")]
+    #[error("not found `remote address` in request extensions")]
     NotFoundRemoteAddr,
-    #[error("not found original uri in request extensions")]
+    #[error("not found `original uri` in request extensions")]
     NotFoundOriginalUri,
 }

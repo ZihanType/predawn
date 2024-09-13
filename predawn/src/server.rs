@@ -155,7 +155,7 @@ async fn handle_conn<H: Handler + Clone>(
 ) {
     let tcp_stream = TokioIo::new(tcp_stream);
 
-    tracing::info!("connection {remote_addr} accepted");
+    tracing::trace!("connection {remote_addr} accepted");
 
     tokio::spawn(async move {
         let builder = Builder::new(TokioExecutor::new());
@@ -187,7 +187,7 @@ async fn handle_conn<H: Handler + Clone>(
             }
         }
 
-        tracing::info!("connection {remote_addr} closed");
+        tracing::trace!("connection {remote_addr} closed");
 
         drop(close_receiver);
     });

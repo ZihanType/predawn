@@ -37,6 +37,7 @@ syn = { version = "2", default-features = false }
 http = { version = "1", default-features = false }
 hyper = { version = "1", default-features = false }
 bytes = { version = "1", default-features = false }
+futures-core = { version = "0.3", default-features = false }
 futures-util = { version = "0.3", default-features = false }
 serde = { version = "1", default-features = false }
 serde_json = { version = "1", default-features = false }
@@ -68,3 +69,4 @@ scc = { version = "2", default-features = false }
 url = { version = "2", default-features = false }
 headers = { version = "0.4", default-features = false }
 tracing-appender = { version = "0.2", default-features = false }
+tokio-tungstenite = { version = "0.23", default-features = false }

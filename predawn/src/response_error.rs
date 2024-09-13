@@ -477,6 +477,44 @@ impl ResponseError for InvalidHeaderValue {
     }
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum WebSocketError {
+    #[error("request method must be `GET`")]
+    MethodNotGet,
+    #[error("`Connection` header does not contains `upgrade`")]
+    ConnectionHeaderNotContainsUpgrade,
+    #[error("`Upgrade` header does not equal `websocket`")]
+    UpgradeHeaderNotEqualWebSocket,
+    #[error("`Sec-WebSocket-Version` header does not equal `13`")]
+    SecWebSocketVersionHeaderNotEqual13,
+    #[error("`Sec-WebSocket-Key` header not present")]
+    SecWebSocketKeyHeaderNotPresent,
+    #[error("request couldn't be upgraded to a WebSocket connection")]
+    ConnectionNotUpgradable,
+}
+
+impl ResponseError for WebSocketError {
+    fn as_status(&self) -> StatusCode {
+        match self {
+            WebSocketError::MethodNotGet => StatusCode::METHOD_NOT_ALLOWED,
+            WebSocketError::ConnectionHeaderNotContainsUpgrade
+            | WebSocketError::UpgradeHeaderNotEqualWebSocket
+            | WebSocketError::SecWebSocketVersionHeaderNotEqual13
+            | WebSocketError::SecWebSocketKeyHeaderNotPresent => StatusCode::BAD_REQUEST,
+            WebSocketError::ConnectionNotUpgradable => StatusCode::UPGRADE_REQUIRED,
+        }
+    }
+
+    fn status_codes() -> HashSet<StatusCode> {
+        [
+            StatusCode::METHOD_NOT_ALLOWED,
+            StatusCode::BAD_REQUEST,
+            StatusCode::UPGRADE_REQUIRED,
+        ]
+        .into()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

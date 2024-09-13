@@ -6,7 +6,8 @@ use std::{
 };
 
 use bytes::{Bytes, BytesMut};
-use futures_util::{TryStream, TryStreamExt};
+use futures_core::TryStream;
+use futures_util::TryStreamExt;
 use http_body::SizeHint;
 use http_body_util::{combinators::UnsyncBoxBody, BodyExt, Empty, Full, Limited, StreamBody};
 use hyper::body::{Frame, Incoming};

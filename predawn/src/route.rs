@@ -1,4 +1,6 @@
-use futures_util::{future::Either, Future, FutureExt};
+use std::future::Future;
+
+use futures_util::{future::Either, FutureExt};
 use http::Method;
 use indexmap::IndexMap;
 use matchit::{InsertError, Match};

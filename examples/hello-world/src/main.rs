@@ -11,6 +11,7 @@ use predawn::{
     controller,
     extract::{
         multipart::{JsonField, Multipart, Upload},
+        websocket::{Message, WebSocketRequest, WebSocketResponse},
         Path, Query,
     },
     handler::{Handler, HandlerExt},
@@ -221,6 +222,19 @@ impl MyController {
         Json(Nested {
             name: "Hello".to_string(),
             inner: None,
+        })
+    }
+
+    #[handler(paths = ["/websocket"], methods = [GET])]
+    async fn websocket(&self, ws: WebSocketRequest) -> WebSocketResponse {
+        ws.on_upgrade(|mut socket| async move {
+            loop {
+                if socket.send(Message::Text("hello".into())).await.is_err() {
+                    break;
+                } else {
+                    tokio::time::sleep(Duration::from_secs(1)).await;
+                }
+            }
         })
     }
 }

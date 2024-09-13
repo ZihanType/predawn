@@ -15,6 +15,7 @@ readme.workspace = true
 predawn-schema = { workspace = true }
 
 bytes = { workspace = true }
+futures-core = { workspace = true, features = ["alloc"] }
 futures-util = { workspace = true, features = ["alloc"] }
 hyper = { workspace = true }
 http = { workspace = true }

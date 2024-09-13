@@ -4,7 +4,8 @@ use std::{
     task::{Context, Poll},
 };
 
-use futures_util::{future::BoxFuture, FutureExt};
+use futures_core::future::BoxFuture;
+use futures_util::FutureExt;
 use hyper::body::Incoming;
 use predawn_core::{
     error::Error, into_response::IntoResponse, request::Request, response::Response,

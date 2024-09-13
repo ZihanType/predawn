@@ -8,7 +8,7 @@ mod inspect_error;
 
 use std::{any::Any, future::Future, marker::PhantomData, sync::Arc};
 
-use futures_util::future::BoxFuture;
+use futures_core::future::BoxFuture;
 use predawn_core::{
     either::Either, error::Error, into_response::IntoResponse, request::Request, response::Response,
 };

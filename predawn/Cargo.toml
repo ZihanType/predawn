@@ -20,7 +20,8 @@ hyper = { workspace = true, features = ["server", "http1", "http2"] }
 thiserror = { workspace = true }
 bytes = { workspace = true }
 http = { workspace = true }
-futures-util = { workspace = true, features = ["alloc"] }
+futures-core = { workspace = true, features = ["alloc"] }
+futures-util = { workspace = true }
 matchit = { workspace = true }
 tokio = { workspace = true, features = ["macros", "signal"] }
 hyper-util = { workspace = true, features = [
@@ -45,6 +46,7 @@ reqwest = { workspace = true }
 http-body-util = { workspace = true }
 multer = { workspace = true }
 headers = { workspace = true }
+tokio-tungstenite = { workspace = true, features = ["connect", "handshake"] }
 
 # Optional dependencies
 tower = { workspace = true, optional = true }
