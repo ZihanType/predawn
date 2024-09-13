@@ -449,7 +449,6 @@ fn generate_single_fn_impl<'a>(
             quote_use! {
                 # use predawn::openapi::SecurityRequirement;
 
-                #[allow(unused_mut)]
                 let mut security_requirement = SecurityRequirement::default();
                 #(#insert_security_requirement)*
                 security.push(security_requirement);
@@ -460,7 +459,7 @@ fn generate_single_fn_impl<'a>(
             # use std::vec::Vec;
 
             let mut security = Vec::new();
-            #(#push_security)*
+            #({#push_security})*
             operation.security = Some(security);
         }
     };
@@ -504,26 +503,59 @@ fn generate_single_fn_impl<'a>(
 
         let mut operation = Operation::default();
 
-        #add_summary
-        #add_description
+        #[doc = "add summary"]
+        {
+            #add_summary
+        }
 
-        #add_tags
+        #[doc = "add description"]
+        {
+            #add_description
+        }
 
-        #add_security
+        #[doc = "add tags"]
+        {
+            #add_tags
+        }
 
-        operation.operation_id = Some(format!("{}::{}", type_name::<#self_ty>(), stringify!(#fn_name)));
+        #[doc = "add security"]
+        {
+            #add_security
+        }
 
-        #last_request_body
+        #[doc = "add operation_id"]
+        {
+            operation.operation_id = Some(format!("{}::{}", type_name::<#self_ty>(), stringify!(#fn_name)));
+        }
 
-        #(#heads_parameters)*
-        #last_parameters
+        #[doc = "add request_body"]
+        {
+            #last_request_body
+        }
+
+        #[doc = "add request parameters"]
+        {
+            #(#heads_parameters)*
+            #last_parameters
+        }
 
         let mut responses = BTreeMap::new();
 
-        #(#heads_error_responses)*
-        #last_error_responses
-        #return_error_responses
-        #return_responses
+        #[doc = "add response from read request error"]
+        {
+            #(#heads_error_responses)*
+            #last_error_responses
+        }
+
+        #[doc = "add response from write response error"]
+        {
+            #return_error_responses
+        }
+
+        #[doc = "add response itself"]
+        {
+            #return_responses
+        }
 
         operation.responses.responses.extend(transform_responses(responses));
     };
@@ -573,7 +605,11 @@ fn generate_single_fn_impl<'a>(
         #label {
             #create_handler
             #create_operation
-            #(#insert_fn_into_multi_path)*
+
+            #[doc = "insert handler and operation"]
+            {
+                #(#insert_fn_into_multi_path)*
+            }
         }
     };
 
