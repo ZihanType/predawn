@@ -177,7 +177,6 @@ where
 pub struct DefaultOnFailedUpgrade;
 
 impl OnFailedUpgrade for DefaultOnFailedUpgrade {
-    #[inline]
     fn call(self, error: hyper::Error) {
         tracing::error!("WebSocket upgrade failed: {:?}", error);
     }
