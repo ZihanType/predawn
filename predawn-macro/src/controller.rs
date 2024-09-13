@@ -128,6 +128,7 @@ pub(crate) fn generate(
         # use predawn::controller::Controller;
         # use predawn::handler::DynHandler;
         # use predawn::normalized_path::NormalizedPath;
+        # use predawn::__internal::indexmap::IndexMap;
         # use predawn::__internal::http::Method;
         # use predawn::__internal::rudi::Context;
         # use predawn::openapi::{SecurityScheme, Operation, Tag, Schema};
@@ -136,8 +137,8 @@ pub(crate) fn generate(
             fn insert_routes(
                 self: Arc<Self>,
                 cx: &mut Context,
-                route_table: &mut BTreeMap<NormalizedPath, Vec<(Method, DynHandler)>>,
-                paths: &mut BTreeMap<NormalizedPath, Vec<(Method, Operation)>>,
+                route_table: &mut IndexMap<NormalizedPath, Vec<(Method, DynHandler)>>,
+                paths: &mut IndexMap<NormalizedPath, Vec<(Method, Operation)>>,
                 schemas: & mut BTreeMap<String, Schema>,
                 schemas_in_progress: &mut Vec<String>,
                 security_schemes: &mut BTreeMap<&'static str, (&'static str, SecurityScheme)>,

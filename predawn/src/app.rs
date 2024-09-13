@@ -115,8 +115,8 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
     let mut cx = H::create_context(config, env).await;
     cx.insert_single_owner(map);
 
-    let mut route_table = BTreeMap::new();
-    let mut paths = BTreeMap::new();
+    let mut route_table = IndexMap::with_capacity(128);
+    let mut paths = IndexMap::with_capacity(128);
     let mut schemas = BTreeMap::new();
     let mut schemas_in_progress = Vec::with_capacity(16);
     let mut security_schemes = BTreeMap::new();
