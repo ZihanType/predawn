@@ -1,4 +1,4 @@
-use std::{collections::HashSet, error::Error, fmt, str::Utf8Error, sync::Arc};
+use std::{collections::BTreeSet, error::Error, fmt, str::Utf8Error, sync::Arc};
 
 use http::{
     header::{CONTENT_DISPOSITION, CONTENT_TYPE},
@@ -23,7 +23,7 @@ impl ResponseError for MethodNotAllowedError {
         StatusCode::METHOD_NOT_ALLOWED
     }
 
-    fn status_codes() -> HashSet<StatusCode> {
+    fn status_codes() -> BTreeSet<StatusCode> {
         [StatusCode::METHOD_NOT_ALLOWED].into()
     }
 }
@@ -39,7 +39,7 @@ impl ResponseError for MatchError {
         }
     }
 
-    fn status_codes() -> HashSet<StatusCode> {
+    fn status_codes() -> BTreeSet<StatusCode> {
         [StatusCode::NOT_FOUND].into()
     }
 }
@@ -53,7 +53,7 @@ impl ResponseError for QueryError {
         StatusCode::BAD_REQUEST
     }
 
-    fn status_codes() -> HashSet<StatusCode> {
+    fn status_codes() -> BTreeSet<StatusCode> {
         [StatusCode::BAD_REQUEST].into()
     }
 }
@@ -120,7 +120,7 @@ impl ResponseError for PathError {
         }
     }
 
-    fn status_codes() -> HashSet<StatusCode> {
+    fn status_codes() -> BTreeSet<StatusCode> {
         [StatusCode::INTERNAL_SERVER_ERROR, StatusCode::BAD_REQUEST].into()
     }
 }
@@ -144,7 +144,7 @@ impl ResponseError for ReadFormError {
         }
     }
 
-    fn status_codes() -> HashSet<StatusCode> {
+    fn status_codes() -> BTreeSet<StatusCode> {
         let mut status_codes = ReadBytesError::status_codes();
         status_codes.insert(StatusCode::UNSUPPORTED_MEDIA_TYPE);
         status_codes.insert(StatusCode::BAD_REQUEST);
@@ -161,7 +161,7 @@ impl ResponseError for WriteFormError {
         StatusCode::INTERNAL_SERVER_ERROR
     }
 
-    fn status_codes() -> HashSet<StatusCode> {
+    fn status_codes() -> BTreeSet<StatusCode> {
         [StatusCode::INTERNAL_SERVER_ERROR].into()
     }
 }
@@ -185,7 +185,7 @@ impl ResponseError for DeserializeJsonError {
         }
     }
 
-    fn status_codes() -> HashSet<StatusCode> {
+    fn status_codes() -> BTreeSet<StatusCode> {
         [StatusCode::BAD_REQUEST, StatusCode::UNPROCESSABLE_ENTITY].into()
     }
 }
@@ -209,7 +209,7 @@ impl ResponseError for ReadJsonError {
         }
     }
 
-    fn status_codes() -> HashSet<StatusCode> {
+    fn status_codes() -> BTreeSet<StatusCode> {
         let mut status_codes = ReadBytesError::status_codes();
         status_codes.extend(DeserializeJsonError::status_codes());
         status_codes.insert(StatusCode::UNSUPPORTED_MEDIA_TYPE);
@@ -226,7 +226,7 @@ impl ResponseError for WriteJsonError {
         StatusCode::INTERNAL_SERVER_ERROR
     }
 
-    fn status_codes() -> HashSet<StatusCode> {
+    fn status_codes() -> BTreeSet<StatusCode> {
         [StatusCode::INTERNAL_SERVER_ERROR].into()
     }
 }
@@ -296,8 +296,8 @@ impl ResponseError for MultipartError {
         }
     }
 
-    fn status_codes() -> HashSet<StatusCode> {
-        let mut status_codes: HashSet<StatusCode> = [
+    fn status_codes() -> BTreeSet<StatusCode> {
+        let mut status_codes: BTreeSet<StatusCode> = [
             StatusCode::UNSUPPORTED_MEDIA_TYPE,
             StatusCode::BAD_REQUEST,
             StatusCode::PAYLOAD_TOO_LARGE,
@@ -351,7 +351,7 @@ impl ResponseError for InvalidContentDisposition {
         StatusCode::INTERNAL_SERVER_ERROR
     }
 
-    fn status_codes() -> HashSet<StatusCode> {
+    fn status_codes() -> BTreeSet<StatusCode> {
         [StatusCode::INTERNAL_SERVER_ERROR].into()
     }
 }
@@ -373,7 +373,7 @@ impl ResponseError for TypedHeaderError {
         StatusCode::BAD_REQUEST
     }
 
-    fn status_codes() -> HashSet<StatusCode> {
+    fn status_codes() -> BTreeSet<StatusCode> {
         [StatusCode::BAD_REQUEST].into()
     }
 }
@@ -392,7 +392,7 @@ impl<const N: usize> ResponseError for InvalidContentType<N> {
         StatusCode::UNSUPPORTED_MEDIA_TYPE
     }
 
-    fn status_codes() -> HashSet<StatusCode> {
+    fn status_codes() -> BTreeSet<StatusCode> {
         [StatusCode::UNSUPPORTED_MEDIA_TYPE].into()
     }
 }
@@ -472,7 +472,7 @@ impl ResponseError for InvalidHeaderValue {
         StatusCode::INTERNAL_SERVER_ERROR
     }
 
-    fn status_codes() -> HashSet<StatusCode> {
+    fn status_codes() -> BTreeSet<StatusCode> {
         [StatusCode::INTERNAL_SERVER_ERROR].into()
     }
 }
@@ -505,7 +505,7 @@ impl ResponseError for WebSocketError {
         }
     }
 
-    fn status_codes() -> HashSet<StatusCode> {
+    fn status_codes() -> BTreeSet<StatusCode> {
         [
             StatusCode::METHOD_NOT_ALLOWED,
             StatusCode::BAD_REQUEST,

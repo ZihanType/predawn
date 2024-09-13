@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, HashSet},
+    collections::{BTreeMap, BTreeSet},
     time::Duration,
 };
 
@@ -319,7 +319,7 @@ impl ResponseError for MyError {
         StatusCode::INTERNAL_SERVER_ERROR
     }
 
-    fn status_codes() -> HashSet<StatusCode> {
+    fn status_codes() -> BTreeSet<StatusCode> {
         [StatusCode::INTERNAL_SERVER_ERROR].into()
     }
 }

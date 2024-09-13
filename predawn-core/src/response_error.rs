@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, HashSet},
+    collections::{BTreeMap, BTreeSet},
     convert::Infallible,
     error::Error,
     fmt,
@@ -19,7 +19,7 @@ use crate::{
 pub trait ResponseError: Error + Send + Sync + Sized + 'static {
     fn as_status(&self) -> StatusCode;
 
-    fn status_codes() -> HashSet<StatusCode>;
+    fn status_codes() -> BTreeSet<StatusCode>;
 
     fn as_response(&self) -> Response {
         Response::builder()
@@ -66,8 +66,8 @@ impl ResponseError for Infallible {
         match *self {}
     }
 
-    fn status_codes() -> HashSet<StatusCode> {
-        HashSet::new()
+    fn status_codes() -> BTreeSet<StatusCode> {
+        BTreeSet::new()
     }
 
     fn as_response(&self) -> Response {
@@ -116,7 +116,7 @@ impl ResponseError for RequestBodyLimitError {
         StatusCode::PAYLOAD_TOO_LARGE
     }
 
-    fn status_codes() -> HashSet<StatusCode> {
+    fn status_codes() -> BTreeSet<StatusCode> {
         [StatusCode::PAYLOAD_TOO_LARGE].into()
     }
 }
@@ -137,7 +137,7 @@ impl ResponseError for ReadBytesError {
         }
     }
 
-    fn status_codes() -> HashSet<StatusCode> {
+    fn status_codes() -> BTreeSet<StatusCode> {
         let mut status_codes = RequestBodyLimitError::status_codes();
         status_codes.insert(StatusCode::BAD_REQUEST);
         status_codes
@@ -160,7 +160,7 @@ impl ResponseError for ReadStringError {
         }
     }
 
-    fn status_codes() -> HashSet<StatusCode> {
+    fn status_codes() -> BTreeSet<StatusCode> {
         let mut status_codes = ReadBytesError::status_codes();
         status_codes.insert(StatusCode::BAD_REQUEST);
         status_codes

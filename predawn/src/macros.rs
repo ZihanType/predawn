@@ -78,8 +78,8 @@ macro_rules! define_from_request_error {
                 }
             }
 
-            fn status_codes() -> ::std::collections::HashSet<$crate::__internal::http::StatusCode> {
-                let mut status_codes = ::std::collections::HashSet::new();
+            fn status_codes() -> ::std::collections::BTreeSet<$crate::__internal::http::StatusCode> {
+                let mut status_codes = ::std::collections::BTreeSet::new();
 
                 $(
                     status_codes.extend(<$error as $crate::response_error::ResponseError>::status_codes());
@@ -170,8 +170,8 @@ macro_rules! define_into_response_error {
                 }
             }
 
-            fn status_codes() -> ::std::collections::HashSet<$crate::__internal::http::StatusCode> {
-                let mut status_codes = ::std::collections::HashSet::new();
+            fn status_codes() -> ::std::collections::BTreeSet<$crate::__internal::http::StatusCode> {
+                let mut status_codes = ::std::collections::BTreeSet::new();
 
                 $(
                     status_codes.extend(<$error as $crate::response_error::ResponseError>::status_codes());

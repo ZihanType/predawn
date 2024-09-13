@@ -1,4 +1,4 @@
-use std::{collections::HashSet, sync::Arc};
+use std::{collections::BTreeSet, sync::Arc};
 
 use http::StatusCode;
 use predawn::response_error::ResponseError;
@@ -30,7 +30,7 @@ impl ResponseError for Error {
         StatusCode::INTERNAL_SERVER_ERROR
     }
 
-    fn status_codes() -> HashSet<StatusCode> {
+    fn status_codes() -> BTreeSet<StatusCode> {
         [StatusCode::INTERNAL_SERVER_ERROR].into()
     }
 }

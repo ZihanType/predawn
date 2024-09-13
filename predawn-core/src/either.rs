@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, HashSet},
+    collections::{BTreeMap, BTreeSet},
     error::Error,
     fmt,
 };
@@ -57,7 +57,7 @@ where
         }
     }
 
-    fn status_codes() -> HashSet<StatusCode> {
+    fn status_codes() -> BTreeSet<StatusCode> {
         let mut status_codes = L::status_codes();
         status_codes.extend(R::status_codes());
         status_codes
