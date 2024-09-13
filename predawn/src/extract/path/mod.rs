@@ -24,7 +24,7 @@ where
 {
     type Error = PathError;
 
-    async fn from_request_head(head: &'a Head) -> Result<Self, Self::Error> {
+    async fn from_request_head(head: &'a mut Head) -> Result<Self, Self::Error> {
         let params = match head.extensions.get::<PathParams>() {
             Some(PathParams::Params(params)) => params,
             Some(PathParams::InvalidUtf8InPathParam { key, error }) => {

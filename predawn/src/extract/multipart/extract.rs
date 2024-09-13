@@ -17,7 +17,7 @@ pub struct Multipart(multer::Multipart<'static>);
 impl<'a> FromRequest<'a> for Multipart {
     type Error = MultipartError;
 
-    async fn from_request(head: &'a Head, body: RequestBody) -> Result<Self, Self::Error> {
+    async fn from_request(head: &'a mut Head, body: RequestBody) -> Result<Self, Self::Error> {
         let content_type = head.content_type().unwrap_or_default();
 
         if <Multipart as RequestMediaType>::check_content_type(content_type) {

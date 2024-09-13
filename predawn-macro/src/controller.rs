@@ -235,7 +235,7 @@ fn generate_single_fn_impl<'a>(
         let from_request_head = quote_use! {
             # use predawn::from_request::FromRequestHead;
 
-            let #arg_ident = <#ty as FromRequestHead>::from_request_head(&head).await?;
+            let #arg_ident = <#ty as FromRequestHead>::from_request_head(&mut head).await?;
         };
 
         arg_idents.push(arg_ident);
@@ -278,7 +278,7 @@ fn generate_single_fn_impl<'a>(
         last_from_request = quote_use! {
             # use predawn::from_request::FromRequest;
 
-            let last = <#ty as FromRequest<_>>::from_request(&head, body).await?;
+            let last = <#ty as FromRequest<_>>::from_request(&mut head, body).await?;
         };
 
         last_parameters = quote_use! {
@@ -476,8 +476,8 @@ fn generate_single_fn_impl<'a>(
                 let this = this.clone();
 
                 async move {
-                    #[allow(unused_variables)]
-                    let (head, body) = req.split();
+                    #[allow(unused_variables, unused_mut)]
+                    let (mut head, body) = req.split();
 
                     #extract_from_request
 

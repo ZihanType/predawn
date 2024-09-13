@@ -22,7 +22,7 @@ where
 {
     type Error = TypedHeaderError;
 
-    async fn from_request_head(head: &'a Head) -> Result<Self, Self::Error> {
+    async fn from_request_head(head: &'a mut Head) -> Result<Self, Self::Error> {
         let name = T::name();
 
         let mut values = head.headers.get_all(name).iter();

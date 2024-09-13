@@ -80,7 +80,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         impl #impl_generics_with_lifetime FromRequest<'a> for #ident #ty_generics #where_clause {
             type Error = MultipartError;
 
-            async fn from_request(head: &'a Head, body: RequestBody) -> Result<Self, Self::Error> {
+            async fn from_request(head: &'a mut Head, body: RequestBody) -> Result<Self, Self::Error> {
                 let mut multipart = <Multipart as FromRequest<_>>::from_request(head, body).await?;
 
                 #(#define_vars)*

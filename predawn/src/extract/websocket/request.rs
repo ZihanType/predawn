@@ -96,7 +96,7 @@ impl ApiRequestHead for WebSocketRequest {
 impl<'a> FromRequestHead<'a> for WebSocketRequest {
     type Error = WebSocketError;
 
-    async fn from_request_head(head: &'a Head) -> Result<Self, Self::Error> {
+    async fn from_request_head(head: &'a mut Head) -> Result<Self, Self::Error> {
         if head.method != Method::GET {
             return Err(WebSocketError::MethodNotGet);
         }
@@ -136,9 +136,8 @@ impl<'a> FromRequestHead<'a> for WebSocketRequest {
 
         let on_upgrade = head
             .extensions
-            .get::<OnUpgrade>()
-            .ok_or(WebSocketError::ConnectionNotUpgradable)?
-            .clone();
+            .remove::<OnUpgrade>()
+            .ok_or(WebSocketError::ConnectionNotUpgradable)?;
 
         let sec_websocket_protocol = head.headers.get(header::SEC_WEBSOCKET_PROTOCOL).cloned();
 

@@ -62,7 +62,7 @@ impl ApiRequest for RequestBody {
     }
 }
 
-macro_rules! some_request {
+macro_rules! some_api_request_impl {
     ($($ty:ty),+ $(,)?) => {
         $(
             impl ApiRequest for $ty {
@@ -82,29 +82,9 @@ macro_rules! some_request {
     };
 }
 
-some_request![Bytes, Vec<u8>, String];
+some_api_request_impl![Bytes, Vec<u8>, String];
 
-macro_rules! none_request_head_for_ref_and_owned {
-    ($($ty:ty),+ $(,)?) => {
-        $(
-            impl<'a> ApiRequestHead for &'a $ty {
-                fn parameters(_: &mut BTreeMap<String, Schema>, _: &mut Vec<String>) -> Option<Vec<Parameter>> {
-                    None
-                }
-            }
-
-            impl ApiRequestHead for $ty {
-                fn parameters(_: &mut BTreeMap<String, Schema>, _: &mut Vec<String>) -> Option<Vec<Parameter>> {
-                    None
-                }
-            }
-        )+
-    };
-}
-
-none_request_head_for_ref_and_owned![Head, Uri, Method, HeaderMap, OriginalUri];
-
-macro_rules! none_request_head_for_owned {
+macro_rules! some_api_request_head_impl {
     ($($ty:ty),+ $(,)?) => {
         $(
             impl ApiRequestHead for $ty {
@@ -116,7 +96,17 @@ macro_rules! none_request_head_for_owned {
     };
 }
 
-none_request_head_for_owned![Version, LocalAddr, RemoteAddr, BodyLimit];
+some_api_request_head_impl![
+    Uri,
+    Method,
+    HeaderMap,
+    OriginalUri,
+    Version,
+    LocalAddr,
+    RemoteAddr,
+    BodyLimit,
+    Head,
+];
 
 macro_rules! optional_parameters {
     ($ty:ty) => {

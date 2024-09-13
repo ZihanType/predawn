@@ -37,7 +37,7 @@ where
 {
     type Error = ReadJsonError;
 
-    async fn from_request(head: &'a Head, body: RequestBody) -> Result<Self, Self::Error> {
+    async fn from_request(head: &'a mut Head, body: RequestBody) -> Result<Self, Self::Error> {
         let content_type = head.content_type().unwrap_or_default();
 
         if <Self as RequestMediaType>::check_content_type(content_type) {

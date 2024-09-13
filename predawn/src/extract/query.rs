@@ -22,7 +22,7 @@ where
 {
     type Error = QueryError;
 
-    async fn from_request_head(head: &'a Head) -> Result<Self, Self::Error> {
+    async fn from_request_head(head: &'a mut Head) -> Result<Self, Self::Error> {
         match serde_html_form::from_str(head.uri.query().unwrap_or_default()) {
             Ok(o) => Ok(Query(o)),
             Err(e) => Err(QueryError(e)),

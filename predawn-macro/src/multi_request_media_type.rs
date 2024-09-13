@@ -109,7 +109,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         impl #impl_generics_with_lifetime FromRequest<'a> for #ident #ty_generics #where_clause {
             type Error = #from_request_error;
 
-            async fn from_request(head: &'a Head, body: RequestBody) -> Result<Self, Self::Error> {
+            async fn from_request(head: &'a mut Head, body: RequestBody) -> Result<Self, Self::Error> {
                 let content_type = head.content_type().unwrap_or_default();
 
                 #(#from_request_bodies)*
