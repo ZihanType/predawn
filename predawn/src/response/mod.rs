@@ -1,4 +1,5 @@
 mod download;
+pub mod sse;
 mod to_header_value;
 
 pub use predawn_core::response::Response;

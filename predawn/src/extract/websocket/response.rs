@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, convert::Infallible, future::Future};
 
 use headers::{Connection, HeaderMapExt, SecWebsocketAccept, Upgrade};
-use http::{header, StatusCode};
+use http::{header::SEC_WEBSOCKET_PROTOCOL, StatusCode};
 use hyper_util::rt::TokioIo;
 use predawn_core::{
     api_response::ApiResponse,
@@ -15,7 +15,7 @@ use tokio_tungstenite::{tungstenite::protocol::Role, WebSocketStream};
 use super::{OnFailedUpgrade, WebSocket, WebSocketRequest};
 
 #[derive(Debug)]
-pub struct WebSocketResponse(pub(crate) Response);
+pub struct WebSocketResponse(Response);
 
 impl WebSocketResponse {
     pub(crate) fn new<F, C, Fut>(request: WebSocketRequest<F>, callback: C) -> WebSocketResponse
@@ -69,7 +69,7 @@ impl WebSocketResponse {
         headers.typed_insert(SecWebsocketAccept::from(sec_websocket_key));
 
         if let Some(protocol) = protocol {
-            headers.insert(header::SEC_WEBSOCKET_PROTOCOL, protocol);
+            headers.insert(SEC_WEBSOCKET_PROTOCOL, protocol);
         }
 
         WebSocketResponse(response)

@@ -7,7 +7,6 @@ use std::{
     time::Duration,
 };
 
-use futures_util::pin_mut;
 use hyper::{body::Incoming, service::service_fn};
 use hyper_util::{
     rt::{TokioExecutor, TokioIo},
@@ -174,7 +173,7 @@ async fn handle_conn<H: Handler + Clone>(
                 }
             }),
         );
-        pin_mut!(conn);
+        let mut conn = std::pin::pin!(conn);
 
         tokio::select! {
             _ = conn.as_mut() => {

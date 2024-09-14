@@ -1,7 +1,10 @@
 use std::{collections::BTreeMap, future::Future};
 
 use headers::{Connection, HeaderMapExt, SecWebsocketKey, SecWebsocketVersion, Upgrade};
-use http::{header, HeaderValue, Method};
+use http::{
+    header::{SEC_WEBSOCKET_PROTOCOL, UPGRADE},
+    HeaderValue, Method,
+};
 use hyper::upgrade::OnUpgrade;
 use predawn_core::{
     api_request::ApiRequestHead,
@@ -19,7 +22,7 @@ pub struct WebSocketRequest<F = DefaultOnFailedUpgrade> {
     /// The chosen protocol sent in the `Sec-WebSocket-Protocol` header of the response.
     pub(crate) protocol: Option<HeaderValue>,
     pub(crate) sec_websocket_key: SecWebsocketKey,
-    pub(crate) on_upgrade: hyper::upgrade::OnUpgrade,
+    pub(crate) on_upgrade: OnUpgrade,
     pub(crate) on_failed_upgrade: F,
     pub(crate) sec_websocket_protocol: Option<HeaderValue>,
 }
@@ -111,7 +114,7 @@ impl<'a> FromRequestHead<'a> for WebSocketRequest {
         let connection_contains_upgrade = head
             .headers
             .typed_get::<Connection>()
-            .map_or(false, |connection| connection.contains(header::UPGRADE));
+            .map_or(false, |connection| connection.contains(UPGRADE));
 
         if !connection_contains_upgrade {
             return Err(WebSocketError::ConnectionHeaderNotContainsUpgrade);
@@ -146,7 +149,7 @@ impl<'a> FromRequestHead<'a> for WebSocketRequest {
             .remove::<OnUpgrade>()
             .ok_or(WebSocketError::ConnectionNotUpgradable)?;
 
-        let sec_websocket_protocol = head.headers.get(header::SEC_WEBSOCKET_PROTOCOL).cloned();
+        let sec_websocket_protocol = head.headers.get(SEC_WEBSOCKET_PROTOCOL).cloned();
 
         Ok(Self {
             config: Default::default(),

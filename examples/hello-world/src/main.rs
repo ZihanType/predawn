@@ -1,8 +1,10 @@
 use std::{
     collections::{BTreeMap, BTreeSet},
+    convert::Infallible,
     time::Duration,
 };
 
+use futures_util::StreamExt;
 use http::StatusCode;
 use predawn::{
     any_map::AnyMap,
@@ -18,7 +20,7 @@ use predawn::{
     middleware::{TowerLayerCompatExt, Tracing},
     openapi::{self, SecurityRequirement},
     payload::{Form, Json},
-    response::Download,
+    response::{sse::EventStream, Download},
     response_error::ResponseError,
     route::Router,
     SecurityScheme, Tag, ToParameters, ToSchema,
@@ -236,6 +238,25 @@ impl MyController {
                 }
             }
         })
+    }
+
+    #[handler(paths = ["/event_stream"], methods = [GET])]
+    async fn event_stream(&self) -> EventStream<Person> {
+        EventStream::builder().build(
+            async_stream::stream! {
+                let names = ["Alice", "Bob", "Charlie", "David"];
+
+                for (i, name) in names.iter().enumerate() {
+                    yield Person {
+                        name: Some(name.to_string()),
+                        age: (i + 1) as u16 * 10,
+                    };
+
+                    tokio::time::sleep(Duration::from_secs(1)).await;
+                }
+            }
+            .map(Ok::<_, Infallible>),
+        )
     }
 }
 

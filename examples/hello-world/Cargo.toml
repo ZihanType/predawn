@@ -30,3 +30,5 @@ tower = { workspace = true, features = ["limit"] }
 tower-http = { workspace = true, features = ["compression-zstd"] }
 tracing-subscriber = { workspace = true, features = ["std", "fmt", "ansi"] }
 tracing-appender = { workspace = true }
+futures-util = { workspace = true }
+async-stream = { workspace = true }

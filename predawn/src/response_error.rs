@@ -515,6 +515,41 @@ impl ResponseError for WebSocketError {
     }
 }
 
+#[derive(Debug)]
+pub enum EventStreamError {
+    InvalidType,
+    InvalidId,
+    InvalidComment,
+}
+
+impl fmt::Display for EventStreamError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let field = match self {
+            Self::InvalidType => "event",
+            Self::InvalidId => "id",
+            Self::InvalidComment => "comment",
+        };
+
+        write!(
+            f,
+            "SSE `{}` field value cannot contain newlines or carriage returns",
+            field
+        )
+    }
+}
+
+impl Error for EventStreamError {}
+
+impl ResponseError for EventStreamError {
+    fn as_status(&self) -> StatusCode {
+        StatusCode::INTERNAL_SERVER_ERROR
+    }
+
+    fn status_codes() -> BTreeSet<StatusCode> {
+        [StatusCode::INTERNAL_SERVER_ERROR].into()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

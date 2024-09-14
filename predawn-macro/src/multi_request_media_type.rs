@@ -92,7 +92,6 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         # use predawn::response_error::InvalidContentType;
         # use predawn::openapi::{self, Schema, Parameter};
         # use predawn::__internal::indexmap::IndexMap;
-        # use predawn::__internal::http::header::CONTENT_TYPE;
         # use predawn::from_request::FromRequest;
         # use predawn::api_request::ApiRequest;
         # use predawn::request::Head;

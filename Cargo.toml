@@ -70,3 +70,6 @@ url = { version = "2", default-features = false }
 headers = { version = "0.4", default-features = false }
 tracing-appender = { version = "0.2", default-features = false }
 tokio-tungstenite = { version = "0.23", default-features = false }
+memchr = { version = "2", default-features = false }
+pin-project-lite = { version = "0.2", default-features = false }
+async-stream = { version = "0.3", default-features = false }

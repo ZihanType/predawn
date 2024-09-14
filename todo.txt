@@ -1,13 +1,13 @@
-SSE
-
-每个错误都加上location，打印Debug错误的时候，把每层错误都打印出来
-fn location(&self)->&'static Location<'static> {..}
+default not required
 
 serde_path_to_error
 serde_html_form query form
 path
 
 features
+
+每个错误都加上location，打印Debug错误的时候，把每层错误都打印出来
+fn location(&self)->&'static Location<'static> {..}
 
 tempfile
 
