@@ -1,5 +1,3 @@
-features
-
 每个错误都加上location，打印Debug错误的时候，把每层错误都打印出来
 fn location(&self)->&'static Location<'static> {..}
 
@@ -52,6 +50,7 @@ actual_type
 
 update references in doc comments by search `https://docs.rs`
 
+features
 refactor `Plugin`
 service attribute macro
 operation id [repeated]
