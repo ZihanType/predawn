@@ -49,6 +49,7 @@ headers = { workspace = true }
 tokio-tungstenite = { workspace = true, features = ["connect", "handshake"] }
 memchr = { workspace = true, features = ["std"] }
 pin-project-lite = { workspace = true }
+form_urlencoded = { workspace = true }
 
 # Optional dependencies
 tower = { workspace = true, optional = true }

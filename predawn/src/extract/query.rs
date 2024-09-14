@@ -23,7 +23,9 @@ where
     type Error = QueryError;
 
     async fn from_request_head(head: &'a mut Head) -> Result<Self, Self::Error> {
-        match serde_html_form::from_str(head.uri.query().unwrap_or_default()) {
+        match crate::util::deserialize_form_from_bytes(
+            head.uri.query().unwrap_or_default().as_bytes(),
+        ) {
             Ok(o) => Ok(Query(o)),
             Err(e) => Err(QueryError(e)),
         }

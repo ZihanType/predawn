@@ -40,7 +40,7 @@ where
         if <Self as RequestMediaType>::check_content_type(content_type) {
             let bytes = Bytes::from_request(head, body).await?;
 
-            match serde_html_form::from_bytes::<T>(&bytes) {
+            match crate::util::deserialize_form_from_bytes(&bytes) {
                 Ok(value) => Ok(Form(value)),
                 Err(err) => Err(ReadFormError::FormDeserializeError(err)),
             }
@@ -74,7 +74,7 @@ where
     type Error = WriteFormError;
 
     fn into_response(self) -> Result<Response, Self::Error> {
-        let mut response = serde_html_form::to_string(&self.0)
+        let mut response = crate::util::serialize_form_from_value(&self.0)
             .map_err(WriteFormError)?
             .into_response()
             .unwrap_or_else(|a: Infallible| match a {});

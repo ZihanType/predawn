@@ -43,7 +43,7 @@ where
         if <Self as RequestMediaType>::check_content_type(content_type) {
             let bytes = Bytes::from_request(head, body).await?;
 
-            match crate::util::from_bytes(&bytes) {
+            match crate::util::deserialize_json_from_bytes(&bytes) {
                 Ok(o) => Ok(Json(o)),
                 Err(e) => Err(ReadJsonError::DeserializeJsonError(e)),
             }

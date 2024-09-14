@@ -50,7 +50,7 @@ impl<T: Send + DeserializeOwned> ParseField for JsonField<T> {
         )
         .await??;
 
-        match crate::util::from_bytes(&bytes) {
+        match crate::util::deserialize_json_from_bytes(&bytes) {
             Ok(o) => Ok(Ok(JsonField(o))),
             Err(e) => Err(MultipartError::DeserializeJson { name, error: e }),
         }

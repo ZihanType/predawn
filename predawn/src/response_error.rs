@@ -46,7 +46,7 @@ impl ResponseError for MatchError {
 
 #[derive(Debug, thiserror::Error)]
 #[error("failed to deserialize query data: {0}")]
-pub struct QueryError(#[from] pub serde_html_form::de::Error);
+pub struct QueryError(#[from] pub(crate) serde_path_to_error::Error<serde_html_form::de::Error>);
 
 impl ResponseError for QueryError {
     fn as_status(&self) -> StatusCode {
@@ -132,7 +132,7 @@ pub enum ReadFormError {
     #[error("expected request with `{}: {}`", CONTENT_TYPE, <Form<()> as MediaType>::MEDIA_TYPE)]
     InvalidFormContentType,
     #[error("failed to deserialize form data: {0}")]
-    FormDeserializeError(#[from] serde_html_form::de::Error),
+    FormDeserializeError(#[from] serde_path_to_error::Error<serde_html_form::de::Error>),
 }
 
 impl ResponseError for ReadFormError {
@@ -154,7 +154,9 @@ impl ResponseError for ReadFormError {
 
 #[derive(Debug, thiserror::Error)]
 #[error("failed to serialize form data: {0}")]
-pub struct WriteFormError(#[from] pub serde_html_form::ser::Error);
+pub struct WriteFormError(
+    #[from] pub(crate) serde_path_to_error::Error<serde_html_form::ser::Error>,
+);
 
 impl ResponseError for WriteFormError {
     fn as_status(&self) -> StatusCode {

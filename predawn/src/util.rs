@@ -1,12 +1,14 @@
 use predawn_core::openapi::{
     Schema, SchemaData, SchemaKind, StringFormat, StringType, Type, VariantOrUnknownOrEmpty,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::error::Category;
 
 use crate::response_error::DeserializeJsonError;
 
-pub(crate) fn from_bytes<'de, T>(bytes: &'de [u8]) -> Result<T, DeserializeJsonError>
+pub(crate) fn deserialize_json_from_bytes<'de, T>(
+    bytes: &'de [u8],
+) -> Result<T, DeserializeJsonError>
 where
     T: Deserialize<'de>,
 {
@@ -28,6 +30,33 @@ where
             Category::Eof => DeserializeJsonError::EofError(err),
         }
     })
+}
+
+pub(crate) fn deserialize_form_from_bytes<'de, T>(
+    bytes: &'de [u8],
+) -> Result<T, serde_path_to_error::Error<serde_html_form::de::Error>>
+where
+    T: Deserialize<'de>,
+{
+    let deserializer = serde_html_form::Deserializer::new(form_urlencoded::parse(bytes));
+    serde_path_to_error::deserialize(deserializer)
+}
+
+pub(crate) fn serialize_form_from_value<T>(
+    value: &T,
+) -> Result<String, serde_path_to_error::Error<serde_html_form::ser::Error>>
+where
+    T: Serialize,
+{
+    let mut target = String::new();
+
+    let mut urlencoder = form_urlencoded::Serializer::for_suffix(&mut target, 0);
+    let serializer = serde_html_form::Serializer::new(&mut urlencoder);
+
+    serde_path_to_error::serialize(value, serializer)?;
+    urlencoder.finish();
+
+    Ok(target)
 }
 
 pub(crate) fn binary_schema(title: &'static str) -> Schema {
