@@ -192,6 +192,19 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
         }
     };
 
+    let push_required = if add_default.is_empty() {
+        quote_use! {
+            # use std::string::ToString;
+            # use predawn::ToSchema;
+
+            if <#ty as ToSchema>::REQUIRED {
+                obj.required.push(ToString::to_string(#ident));
+            }
+        }
+    } else {
+        TokenStream::new()
+    };
+
     let expand = quote_use! {
         # use std::string::ToString;
         # use predawn::ToSchema;
@@ -201,9 +214,7 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
 
             obj.properties.insert(ToString::to_string(#ident), schema);
 
-            if <#ty as ToSchema>::REQUIRED {
-                obj.required.push(ToString::to_string(#ident));
-            }
+            #push_required
         }
     };
 

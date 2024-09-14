@@ -1,5 +1,3 @@
-default not required
-
 serde_path_to_error
 serde_html_form query form
 path

@@ -125,6 +125,12 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
         }
     };
 
+    let required = if add_default.is_empty() {
+        quote! { <#ty as ::predawn::ToSchema>::REQUIRED }
+    } else {
+        quote! { false }
+    };
+
     let expand = quote_use! {
         # use core::default::Default;
         # use std::string::ToString;
@@ -136,7 +142,7 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
         let param = ParameterData {
             name: ToString::to_string(#ident),
             description: #description,
-            required: <#ty as ToSchema>::REQUIRED,
+            required: #required,
             deprecated: Default::default(),
             format: ParameterSchemaOrContent::Schema(schema),
             example: Default::default(),
