@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{borrow::Cow, collections::BTreeMap};
 
 use openapiv3::{AnySchema, NumberType, Schema, SchemaData, SchemaKind, Type};
 use serde_json::{Map, Number, Value};
@@ -7,10 +7,14 @@ use super::forward_impl;
 use crate::ToSchema;
 
 impl ToSchema for Value {
+    fn title() -> Cow<'static, str> {
+        "Any".into()
+    }
+
     fn schema(_: &mut BTreeMap<String, Schema>, _: &mut Vec<String>) -> Schema {
         Schema {
             schema_data: SchemaData {
-                title: Some("Any".to_string()),
+                title: Some(Self::title().into()),
                 ..Default::default()
             },
             schema_kind: SchemaKind::Any(AnySchema::default()),
@@ -21,10 +25,14 @@ impl ToSchema for Value {
 forward_impl!(Map<String, Value> => BTreeMap<String, Value>);
 
 impl ToSchema for Number {
+    fn title() -> Cow<'static, str> {
+        "Number".into()
+    }
+
     fn schema(_: &mut BTreeMap<String, Schema>, _: &mut Vec<String>) -> Schema {
         Schema {
             schema_data: SchemaData {
-                title: Some("Number".to_string()),
+                title: Some(Self::title().into()),
                 ..Default::default()
             },
             schema_kind: SchemaKind::Type(Type::Number(NumberType::default())),

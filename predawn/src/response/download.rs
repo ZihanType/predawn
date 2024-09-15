@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{borrow::Cow, collections::BTreeMap};
 
 use http::{
     header::{CONTENT_DISPOSITION, CONTENT_TYPE},
@@ -120,18 +120,21 @@ impl<T: MediaType + ResponseMediaType> ApiResponse for Download<T> {
 }
 
 impl<T> ToSchema for Download<T> {
-    fn name() -> String {
+    fn title() -> Cow<'static, str> {
+        "Download".into()
+    }
+
+    fn key() -> String {
         let type_name = std::any::type_name::<Self>();
 
         type_name
             .find('<')
-            .map_or(type_name, |end| &type_name[..end])
+            .map_or(type_name, |lt_token| &type_name[..lt_token])
             .replace("::", ".")
-            .to_string()
     }
 
     fn schema(_: &mut BTreeMap<String, Schema>, _: &mut Vec<String>) -> openapi::Schema {
-        crate::util::binary_schema("Download")
+        crate::util::binary_schema(Self::title())
     }
 }
 

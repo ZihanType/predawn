@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{borrow::Cow, collections::BTreeMap};
 
 use openapiv3::{AdditionalProperties, ObjectType, Schema, SchemaData, SchemaKind, Type};
 
@@ -10,11 +10,11 @@ macro_rules! map_impl {
         where
             V: ToSchema
         {
-            fn schema(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> Schema {
-                let schema = V::schema(schemas, schemas_in_progress);
-                let title = schema.schema_data.title.as_deref().unwrap_or("Unknown");
-                let title = format!("Map<String, {}>", title);
+            fn title() -> Cow<'static, str> {
+                format!("Map<String, {}>", V::title()).into()
+            }
 
+            fn schema(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> Schema {
                 let ty = ObjectType {
                     additional_properties: Some(AdditionalProperties::Schema(Box::new(V::schema_ref(schemas, schemas_in_progress)))),
                     ..Default::default()
@@ -22,7 +22,7 @@ macro_rules! map_impl {
 
                 Schema {
                     schema_data: SchemaData {
-                        title: Some(title),
+                        title: Some(Self::title().into()),
                         ..Default::default()
                     },
                     schema_kind: SchemaKind::Type(Type::Object(ty)),

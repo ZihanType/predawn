@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use predawn_core::openapi::{
     Schema, SchemaData, SchemaKind, StringFormat, StringType, Type, VariantOrUnknownOrEmpty,
 };
@@ -59,7 +61,7 @@ where
     Ok(target)
 }
 
-pub(crate) fn binary_schema(title: &'static str) -> Schema {
+pub(crate) fn binary_schema(title: Cow<'static, str>) -> Schema {
     let ty = StringType {
         format: VariantOrUnknownOrEmpty::Item(StringFormat::Binary),
         ..Default::default()
@@ -67,7 +69,7 @@ pub(crate) fn binary_schema(title: &'static str) -> Schema {
 
     Schema {
         schema_data: SchemaData {
-            title: Some(title.to_string()),
+            title: Some(title.into()),
             ..Default::default()
         },
         schema_kind: SchemaKind::Type(Type::String(ty)),

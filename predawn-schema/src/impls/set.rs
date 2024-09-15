@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{borrow::Cow, collections::BTreeMap};
 
 use openapiv3::{ArrayType, Schema, SchemaData, SchemaKind, Type};
 
@@ -10,11 +10,11 @@ macro_rules! set_impl {
         where
             T: ToSchema
         {
-            fn schema(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> Schema {
-                let schema = T::schema(schemas, schemas_in_progress);
-                let title = schema.schema_data.title.as_deref().unwrap_or("Unknown");
-                let title = format!("Set<{}>", title);
+            fn title() -> Cow<'static, str> {
+                format!("Set<{}>", T::title()).into()
+            }
 
+            fn schema(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> Schema {
                 let ty = ArrayType {
                     items: Some(T::schema_ref_box(schemas, schemas_in_progress)),
                     min_items: None,
@@ -24,7 +24,7 @@ macro_rules! set_impl {
 
                 Schema {
                     schema_data: SchemaData {
-                        title: Some(title),
+                        title: Some(Self::title().into()),
                         ..Default::default()
                     },
                     schema_kind: SchemaKind::Type(Type::Array(ty)),

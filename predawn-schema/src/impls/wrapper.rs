@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{borrow::Cow, collections::BTreeMap};
 
 use openapiv3::Schema;
 
@@ -10,6 +10,10 @@ macro_rules! wrapper_impl {
         where
             T: ToSchema
         {
+            fn title() -> Cow<'static, str> {
+                T::title()
+            }
+
             fn schema(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> Schema {
                 T::schema(schemas, schemas_in_progress)
             }

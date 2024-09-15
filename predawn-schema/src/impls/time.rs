@@ -1,4 +1,5 @@
 use std::{
+    borrow::Cow,
     collections::BTreeMap,
     time::{Duration, SystemTime},
 };
@@ -8,6 +9,10 @@ use openapiv3::{ObjectType, Schema, SchemaData, SchemaKind, Type};
 use crate::ToSchema;
 
 impl ToSchema for SystemTime {
+    fn title() -> Cow<'static, str> {
+        "SystemTime".into()
+    }
+
     fn schema(
         schemas: &mut BTreeMap<String, Schema>,
         schemas_in_progress: &mut Vec<String>,
@@ -31,7 +36,7 @@ impl ToSchema for SystemTime {
 
         Schema {
             schema_data: SchemaData {
-                title: Some("SystemTime".to_string()),
+                title: Some(Self::title().into()),
                 ..Default::default()
             },
             schema_kind: SchemaKind::Type(Type::Object(ty)),
@@ -40,6 +45,10 @@ impl ToSchema for SystemTime {
 }
 
 impl ToSchema for Duration {
+    fn title() -> Cow<'static, str> {
+        "Duration".into()
+    }
+
     fn schema(
         schemas: &mut BTreeMap<String, Schema>,
         schemas_in_progress: &mut Vec<String>,
@@ -63,7 +72,7 @@ impl ToSchema for Duration {
 
         Schema {
             schema_data: SchemaData {
-                title: Some("Duration".to_string()),
+                title: Some(Self::title().into()),
                 ..Default::default()
             },
             schema_kind: SchemaKind::Type(Type::Object(ty)),

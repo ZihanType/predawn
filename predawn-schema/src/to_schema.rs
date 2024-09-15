@@ -1,13 +1,15 @@
-use std::collections::BTreeMap;
+use std::{borrow::Cow, collections::BTreeMap};
 
 use openapiv3::{ReferenceOr, Schema};
 
 pub trait ToSchema {
     const REQUIRED: bool = true;
 
-    fn name() -> String {
+    fn key() -> String {
         std::any::type_name::<Self>().replace("::", ".")
     }
+
+    fn title() -> Cow<'static, str>;
 
     fn schema_ref(
         schemas: &mut BTreeMap<String, Schema>,
@@ -36,25 +38,25 @@ fn reference<S, T>(
 where
     S: ToSchema + ?Sized,
 {
-    let name = S::name();
+    let key = S::key();
 
     let reference = ReferenceOr::Reference {
-        reference: format!("#/components/schemas/{}", name),
+        reference: format!("#/components/schemas/{}", key),
     };
 
-    if !schemas.contains_key(&name) {
+    if !schemas.contains_key(&key) {
         // nested types
-        if schemas_in_progress.contains(&name) {
+        if schemas_in_progress.contains(&key) {
             return reference;
         }
 
-        schemas_in_progress.push(name);
+        schemas_in_progress.push(key);
         let schema = S::schema(schemas, schemas_in_progress);
-        let name = schemas_in_progress.pop().expect("must have a name");
+        let key = schemas_in_progress.pop().expect("must have a name");
 
-        debug_assert_eq!(name, S::name());
+        debug_assert_eq!(key, S::key());
 
-        schemas.insert(name, schema);
+        schemas.insert(key, schema);
     }
 
     reference

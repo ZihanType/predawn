@@ -1,4 +1,5 @@
 use std::{
+    borrow::Cow,
     collections::BTreeMap,
     num::{
         NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroIsize, NonZeroU128,
@@ -16,10 +17,14 @@ use crate::ToSchema;
 macro_rules! nonzero_signed_impl {
     ($ty:ty, $format:literal) => {
         impl ToSchema for $ty {
+            fn title() -> Cow<'static, str> {
+                stringify!($ty).into()
+            }
+
             fn schema(_: &mut BTreeMap<String, Schema>, _: &mut Vec<String>) -> Schema {
                 Schema {
                     schema_data: SchemaData {
-                        title: Some(stringify!($ty).to_string()),
+                        title: Some(Self::title().into()),
                         ..Default::default()
                     },
                     schema_kind: SchemaKind::Any(AnySchema {
@@ -52,10 +57,14 @@ nonzero_signed_impl!(NonZeroIsize, "int");
 macro_rules! nonzero_unsigned_impl {
     ($ty:ty, $format:literal) => {
         impl ToSchema for $ty {
+            fn title() -> Cow<'static, str> {
+                stringify!($ty).into()
+            }
+
             fn schema(_: &mut BTreeMap<String, Schema>, _: &mut Vec<String>) -> Schema {
                 Schema {
                     schema_data: SchemaData {
-                        title: Some(stringify!($ty).to_string()),
+                        title: Some(Self::title().into()),
                         ..Default::default()
                     },
                     schema_kind: SchemaKind::Type(Type::Integer(IntegerType {

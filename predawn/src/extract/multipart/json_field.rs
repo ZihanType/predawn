@@ -1,8 +1,11 @@
-use std::collections::BTreeMap;
+use std::{borrow::Cow, collections::BTreeMap};
 
 use bytes::Bytes;
 use multer::Field;
-use predawn_core::{impl_deref, openapi::Schema};
+use predawn_core::{
+    impl_deref,
+    openapi::{ReferenceOr, Schema},
+};
 use predawn_schema::ToSchema;
 use serde::de::DeserializeOwned;
 
@@ -15,8 +18,28 @@ pub struct JsonField<T>(pub T);
 impl_deref!(JsonField);
 
 impl<T: ToSchema> ToSchema for JsonField<T> {
-    fn name() -> String {
-        T::name()
+    const REQUIRED: bool = T::REQUIRED;
+
+    fn key() -> String {
+        T::key()
+    }
+
+    fn title() -> Cow<'static, str> {
+        T::title()
+    }
+
+    fn schema_ref(
+        schemas: &mut BTreeMap<String, Schema>,
+        schemas_in_progress: &mut Vec<String>,
+    ) -> ReferenceOr<Schema> {
+        T::schema_ref(schemas, schemas_in_progress)
+    }
+
+    fn schema_ref_box(
+        schemas: &mut BTreeMap<String, Schema>,
+        schemas_in_progress: &mut Vec<String>,
+    ) -> ReferenceOr<Box<Schema>> {
+        T::schema_ref_box(schemas, schemas_in_progress)
     }
 
     fn schema(

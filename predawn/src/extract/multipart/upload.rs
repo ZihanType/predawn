@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{borrow::Cow, collections::BTreeMap};
 
 use bytes::Bytes;
 use multer::Field;
@@ -47,8 +47,12 @@ impl Upload {
 }
 
 impl ToSchema for Upload {
+    fn title() -> Cow<'static, str> {
+        "Upload".into()
+    }
+
     fn schema(_: &mut BTreeMap<String, Schema>, _: &mut Vec<String>) -> Schema {
-        crate::util::binary_schema("Upload")
+        crate::util::binary_schema(Self::title())
     }
 }
 

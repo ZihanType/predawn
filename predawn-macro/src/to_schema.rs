@@ -1,8 +1,10 @@
 use from_attr::{AttrsValue, FromAttr};
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{format_ident, quote};
 use quote_use::quote_use;
-use syn::{punctuated::Punctuated, Attribute, DeriveInput, Field, Generics, Ident, Token};
+use syn::{
+    punctuated::Punctuated, Attribute, DeriveInput, Field, GenericParam, Generics, Ident, Token,
+};
 
 use crate::{
     schema_attr::SchemaAttr,
@@ -57,7 +59,7 @@ fn generate_named_struct(
         return Err(e);
     }
 
-    let schema_title = generate_schema_title(&ident.to_string(), &generics);
+    let title_fn = generate_title_fn(ident.to_string(), &generics);
 
     let description = util::extract_description(&attrs);
     let add_description = if description.is_empty() {
@@ -77,11 +79,11 @@ fn generate_named_struct(
         # use predawn::openapi::{Schema, ObjectType, SchemaData, SchemaKind, Type};
 
         impl #impl_generics ToSchema for #ident #ty_generics #where_clause {
+            #title_fn
+
             fn schema(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> Schema {
                 let mut data = SchemaData::default();
-
-                let title = #schema_title;
-                data.title = Some(title);
+                data.title = Some(Self::title().into());
 
                 #add_description
 
@@ -221,96 +223,68 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
     Ok(expand)
 }
 
-fn generate_schema_title(name: &str, generics: &Generics) -> TokenStream {
+fn generate_title_fn(ident: String, generics: &Generics) -> TokenStream {
     let mut have_first = false;
+    let mut variable_definitions = Vec::new();
+    let mut variable_idents = Vec::new();
+    let mut generic_slots = String::new();
 
-    let push_types = generics
-        .params
-        .iter()
-        .filter_map(|param| match param {
-            syn::GenericParam::Type(ty) => {
+    generics.params.iter().enumerate().for_each(|(idx, param)| {
+        let var_ident = format_ident!("var{}", idx);
+
+        let variable_definition = match param {
+            GenericParam::Lifetime(_) => return,
+            GenericParam::Type(ty) => {
                 let ty = &ty.ident;
 
-                let extract_title = quote_use! {
+                quote_use! {
                     # use predawn::ToSchema;
 
-                    let schema = <#ty as ToSchema>::schema(schemas, schemas_in_progress);
-                    let title = schema.schema_data.title.as_deref().unwrap_or("Unknown");
-                };
-
-                let push_comma = if !have_first {
-                    have_first = true;
-
-                    TokenStream::new()
-                } else {
-                    quote! {
-                        name.push_str(", ");
-                    }
-                };
-
-                let push_title = quote! {
-                    name.push_str(title);
-                };
-
-                Some(quote! {
-                    {
-                        #extract_title
-                        #push_comma
-                        #push_title
-                    }
-                })
+                    let #var_ident = <#ty as ToSchema>::title();
+                }
             }
-            syn::GenericParam::Const(cns) => {
+            GenericParam::Const(cns) => {
                 let cns = &cns.ident;
 
-                let push_comma = if !have_first {
-                    have_first = true;
-
-                    TokenStream::new()
-                } else {
-                    quote! {
-                        name.push_str(", ");
-                    }
-                };
-
-                let push_title = quote_use! {
-                    # use std::string::ToString;
-
-                    name.push_str(&<#cns as ToString>::to_string());
-                };
-
-                Some(quote! {
-                    {
-                        #push_comma
-                        #push_title
-                    }
-                })
+                quote! {
+                    let #var_ident = #cns;
+                }
             }
-            syn::GenericParam::Lifetime(_) => None,
-        })
-        .collect::<Vec<_>>();
+        };
 
-    if push_types.is_empty() {
-        quote_use! {
-            # use std::string::ToString;
+        variable_definitions.push(variable_definition);
 
-            {
-                ToString::to_string(#name)
-            }
+        variable_idents.push(var_ident);
+
+        let slot = if !have_first {
+            have_first = true;
+            "{}"
+        } else {
+            ", {}"
+        };
+        generic_slots.push_str(slot);
+    });
+
+    let body = if variable_definitions.is_empty() {
+        quote! {
+            ::std::borrow::Cow::Borrowed(#ident)
         }
     } else {
-        quote_use! {
-            # use std::string::ToString;
+        let mut template = String::from(&ident);
+        template.push('<');
+        template.push_str(&generic_slots);
+        template.push('>');
 
-            {
-                let mut name = ToString::to_string(#name);
+        quote! {
+            ::std::format!(#template, #(#variable_idents),*).into()
+        }
+    };
 
-                name.push('<');
-                #(#push_types)*
-                name.push('>');
+    quote! {
+        fn title() -> ::std::borrow::Cow<'static, str> {
+            #(#variable_definitions)*
 
-                name
-            }
+            #body
         }
     }
 }
@@ -329,8 +303,7 @@ fn generate_only_unit(
     ident: Ident,
     variants: Vec<UnitVariant>,
 ) -> syn::Result<TokenStream> {
-    let title = ident.to_string();
-    let title = util::generate_string_expr(&title);
+    let title_literal = ident.to_string();
 
     let description = util::extract_description(&attrs);
     let add_description = if description.is_empty() {
@@ -364,14 +337,18 @@ fn generate_only_unit(
 
     let expand = quote_use! {
         # use std::collections::BTreeMap;
+        # use std::borrow::Cow;
         # use predawn::ToSchema;
         # use predawn::openapi::{Schema, StringType, SchemaData, SchemaKind, Type};
 
         impl ToSchema for #ident {
+            fn title() -> Cow<'static, str> {
+                #title_literal.into()
+            }
+
             fn schema(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> Schema {
                 let mut data = SchemaData::default();
-
-                data.title = Some(#title);
+                data.title = Some(Self::title().into());
 
                 #add_description
 
@@ -460,7 +437,7 @@ fn generate_normal_enum(
         return Err(e);
     }
 
-    let schema_title = generate_schema_title(&ident.to_string(), &generics);
+    let title_fn = generate_title_fn(ident.to_string(), &generics);
 
     let description = util::extract_description(&attrs);
     let add_description = if description.is_empty() {
@@ -480,11 +457,11 @@ fn generate_normal_enum(
         # use predawn::openapi::{Schema, ObjectType, SchemaData, SchemaKind, Type};
 
         impl #impl_generics ToSchema for #ident #ty_generics #where_clause {
+            #title_fn
+
             fn schema(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> Schema {
                 let mut data = SchemaData::default();
-
-                let title = #schema_title;
-                data.title = Some(title);
+                data.title = Some(Self::title().into());
 
                 #add_description
 

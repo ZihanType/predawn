@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{borrow::Cow, collections::BTreeMap};
 
 use openapiv3::{
     ArrayType, BooleanType, IntegerType, NumberType, Schema, SchemaData, SchemaKind, StringType,
@@ -9,10 +9,14 @@ use paste::paste;
 use crate::ToSchema;
 
 impl ToSchema for bool {
+    fn title() -> Cow<'static, str> {
+        "bool".into()
+    }
+
     fn schema(_: &mut BTreeMap<String, Schema>, _: &mut Vec<String>) -> Schema {
         Schema {
             schema_data: SchemaData {
-                title: Some("bool".to_string()),
+                title: Some(Self::title().into()),
                 ..Default::default()
             },
             schema_kind: SchemaKind::Type(Type::Boolean(BooleanType::default())),
@@ -21,10 +25,14 @@ impl ToSchema for bool {
 }
 
 impl ToSchema for char {
+    fn title() -> Cow<'static, str> {
+        "char".into()
+    }
+
     fn schema(_: &mut BTreeMap<String, Schema>, _: &mut Vec<String>) -> Schema {
         Schema {
             schema_data: SchemaData {
-                title: Some("char".to_string()),
+                title: Some(Self::title().into()),
                 ..Default::default()
             },
             schema_kind: SchemaKind::Type(Type::String(StringType {
@@ -39,10 +47,14 @@ impl ToSchema for char {
 macro_rules! simple_impl {
     ($ty:ty, $ty_variant:ident, $format:literal) => {
         impl ToSchema for $ty {
+            fn title() -> Cow<'static, str> {
+                stringify!($ty).into()
+            }
+
             fn schema(_: &mut BTreeMap<String, Schema>, _: &mut Vec<String>) -> Schema {
                 Schema {
                     schema_data: SchemaData {
-                        title: Some(stringify!($ty).to_string()),
+                        title: Some(Self::title().into()),
                         ..Default::default()
                     },
                     schema_kind: paste! {
@@ -69,10 +81,14 @@ simple_impl!(isize, Integer, "int");
 macro_rules! unsigned_impl {
     ($ty:ty, $format:literal) => {
         impl ToSchema for $ty {
+            fn title() -> Cow<'static, str> {
+                stringify!($ty).into()
+            }
+
             fn schema(_: &mut BTreeMap<String, Schema>, _: &mut Vec<String>) -> Schema {
                 Schema {
                     schema_data: SchemaData {
-                        title: Some(stringify!($ty).to_string()),
+                        title: Some(Self::title().into()),
                         ..Default::default()
                     },
                     schema_kind: SchemaKind::Type(Type::Integer(IntegerType {
@@ -94,14 +110,14 @@ unsigned_impl!(u128, "uint128");
 unsigned_impl!(usize, "uint");
 
 impl<T: ToSchema, const N: usize> ToSchema for [T; N] {
+    fn title() -> Cow<'static, str> {
+        format!("Array{}<{}>", N, T::title()).into()
+    }
+
     fn schema(
         schemas: &mut BTreeMap<String, Schema>,
         schemas_in_progress: &mut Vec<String>,
     ) -> Schema {
-        let schema = T::schema(schemas, schemas_in_progress);
-        let title = schema.schema_data.title.as_deref().unwrap_or("Unknown");
-        let title = format!("Array{}<{}>", N, title);
-
         let ty = ArrayType {
             items: Some(T::schema_ref_box(schemas, schemas_in_progress)),
             min_items: Some(N),
@@ -111,7 +127,7 @@ impl<T: ToSchema, const N: usize> ToSchema for [T; N] {
 
         Schema {
             schema_data: SchemaData {
-                title: Some(title),
+                title: Some(Self::title().into()),
                 ..Default::default()
             },
             schema_kind: SchemaKind::Type(Type::Array(ty)),
