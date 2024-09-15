@@ -34,6 +34,15 @@ pub struct EventStream<T> {
 }
 
 impl<T> EventStream<T> {
+    pub fn new<S>(stream: S) -> Self
+    where
+        T: Serialize + Send + 'static,
+        S: TryStream<Ok = T> + Send + 'static,
+        S::Error: Into<BoxError>,
+    {
+        Self::builder().build(stream)
+    }
+
     pub fn builder() -> EventStreamBuilder<DefaultOnCreateEvent<T>> {
         EventStreamBuilder {
             keep_alive: None,
@@ -185,12 +194,12 @@ where
     }
 
     let stream = SseStream {
-        stream: stream.map_err(Into::into).and_then(|t| async move {
-            let data = C::data(&t);
+        stream: stream.map_err(Into::into).and_then(|item| async move {
+            let data = C::data(&item);
             let data = serde_json::to_string(data).map_err(Box::new)?;
 
             let mut evt = Event::data(data);
-            C::modify_event(&t, &mut evt);
+            C::modify_event(&item, &mut evt);
 
             let bytes = evt.as_bytes().map_err(Box::new)?;
 

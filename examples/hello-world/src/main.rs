@@ -242,7 +242,7 @@ impl MyController {
 
     #[handler(paths = ["/event_stream"], methods = [GET])]
     async fn event_stream(&self) -> EventStream<Person> {
-        EventStream::builder().build(
+        EventStream::new(
             async_stream::stream! {
                 let names = ["Alice", "Bob", "Charlie", "David"];
 
