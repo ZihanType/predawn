@@ -6,10 +6,10 @@ use crate::response_error::EventStreamError;
 
 #[derive(Debug, Clone)]
 pub struct Event {
-    ty: String,
-    id: String,
-    data: String,
-    comment: String,
+    ty: Option<String>,
+    id: Option<String>,
+    data: Option<String>,
+    comment: Option<String>,
     retry: Option<Duration>,
 }
 
@@ -19,7 +19,7 @@ impl Event {
             Event {
                 ty: Default::default(),
                 id: Default::default(),
-                data,
+                data: Some(data),
                 comment: Default::default(),
                 retry: Default::default(),
             }
@@ -30,7 +30,7 @@ impl Event {
 
     pub fn ty<T: Into<String>>(&mut self, ty: T) -> &mut Self {
         fn inner(evt: &mut Event, ty: String) -> &mut Event {
-            evt.ty = ty;
+            evt.ty = Some(ty);
             evt
         }
 
@@ -39,7 +39,7 @@ impl Event {
 
     pub fn id<T: Into<String>>(&mut self, id: T) -> &mut Self {
         fn inner(evt: &mut Event, id: String) -> &mut Event {
-            evt.id = id;
+            evt.id = Some(id);
             evt
         }
 
@@ -48,7 +48,7 @@ impl Event {
 
     pub fn comment<T: Into<String>>(&mut self, comment: T) -> &mut Self {
         fn inner(evt: &mut Event, comment: String) -> &mut Event {
-            evt.comment = comment;
+            evt.comment = Some(comment);
             evt
         }
 
@@ -83,7 +83,7 @@ impl Event {
 
         let mut buf = BytesMut::new();
 
-        if !ty.is_empty() {
+        if let Some(ty) = ty {
             let bytes = ty.as_bytes();
 
             if valid(bytes) {
@@ -93,7 +93,7 @@ impl Event {
             }
         }
 
-        if !id.is_empty() {
+        if let Some(id) = id {
             let bytes = id.as_bytes();
 
             if valid(bytes) {
@@ -103,7 +103,7 @@ impl Event {
             }
         }
 
-        if !comment.is_empty() {
+        if let Some(comment) = comment {
             let bytes = comment.as_bytes();
 
             if valid(bytes) {
@@ -113,7 +113,7 @@ impl Event {
             }
         }
 
-        if !data.is_empty() {
+        if let Some(data) = data {
             for line in memchr_split(b'\n', data.as_bytes()) {
                 append_line(&mut buf, "data", line);
             }
@@ -137,7 +137,7 @@ impl Event {
             ty: Default::default(),
             id: Default::default(),
             data: Default::default(),
-            comment,
+            comment: Some(comment),
             retry: Default::default(),
         }
     }

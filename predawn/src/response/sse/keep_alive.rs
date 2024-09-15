@@ -21,7 +21,7 @@ pub struct KeepAlive {
 impl Default for KeepAlive {
     fn default() -> Self {
         Self {
-            comment: String::from(": keep-alive\n\n"),
+            comment: String::new(),
             max_interval: Duration::from_secs(15),
         }
     }
