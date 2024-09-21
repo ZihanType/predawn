@@ -129,7 +129,7 @@ pub(crate) fn generate(
         # use predawn::handler::DynHandler;
         # use predawn::normalized_path::NormalizedPath;
         # use predawn::__internal::indexmap::IndexMap;
-        # use predawn::__internal::http::Method;
+        # use predawn::http::Method;
         # use predawn::__internal::rudi::Context;
         # use predawn::openapi::{SecurityScheme, Operation, Tag, Schema};
 
@@ -582,7 +582,7 @@ fn generate_single_fn_impl<'a>(
                 let uppercase_method = method.as_uppercase_ident();
 
                 quote_use! {
-                    # use predawn::__internal::http::Method;
+                    # use predawn::http::Method;
 
                     handlers.push((Method::#uppercase_method, #fn_name.clone()));
                     operations.push((Method::#uppercase_method, operation.clone()));

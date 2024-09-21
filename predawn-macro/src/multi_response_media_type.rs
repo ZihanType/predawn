@@ -77,7 +77,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         # use predawn::{SingleResponse, MultiResponse};
         # use predawn::into_response::IntoResponse;
         # use predawn::api_response::ApiResponse;
-        # use predawn::__internal::http::StatusCode;
+        # use predawn::http::StatusCode;
         # use predawn::__internal::indexmap::IndexMap;
 
         impl #impl_generics MultiResponseMediaType for #ident #ty_generics #where_clause {

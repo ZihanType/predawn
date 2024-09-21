@@ -26,6 +26,7 @@ pub mod test_client;
 mod traits;
 pub(crate) mod util;
 
+pub use http;
 pub use predawn_core::{
     api_request, api_response, body, either, error, error_stack, from_request, into_response,
     location,
@@ -48,7 +49,6 @@ pub use self::traits::{SecurityScheme, Tag, ToParameters};
 
 #[doc(hidden)]
 pub mod __internal {
-    pub use http;
     pub use indexmap;
     pub use paste;
     pub use rudi;

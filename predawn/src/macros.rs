@@ -65,7 +65,7 @@ macro_rules! define_from_request_error {
         }
 
         impl $crate::response_error::ResponseError for $name {
-            fn as_status(&self) -> $crate::__internal::http::StatusCode {
+            fn as_status(&self) -> $crate::http::StatusCode {
                 match self {
                     $(
                         $name::$error(e) => <$error as $crate::response_error::ResponseError>::as_status(e),
@@ -78,7 +78,7 @@ macro_rules! define_from_request_error {
                 }
             }
 
-            fn status_codes(codes: &mut ::std::collections::BTreeSet<$crate::__internal::http::StatusCode>) {
+            fn status_codes(codes: &mut ::std::collections::BTreeSet<$crate::http::StatusCode>) {
                 $(
                     <$error as $crate::response_error::ResponseError>::status_codes(codes);
                 )+
@@ -170,7 +170,7 @@ macro_rules! define_into_response_error {
         }
 
         impl $crate::response_error::ResponseError for $name {
-            fn as_status(&self) -> $crate::__internal::http::StatusCode {
+            fn as_status(&self) -> $crate::http::StatusCode {
                 match self {
                     $(
                         $name::$error(e) => <$error as $crate::response_error::ResponseError>::as_status(e),
@@ -178,7 +178,7 @@ macro_rules! define_into_response_error {
                 }
             }
 
-            fn status_codes(codes: &mut ::std::collections::BTreeSet<$crate::__internal::http::StatusCode>) {
+            fn status_codes(codes: &mut ::std::collections::BTreeSet<$crate::http::StatusCode>) {
                 $(
                     <$error as $crate::response_error::ResponseError>::status_codes(codes);
                 )+

@@ -175,7 +175,7 @@ fn generate_unit(ident: &Ident, status_code_value: u16) -> TokenStream {
         # use predawn::api_response::ApiResponse;
         # use predawn::response::Response;
         # use predawn::openapi::{self, Schema};
-        # use predawn::__internal::http::StatusCode;
+        # use predawn::http::StatusCode;
 
         impl SingleResponse for #ident {
             const STATUS_CODE: u16 = #status_code_value;
@@ -225,7 +225,7 @@ fn generate_only_headers(
         # use predawn::openapi::{self, Schema};
         # use predawn::response_error::InvalidHeaderValue;
         # use predawn::__internal::indexmap::IndexMap;
-        # use predawn::__internal::http::StatusCode;
+        # use predawn::http::StatusCode;
 
         impl #impl_generics SingleResponse for #ident #ty_generics #where_clause {
             const STATUS_CODE: u16 = #status_code_value;
@@ -288,7 +288,7 @@ fn generate_only_body(
         # use predawn::response::Response;
         # use predawn::MultiResponseMediaType;
         # use predawn::openapi::{self, Schema};
-        # use predawn::__internal::http::StatusCode;
+        # use predawn::http::StatusCode;
 
         impl #impl_generics SingleResponse for #ident #ty_generics #where_clause {
             const STATUS_CODE: u16 = #status_code_value;
@@ -349,7 +349,7 @@ fn generate_body_and_headers(
         # use predawn::either::Either;
         # use predawn::response_error::InvalidHeaderValue;
         # use predawn::__internal::indexmap::IndexMap;
-        # use predawn::__internal::http::StatusCode;
+        # use predawn::http::StatusCode;
 
         impl #impl_generics SingleResponse for #ident #ty_generics #where_clause {
             const STATUS_CODE: u16 = #status_code_value;
@@ -502,7 +502,7 @@ fn generate_headers<'a>(
         # use predawn::ToSchema;
         # use predawn::outcome::Outcome;
         # use predawn::response_error::InvalidHeaderValue;
-        # use predawn::__internal::http::HeaderName;
+        # use predawn::http::HeaderName;
 
         match <#ty as ToHeaderValue>::to_header_value(&self.#member) {
             MaybeHeaderValue::Value(val) => {
