@@ -1,6 +1,3 @@
-before_run
-duplicate_schemes
-
 re-export http
 
 用 all_of 重新实现 custom schema

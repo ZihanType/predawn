@@ -247,27 +247,24 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
         );
     }
 
-    let duplicate_schemes = H::openapi_security_schemes(&mut cx)
-        .into_iter()
-        .filter_map(|(name, scheme)| {
-            let exist = security_schemes.get(&name);
+    let mut duplicate_schemes = BTreeMap::new();
 
-            match exist {
-                Some(ReferenceOr::Item(exist_scheme)) => {
-                    if exist_scheme == &scheme {
-                        None
-                    } else {
-                        Some((name, (scheme, exist_scheme.clone())))
-                    }
-                }
-                Some(ReferenceOr::Reference { .. }) => unreachable!(),
-                None => {
-                    security_schemes.insert(name, ReferenceOr::Item(scheme));
-                    None
+    // `openapi_security_schemes` means the global security schemes
+    // `security_schemes` means all the security schemes
+    // if there are multiple security schemes with the same name, it should panic
+    H::openapi_security_schemes(&mut cx)
+        .into_iter()
+        .for_each(|(name, scheme)| match security_schemes.get(&name) {
+            Some(ReferenceOr::Item(exist_scheme)) => {
+                if exist_scheme != &scheme {
+                    duplicate_schemes.insert(name, (scheme, exist_scheme.clone()));
                 }
             }
-        })
-        .collect::<BTreeMap<_, _>>();
+            Some(ReferenceOr::Reference { .. }) => unreachable!(),
+            None => {
+                security_schemes.insert(name, ReferenceOr::Item(scheme));
+            }
+        });
 
     if !duplicate_schemes.is_empty() {
         panic!(
