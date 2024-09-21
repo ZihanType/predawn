@@ -27,12 +27,9 @@ usize::MAX 表示没有事务
 独立事务 ?
 
 2.
-ToSchema 没有修改属性的schema时，调用属性的 schema_ref_box 方法
-
-3.
 数据库连接参数
 
-4.
+3.
 set_username
 set_password
 

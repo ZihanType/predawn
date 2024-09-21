@@ -167,7 +167,7 @@ impl<'de> Deserializer<'de> for PathDeserializer<'de> {
 
 struct MapDeserializer<'de> {
     params: &'de [(Arc<str>, PercentDecodedStr)],
-    pair: Option<(Arc<str>, &'de PercentDecodedStr)>,
+    pair: Option<(&'de str, &'de PercentDecodedStr)>,
 }
 
 impl<'de> MapAccess<'de> for MapDeserializer<'de> {
@@ -180,10 +180,9 @@ impl<'de> MapAccess<'de> for MapDeserializer<'de> {
         match self.params.split_first() {
             Some(((key, value), tail)) => {
                 self.params = tail;
-                self.pair = Some((key.clone(), value));
+                self.pair = Some((key, value));
 
-                seed.deserialize(KeyDeserializer { key: key.clone() })
-                    .map(Some)
+                seed.deserialize(KeyDeserializer { key }).map(Some)
             }
             None => Ok(None),
         }
@@ -200,8 +199,8 @@ impl<'de> MapAccess<'de> for MapDeserializer<'de> {
     }
 }
 
-struct KeyDeserializer {
-    key: Arc<str>,
+struct KeyDeserializer<'de> {
+    key: &'de str,
 }
 
 macro_rules! parse_key {
@@ -215,7 +214,7 @@ macro_rules! parse_key {
     };
 }
 
-impl<'de> Deserializer<'de> for KeyDeserializer {
+impl<'de> Deserializer<'de> for KeyDeserializer<'de> {
     type Error = DeserializePathError;
 
     parse_key!(deserialize_identifier);
@@ -259,7 +258,7 @@ macro_rules! parse_value {
 
 #[derive(Debug)]
 struct ValueDeserializer<'de> {
-    key: Arc<str>,
+    key: &'de str,
     value: &'de PercentDecodedStr,
 }
 
@@ -414,17 +413,15 @@ impl<'de> Deserializer<'de> for ValueDeserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        visitor.visit_enum(EnumDeserializer {
-            value: self.value.clone().into_inner(),
-        })
+        visitor.visit_enum(EnumDeserializer { value: self.value })
     }
 }
 
-struct EnumDeserializer {
-    value: Arc<str>,
+struct EnumDeserializer<'de> {
+    value: &'de str,
 }
 
-impl<'de> EnumAccess<'de> for EnumDeserializer {
+impl<'de> EnumAccess<'de> for EnumDeserializer<'de> {
     type Error = DeserializePathError;
     type Variant = UnitVariant;
 
