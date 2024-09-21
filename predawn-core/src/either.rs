@@ -8,6 +8,7 @@ use http::StatusCode;
 
 use crate::{
     error::BoxError,
+    error_stack::ErrorStack,
     openapi::{self, merge_responses, Schema},
     response::Response,
     response_error::ResponseError,
@@ -57,10 +58,9 @@ where
         }
     }
 
-    fn status_codes() -> BTreeSet<StatusCode> {
-        let mut status_codes = L::status_codes();
-        status_codes.extend(R::status_codes());
-        status_codes
+    fn status_codes(codes: &mut BTreeSet<StatusCode>) {
+        L::status_codes(codes);
+        R::status_codes(codes);
     }
 
     fn as_response(&self) -> Response {
@@ -80,12 +80,17 @@ where
     }
 
     #[doc(hidden)]
-    fn inner(self, type_name: &mut Vec<&'static str>) -> BoxError {
-        type_name.push(std::any::type_name::<Self>());
-
+    fn inner(self) -> BoxError {
         match self {
-            Either::Left(l) => l.inner(type_name),
-            Either::Right(r) => r.inner(type_name),
+            Either::Left(l) => l.inner(),
+            Either::Right(r) => r.inner(),
+        }
+    }
+
+    fn error_stack(&self, stack: &mut ErrorStack) {
+        match self {
+            Either::Left(l) => l.error_stack(stack),
+            Either::Right(r) => r.error_stack(stack),
         }
     }
 }

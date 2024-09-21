@@ -15,7 +15,7 @@ pub struct CatchError<H, F, Err> {
 impl<H, F, Err, Fut, R> Handler for CatchError<H, F, Err>
 where
     H: Handler,
-    F: Fn(Err, Box<[&'static str]>) -> Fut + Send + Sync + 'static,
+    F: Fn(Err, Box<[Box<str>]>) -> Fut + Send + Sync + 'static,
     Err: std::error::Error + Send + Sync + 'static,
     Fut: Future<Output = R> + Send,
     R: IntoResponse,
@@ -24,7 +24,7 @@ where
         match self.inner.call(req).await {
             Ok(response) => Ok(response),
             Err(e) => match e.downcast::<Err>() {
-                Ok((_, e, error_chain)) => (self.f)(e, error_chain)
+                Ok((_, e, error_stack)) => (self.f)(e, error_stack)
                     .await
                     .into_response()
                     .map_err(Into::into),

@@ -1,11 +1,16 @@
 use std::{ops::Deref, str::Utf8Error, sync::Arc};
 
 use matchit::Params;
+use predawn_core::location::Location;
 
 #[derive(Clone, Debug)]
 pub(crate) enum PathParams {
     Params(Vec<(Arc<str>, PercentDecodedStr)>),
-    InvalidUtf8InPathParam { key: Arc<str>, error: Utf8Error },
+    InvalidUtf8InPathParam {
+        key: Arc<str>,
+        error: Utf8Error,
+        location: Location,
+    },
 }
 
 impl Default for PathParams {
@@ -37,7 +42,11 @@ impl PathParams {
                 current.extend(params);
             }
             Err((key, error)) => {
-                *self = PathParams::InvalidUtf8InPathParam { key, error };
+                *self = PathParams::InvalidUtf8InPathParam {
+                    key,
+                    error,
+                    location: Location::caller(),
+                };
             }
         }
     }

@@ -13,13 +13,13 @@ pub struct InspectError<H, F, Err> {
 impl<H, F, Err> Handler for InspectError<H, F, Err>
 where
     H: Handler,
-    F: Fn(&Err, &[&'static str]) + Send + Sync + 'static,
+    F: Fn(&Err, &[Box<str>]) + Send + Sync + 'static,
     Err: std::error::Error + Send + Sync + 'static,
 {
     async fn call(&self, req: Request) -> Result<Response, Error> {
         self.inner.call(req).await.inspect_err(|e| {
             if let Some(err) = e.downcast_ref::<Err>() {
-                (self.f)(err, e.error_chain());
+                (self.f)(err, e.error_stack());
             }
         })
     }

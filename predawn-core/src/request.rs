@@ -7,8 +7,9 @@ use http::{
 };
 use http_body_util::Limited;
 use hyper::body::Incoming;
+use snafu::{OptionExt, Snafu};
 
-use crate::{body::RequestBody, impl_deref, impl_display};
+use crate::{body::RequestBody, impl_deref, impl_display, location::Location};
 
 pub const DEFAULT_BODY_LIMIT: usize = 2 * 1024 * 1024; // 2 mb
 
@@ -207,19 +208,19 @@ impl TryFrom<http::Request<Incoming>> for Request {
 
         let body_limit = extensions
             .remove::<BodyLimit>()
-            .ok_or(ConvertRequestError::NotFoundBodyLimit)?;
+            .context(NotFoundBodyLimitSnafu)?;
 
         let local_addr = extensions
             .remove::<LocalAddr>()
-            .ok_or(ConvertRequestError::NotFoundLocalAddr)?;
+            .context(NotFoundLocalAddrSnafu)?;
 
         let remote_addr = extensions
             .remove::<RemoteAddr>()
-            .ok_or(ConvertRequestError::NotFoundRemoteAddr)?;
+            .context(NotFoundRemoteAddrSnafu)?;
 
         let original_uri = extensions
             .remove::<OriginalUri>()
-            .ok_or(ConvertRequestError::NotFoundOriginalUri)?;
+            .context(NotFoundOriginalUriSnafu)?;
 
         Ok(Self {
             head: Head {
@@ -238,14 +239,29 @@ impl TryFrom<http::Request<Incoming>> for Request {
     }
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, Snafu)]
 pub enum ConvertRequestError {
-    #[error("not found `body limit` in request extensions")]
-    NotFoundBodyLimit,
-    #[error("not found `local address` in request extensions")]
-    NotFoundLocalAddr,
-    #[error("not found `remote address` in request extensions")]
-    NotFoundRemoteAddr,
-    #[error("not found `original uri` in request extensions")]
-    NotFoundOriginalUri,
+    #[snafu(display("not found `body limit` in request extensions"))]
+    NotFoundBodyLimit {
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    #[snafu(display("not found `local address` in request extensions"))]
+    NotFoundLocalAddr {
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    #[snafu(display("not found `remote address` in request extensions"))]
+    NotFoundRemoteAddr {
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    #[snafu(display("not found `original uri` in request extensions"))]
+    NotFoundOriginalUri {
+        #[snafu(implicit)]
+        location: Location,
+    },
 }

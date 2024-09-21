@@ -8,9 +8,12 @@ use predawn_core::{
 };
 use predawn_schema::ToSchema;
 use serde::de::DeserializeOwned;
+use snafu::IntoError;
 
 use super::ParseField;
-use crate::response_error::MultipartError;
+use crate::response_error::{
+    DuplicateFieldSnafu, InvalidJsonFieldSnafu, MissingFieldSnafu, MultipartError,
+};
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct JsonField<T>(pub T);
@@ -54,7 +57,7 @@ impl<T: Send + DeserializeOwned> ParseField for JsonField<T> {
     type Holder = Result<Self, MultipartError>;
 
     fn default_holder(name: &'static str) -> Self::Holder {
-        Err(MultipartError::MissingField { name })
+        MissingFieldSnafu { name }.fail()
     }
 
     async fn parse_field(
@@ -63,7 +66,7 @@ impl<T: Send + DeserializeOwned> ParseField for JsonField<T> {
         name: &'static str,
     ) -> Result<Self::Holder, MultipartError> {
         if holder.is_ok() {
-            return Err(MultipartError::DuplicateField { name });
+            return DuplicateFieldSnafu { name }.fail();
         }
 
         let bytes = <Bytes as ParseField>::parse_field(
@@ -73,9 +76,9 @@ impl<T: Send + DeserializeOwned> ParseField for JsonField<T> {
         )
         .await??;
 
-        match crate::util::deserialize_json_from_bytes(&bytes) {
+        match crate::util::deserialize_json(&bytes) {
             Ok(o) => Ok(Ok(JsonField(o))),
-            Err(e) => Err(MultipartError::DeserializeJson { name, error: e }),
+            Err(e) => Err(InvalidJsonFieldSnafu { name }.into_error(e)),
         }
     }
 

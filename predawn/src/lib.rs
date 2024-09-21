@@ -27,7 +27,8 @@ mod traits;
 pub(crate) mod util;
 
 pub use predawn_core::{
-    api_request, api_response, body, either, error, from_request, into_response,
+    api_request, api_response, body, either, error, error_stack, from_request, into_response,
+    location,
     media_type::{MultiRequestMediaType, MultiResponseMediaType},
     request,
     response::{MultiResponse, SingleResponse},

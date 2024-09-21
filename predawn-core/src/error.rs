@@ -3,7 +3,9 @@ use std::{error::Error as StdError, fmt};
 use http::{header::CONTENT_TYPE, HeaderValue, StatusCode};
 use mime::TEXT_PLAIN_UTF_8;
 
-use crate::{response::Response, response_error::ResponseError};
+use crate::{
+    error_stack::ErrorStack, location::Location, response::Response, response_error::ResponseError,
+};
 
 /// Alias for a type-erased error type.
 pub type BoxError = Box<dyn StdError + Send + Sync>;
@@ -12,7 +14,7 @@ pub type BoxError = Box<dyn StdError + Send + Sync>;
 pub struct Error {
     response: Response,
     inner: BoxError,
-    error_chain: Box<[&'static str]>,
+    error_stack: Box<[Box<str>]>,
 }
 
 impl Error {
@@ -30,22 +32,23 @@ impl Error {
         self.inner.downcast_ref::<T>()
     }
 
-    pub fn downcast<T>(self) -> Result<(Response, T, Box<[&'static str]>), Self>
+    #[allow(clippy::type_complexity)]
+    pub fn downcast<T>(self) -> Result<(Response, T, Box<[Box<str>]>), Self>
     where
         T: StdError + 'static,
     {
         let Self {
             response,
             inner,
-            error_chain,
+            error_stack,
         } = self;
 
         match inner.downcast::<T>() {
-            Ok(err) => Ok((response, *err, error_chain)),
+            Ok(err) => Ok((response, *err, error_stack)),
             Err(err) => Err(Self {
                 response,
                 inner: err,
-                error_chain,
+                error_stack,
             }),
         }
     }
@@ -58,8 +61,8 @@ impl Error {
         self.response
     }
 
-    pub fn error_chain(&self) -> &[&'static str] {
-        &self.error_chain
+    pub fn error_stack(&self) -> &[Box<str>] {
+        &self.error_stack
     }
 }
 
@@ -70,18 +73,21 @@ where
     fn from(error: T) -> Self {
         let response = error.as_response();
 
-        let mut error_chain = Vec::with_capacity(1); // at least one error
-        let inner = error.inner(&mut error_chain);
+        let mut error_stack = ErrorStack::default();
+        error.error_stack(&mut error_stack);
+
+        let inner = error.inner();
 
         Self {
             response,
             inner,
-            error_chain: error_chain.into(),
+            error_stack: error_stack.finish(),
         }
     }
 }
 
 impl From<(StatusCode, BoxError)> for Error {
+    #[track_caller]
     fn from((status, mut error): (StatusCode, BoxError)) -> Self {
         loop {
             match error.downcast::<Error>() {
@@ -108,15 +114,20 @@ impl From<(StatusCode, BoxError)> for Error {
             .body(error.to_string().into())
             .unwrap();
 
+        let mut error_stack = ErrorStack::default();
+        error_stack.push(&error, &Location::caller());
+
         Self {
             response,
             inner: error,
-            error_chain: [std::any::type_name::<BoxError>()].into(),
+            error_stack: error_stack.finish(),
         }
     }
 }
 
 impl From<BoxError> for Error {
+    #[track_caller]
+    #[inline]
     fn from(error: BoxError) -> Self {
         Error::from((StatusCode::INTERNAL_SERVER_ERROR, error))
     }

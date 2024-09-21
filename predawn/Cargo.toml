@@ -17,7 +17,6 @@ predawn-macro = { workspace = true, optional = true }
 predawn-schema = { workspace = true }
 
 hyper = { workspace = true, features = ["server", "http1", "http2"] }
-thiserror = { workspace = true }
 bytes = { workspace = true }
 http = { workspace = true }
 futures-core = { workspace = true, features = ["alloc"] }
@@ -50,6 +49,7 @@ tokio-tungstenite = { workspace = true, features = ["connect", "handshake"] }
 memchr = { workspace = true, features = ["std"] }
 pin-project-lite = { workspace = true }
 form_urlencoded = { workspace = true }
+snafu = { workspace = true, features = ["rust_1_65", "std"] }
 
 # Optional dependencies
 tower = { workspace = true, optional = true }

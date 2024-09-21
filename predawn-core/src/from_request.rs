@@ -4,12 +4,17 @@ use bytes::Bytes;
 use futures_util::FutureExt;
 use http::{HeaderMap, Method, Uri, Version};
 use http_body_util::{BodyExt, LengthLimitError};
+use snafu::IntoError;
 
 use crate::{
     body::RequestBody,
+    location::Location,
     private::{ViaRequest, ViaRequestHead},
     request::{BodyLimit, Head, LocalAddr, OriginalUri, RemoteAddr},
-    response_error::{ReadBytesError, ReadStringError, RequestBodyLimitError, ResponseError},
+    response_error::{
+        InvalidUtf8Snafu, ReadBytesError, ReadBytesSnafu, ReadStringError, RequestBodyLimitError,
+        RequestBodyLimitSnafu, ResponseError, UnknownBodySnafu,
+    },
 };
 
 pub trait FromRequestHead<'a>: Sized {
@@ -92,13 +97,12 @@ impl<'a> FromRequest<'a> for Bytes {
         match body.collect().await {
             Ok(collected) => Ok(collected.to_bytes()),
             Err(err) => match err.downcast::<LengthLimitError>() {
-                Ok(_) => Err(ReadBytesError::RequestBodyLimitError(
-                    RequestBodyLimitError {
-                        actual: head.content_length(),
-                        expected: head.body_limit.0,
-                    },
-                )),
-                Err(err) => Err(ReadBytesError::UnknownBodyError(err)),
+                Ok(_) => Err(RequestBodyLimitSnafu.into_error(RequestBodyLimitError {
+                    location: Location::caller(),
+                    actual: head.content_length(),
+                    expected: head.body_limit.0,
+                })),
+                Err(err) => Err(UnknownBodySnafu.into_error(err)),
             },
         }
     }
@@ -118,9 +122,9 @@ impl<'a> FromRequest<'a> for String {
     async fn from_request(head: &'a mut Head, body: RequestBody) -> Result<Self, Self::Error> {
         let bytes = Vec::<u8>::from_request(head, body)
             .await
-            .map_err(ReadStringError::ReadBytes)?;
+            .map_err(|e| ReadBytesSnafu.into_error(e))?;
 
-        let string = String::from_utf8(bytes).map_err(ReadStringError::InvalidUtf8)?;
+        let string = String::from_utf8(bytes).map_err(|e| InvalidUtf8Snafu.into_error(e))?;
 
         Ok(string)
     }

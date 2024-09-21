@@ -4,7 +4,10 @@ use rudi::Singleton;
 use scc::HashMap;
 use sea_orm::{Database, DatabaseConnection, DbErr};
 
-use crate::{Connection, DataSourcesConfig, Error, Transaction, DEFAULT_DATA_SOURCE_NAME};
+use crate::{
+    error::NotFoundDataSourceSnafu, Connection, DataSourcesConfig, Error, Transaction,
+    DEFAULT_DATA_SOURCE_NAME,
+};
 
 #[derive(Debug, Default, Clone)]
 pub struct DataSources(HashMap<Arc<str>, Connection>);
@@ -46,7 +49,7 @@ macro_rules! single_operation {
         pub async fn $ident(&self, name: &str) -> Result<$ty, Error> {
             match self.0.get_async(name).await {
                 Some(mut entry) => entry.get_mut().$ident().await,
-                None => Err(Error::NotFoundDataSourceError { name: name.into() }),
+                None => NotFoundDataSourceSnafu { name }.fail(),
             }
         }
     };

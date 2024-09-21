@@ -1,8 +1,15 @@
 use std::sync::Arc;
 
 use sea_orm::{DatabaseConnection, TransactionTrait};
+use snafu::IntoError;
 
-use crate::{Error, Transaction};
+use crate::{
+    error::{
+        DbErrSnafu, NoTransactionsToCommitSnafu, NoTransactionsToRollbackSnafu,
+        TransactionReferencesSnafu,
+    },
+    Error, Transaction,
+};
 
 #[derive(Debug, Clone)]
 pub struct Connection {
@@ -28,7 +35,11 @@ impl Connection {
     }
 
     pub async fn new_txn(&mut self) -> Result<Transaction, Error> {
-        let txn = self.conn.begin().await?;
+        let txn = self
+            .conn
+            .begin()
+            .await
+            .map_err(|e| DbErrSnafu.into_error(e))?;
         let txn = Transaction(Arc::new(txn));
         self.transactions.push(txn.clone());
         Ok(txn)
@@ -36,21 +47,23 @@ impl Connection {
 
     pub async fn commit(&mut self) -> Result<(), Error> {
         let Some(Transaction(txn)) = self.transactions.pop() else {
-            return Err(Error::NoTransactionsToCommit {
+            return NoTransactionsToCommitSnafu {
                 name: self.name.clone(),
-            });
+            }
+            .fail();
         };
 
         match Arc::try_unwrap(txn) {
             Ok(txn) => {
-                txn.commit().await?;
+                txn.commit().await.map_err(|e| DbErrSnafu.into_error(e))?;
                 Ok(())
             }
             Err(txn) => {
                 self.transactions.push(Transaction(txn));
-                Err(Error::TransactionReferencesError {
+                TransactionReferencesSnafu {
                     name: self.name.clone(),
-                })
+                }
+                .fail()
             }
         }
     }
@@ -65,21 +78,23 @@ impl Connection {
 
     pub async fn rollback(&mut self) -> Result<(), Error> {
         let Some(Transaction(txn)) = self.transactions.pop() else {
-            return Err(Error::NoTransactionsToRollback {
+            return NoTransactionsToRollbackSnafu {
                 name: self.name.clone(),
-            });
+            }
+            .fail();
         };
 
         match Arc::try_unwrap(txn) {
             Ok(txn) => {
-                txn.rollback().await?;
+                txn.rollback().await.map_err(|e| DbErrSnafu.into_error(e))?;
                 Ok(())
             }
             Err(txn) => {
                 self.transactions.push(Transaction(txn));
-                Err(Error::TransactionReferencesError {
+                TransactionReferencesSnafu {
                     name: self.name.clone(),
-                })
+                }
+                .fail()
             }
         }
     }

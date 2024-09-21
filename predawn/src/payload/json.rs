@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, convert::Infallible};
 
-use bytes::{BufMut, Bytes, BytesMut};
+use bytes::Bytes;
 use http::{
     header::{HeaderValue, CONTENT_TYPE},
     StatusCode,
@@ -23,8 +23,12 @@ use predawn_core::{
 };
 use predawn_schema::ToSchema;
 use serde::{de::DeserializeOwned, Serialize};
+use snafu::IntoError;
 
-use crate::response_error::{ReadJsonError, WriteJsonError};
+use crate::response_error::{
+    DeserializeJsonSnafu, InvalidJsonContentTypeSnafu, ReadJsonBytesSnafu, ReadJsonError,
+    WriteJsonError, WriteJsonSnafu,
+};
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Json<T>(pub T);
@@ -41,14 +45,16 @@ where
         let content_type = head.content_type().unwrap_or_default();
 
         if <Self as RequestMediaType>::check_content_type(content_type) {
-            let bytes = Bytes::from_request(head, body).await?;
+            let bytes = Bytes::from_request(head, body)
+                .await
+                .map_err(|e| ReadJsonBytesSnafu.into_error(e))?;
 
-            match crate::util::deserialize_json_from_bytes(&bytes) {
+            match crate::util::deserialize_json(&bytes) {
                 Ok(o) => Ok(Json(o)),
-                Err(e) => Err(ReadJsonError::DeserializeJsonError(e)),
+                Err(e) => Err(DeserializeJsonSnafu.into_error(e)),
             }
         } else {
-            Err(ReadJsonError::InvalidJsonContentType)
+            InvalidJsonContentTypeSnafu.fail()
         }
     }
 }
@@ -77,24 +83,17 @@ where
     type Error = WriteJsonError;
 
     fn into_response(self) -> Result<Response, Self::Error> {
-        let mut buf = BytesMut::with_capacity(128).writer();
+        let mut response = crate::util::serialize_json(&self.0)
+            .map_err(|e| WriteJsonSnafu.into_error(e))?
+            .into_response()
+            .unwrap_or_else(|a: Infallible| match a {});
 
-        match serde_json::to_writer(&mut buf, &self.0) {
-            Ok(_) => {
-                let mut response = buf
-                    .into_inner()
-                    .into_response()
-                    .unwrap_or_else(|a: Infallible| match a {});
+        response.headers_mut().insert(
+            CONTENT_TYPE,
+            HeaderValue::from_static(<Self as MediaType>::MEDIA_TYPE),
+        );
 
-                response.headers_mut().insert(
-                    CONTENT_TYPE,
-                    HeaderValue::from_static(<Self as MediaType>::MEDIA_TYPE),
-                );
-
-                Ok(response)
-            }
-            Err(err) => Err(WriteJsonError(err)),
-        }
+        Ok(response)
     }
 }
 

@@ -42,7 +42,6 @@ futures-util = { version = "0.3", default-features = false }
 serde = { version = "1", default-features = false }
 serde_json = { version = "1", default-features = false }
 tokio = { version = "1", default-features = false }
-thiserror = { version = "1", default-features = false }
 http-body = { version = "1", default-features = false }
 http-body-util = { version = "0.1", default-features = false }
 matchit = { version = "0.8", default-features = false }
@@ -74,3 +73,4 @@ memchr = { version = "2", default-features = false }
 pin-project-lite = { version = "0.2", default-features = false }
 async-stream = { version = "0.3", default-features = false }
 form_urlencoded = { version = "1", default-features = false }
+snafu = { version = "0.8", default-features = false }

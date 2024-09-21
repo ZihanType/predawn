@@ -7,8 +7,11 @@ use predawn_core::{
     media_type::{has_media_type, MediaType, RequestMediaType},
     request::Head,
 };
+use snafu::IntoError;
 
-use crate::response_error::MultipartError;
+use crate::response_error::{
+    ByParseMultipartSnafu, InvalidMultipartContentTypeSnafu, MultipartError,
+};
 
 #[doc(hidden)]
 #[derive(Debug)]
@@ -21,13 +24,13 @@ impl<'a> FromRequest<'a> for Multipart {
         let content_type = head.content_type().unwrap_or_default();
 
         if <Multipart as RequestMediaType>::check_content_type(content_type) {
-            let boundary =
-                multer::parse_boundary(content_type).map_err(MultipartError::ByParseMultipart)?;
+            let boundary = multer::parse_boundary(content_type)
+                .map_err(|e| ByParseMultipartSnafu.into_error(e))?;
 
             let multipart = multer::Multipart::new(body.into_data_stream(), boundary);
             Ok(Multipart(multipart))
         } else {
-            Err(MultipartError::InvalidMultipartContentType)
+            InvalidMultipartContentTypeSnafu.fail()
         }
     }
 }
@@ -37,7 +40,7 @@ impl Multipart {
         self.0
             .next_field()
             .await
-            .map_err(MultipartError::ByParseMultipart)
+            .map_err(|e| ByParseMultipartSnafu.into_error(e))
     }
 }
 

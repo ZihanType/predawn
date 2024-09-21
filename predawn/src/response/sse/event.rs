@@ -89,7 +89,7 @@ impl Event {
             if valid(bytes) {
                 append_line(&mut buf, "event", bytes);
             } else {
-                return Err(EventStreamError::InvalidType);
+                return Err(EventStreamError::invalid_type());
             }
         }
 
@@ -99,7 +99,7 @@ impl Event {
             if valid(bytes) {
                 append_line(&mut buf, "id", bytes);
             } else {
-                return Err(EventStreamError::InvalidId);
+                return Err(EventStreamError::invalid_id());
             }
         }
 
@@ -109,7 +109,7 @@ impl Event {
             if valid(bytes) {
                 append_line(&mut buf, "", bytes);
             } else {
-                return Err(EventStreamError::InvalidComment);
+                return Err(EventStreamError::invalid_comment());
             }
         }
 

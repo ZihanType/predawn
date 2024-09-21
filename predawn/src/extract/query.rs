@@ -8,8 +8,12 @@ use predawn_core::{
     request::Head,
 };
 use serde::Deserialize;
+use snafu::IntoError;
 
-use crate::{response_error::QueryError, ToParameters};
+use crate::{
+    response_error::{QueryError, QuerySnafu},
+    ToParameters,
+};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Query<T>(pub T);
@@ -23,11 +27,9 @@ where
     type Error = QueryError;
 
     async fn from_request_head(head: &'a mut Head) -> Result<Self, Self::Error> {
-        match crate::util::deserialize_form_from_bytes(
-            head.uri.query().unwrap_or_default().as_bytes(),
-        ) {
+        match crate::util::deserialize_form(head.uri.query().unwrap_or_default().as_bytes()) {
             Ok(o) => Ok(Query(o)),
-            Err(e) => Err(QueryError(e)),
+            Err(e) => Err(QuerySnafu.into_error(e)),
         }
     }
 }

@@ -1,5 +1,6 @@
 use predawn_core::{
     error::Error,
+    location::Location,
     request::{BodyLimit, Request},
     response::Response,
     response_error::RequestBodyLimitError,
@@ -42,6 +43,7 @@ impl<H: Handler> Handler for RequestBodyLimitHandler<H> {
             Some(len) => {
                 if len > self.limit {
                     return Err(RequestBodyLimitError {
+                        location: Location::caller(),
                         actual: Some(len),
                         expected: self.limit,
                     }

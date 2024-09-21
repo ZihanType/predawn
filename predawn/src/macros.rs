@@ -78,36 +78,44 @@ macro_rules! define_from_request_error {
                 }
             }
 
-            fn status_codes() -> ::std::collections::BTreeSet<$crate::__internal::http::StatusCode> {
-                let mut status_codes = ::std::collections::BTreeSet::new();
-
+            fn status_codes(codes: &mut ::std::collections::BTreeSet<$crate::__internal::http::StatusCode>) {
                 $(
-                    status_codes.extend(<$error as $crate::response_error::ResponseError>::status_codes());
+                    <$error as $crate::response_error::ResponseError>::status_codes(codes);
                 )+
 
-                status_codes.extend(
-                    <
-                        $crate::response_error::InvalidContentType<{ $crate::count!($($error,)+) }>
-                        as $crate::response_error::ResponseError
-                    >::status_codes()
-                );
-
-                status_codes
+                <
+                    $crate::response_error::InvalidContentType<{ $crate::count!($($error,)+) }>
+                    as
+                    $crate::response_error::ResponseError
+                >::status_codes(codes);
             }
 
             #[doc(hidden)]
-            fn inner(self, error_chain: &mut ::std::vec::Vec<&'static str>) -> $crate::error::BoxError {
-                error_chain.push(::std::any::type_name::<Self>());
-
+            fn inner(self) -> $crate::error::BoxError {
                 match self {
                     $(
-                        $name::$error(e) => <$error as $crate::response_error::ResponseError>::inner(e, error_chain),
+                        $name::$error(e) => <$error as $crate::response_error::ResponseError>::inner(e),
                     )+
 
                     $name::InvalidContentType(e) => <
                         $crate::response_error::InvalidContentType<{ $crate::count!($($error,)+) }>
-                        as $crate::response_error::ResponseError
-                    >::inner(e, error_chain),
+                        as
+                        $crate::response_error::ResponseError
+                    >::inner(e),
+                }
+            }
+
+            fn error_stack(&self, stack: &mut $crate::error_stack::ErrorStack) {
+                match self {
+                    $(
+                        $name::$error(e) => <$error as $crate::response_error::ResponseError>::error_stack(e, stack),
+                    )+
+
+                    $name::InvalidContentType(e) => <
+                        $crate::response_error::InvalidContentType<{ $crate::count!($($error,)+) }>
+                        as
+                        $crate::response_error::ResponseError
+                    >::error_stack(e, stack),
                 }
             }
         }
@@ -170,23 +178,25 @@ macro_rules! define_into_response_error {
                 }
             }
 
-            fn status_codes() -> ::std::collections::BTreeSet<$crate::__internal::http::StatusCode> {
-                let mut status_codes = ::std::collections::BTreeSet::new();
-
+            fn status_codes(codes: &mut ::std::collections::BTreeSet<$crate::__internal::http::StatusCode>) {
                 $(
-                    status_codes.extend(<$error as $crate::response_error::ResponseError>::status_codes());
+                    <$error as $crate::response_error::ResponseError>::status_codes(codes);
                 )+
-
-                status_codes
             }
 
             #[doc(hidden)]
-            fn inner(self, error_chain: &mut ::std::vec::Vec<&'static str>) -> $crate::error::BoxError {
-                error_chain.push(::std::any::type_name::<Self>());
-
+            fn inner(self) -> $crate::error::BoxError {
                 match self {
                     $(
-                        $name::$error(e) => <$error as $crate::response_error::ResponseError>::inner(e, error_chain),
+                        $name::$error(e) => <$error as $crate::response_error::ResponseError>::inner(e),
+                    )+
+                }
+            }
+
+            fn error_stack(&self, stack: &mut $crate::error_stack::ErrorStack) {
+                match self {
+                    $(
+                        $name::$error(e) => <$error as $crate::response_error::ResponseError>::error_stack(e, stack),
                     )+
                 }
             }

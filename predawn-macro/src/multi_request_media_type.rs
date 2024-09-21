@@ -96,6 +96,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         # use predawn::api_request::ApiRequest;
         # use predawn::request::Head;
         # use predawn::body::RequestBody;
+        # use predawn::location::Location;
 
         impl #impl_generics MultiRequestMediaType for #ident #ty_generics #where_clause {
             fn content(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> IndexMap<String, openapi::MediaType> {
@@ -114,6 +115,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
                 #(#from_request_bodies)*
 
                 Err(<#from_request_error as From<_>>::from(InvalidContentType {
+                    location: Location::caller(),
                     actual: content_type.into(),
                     expected: [#(#media_type_exprs,)*],
                 }))

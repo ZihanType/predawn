@@ -14,7 +14,7 @@ use predawn_core::{
 };
 use predawn_schema::ToSchema;
 
-use crate::response_error::InvalidContentDisposition;
+use crate::response_error::{InvalidContentDisposition, InvalidContentDispositionSnafu};
 
 #[derive(Debug)]
 enum DownloadType {
@@ -75,7 +75,7 @@ impl<T> Download<T> {
     ) -> Result<HeaderValue, InvalidContentDisposition> {
         let value = format!("{}; filename=\"{}\"", ty.as_str(), file_name);
 
-        HeaderValue::from_str(&value).map_err(|_| InvalidContentDisposition(value.into()))
+        HeaderValue::from_str(&value).map_err(|_| InvalidContentDispositionSnafu { value }.build())
     }
 }
 

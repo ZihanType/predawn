@@ -4,9 +4,13 @@ use bytes::Bytes;
 use multer::Field;
 use predawn_core::openapi::Schema;
 use predawn_schema::ToSchema;
+use snafu::OptionExt;
 
 use super::ParseField;
-use crate::response_error::MultipartError;
+use crate::response_error::{
+    DuplicateFieldSnafu, MissingContentTypeSnafu, MissingFieldSnafu, MissingFileNameSnafu,
+    MultipartError,
+};
 
 #[derive(Debug)]
 pub struct Upload {
@@ -60,7 +64,7 @@ impl ParseField for Upload {
     type Holder = Result<Self, MultipartError>;
 
     fn default_holder(name: &'static str) -> Self::Holder {
-        Err(MultipartError::MissingField { name })
+        MissingFieldSnafu { name }.fail()
     }
 
     async fn parse_field(
@@ -69,17 +73,17 @@ impl ParseField for Upload {
         name: &'static str,
     ) -> Result<Self::Holder, MultipartError> {
         if holder.is_ok() {
-            return Err(MultipartError::DuplicateField { name });
+            return DuplicateFieldSnafu { name }.fail();
         }
 
         let file_name = field
             .file_name()
-            .ok_or(MultipartError::MissingFileName { name })?
+            .context(MissingFileNameSnafu { name })?
             .into();
 
         let content_type = field
             .content_type()
-            .ok_or(MultipartError::MissingContentType { name })?
+            .context(MissingContentTypeSnafu { name })?
             .as_ref()
             .into();
 

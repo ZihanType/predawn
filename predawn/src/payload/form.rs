@@ -20,8 +20,12 @@ use predawn_core::{
 };
 use predawn_schema::ToSchema;
 use serde::{de::DeserializeOwned, Serialize};
+use snafu::IntoError;
 
-use crate::response_error::{ReadFormError, WriteFormError};
+use crate::response_error::{
+    FormDeserializeSnafu, InvalidFormContentTypeSnafu, ReadFormBytesSnafu, ReadFormError,
+    WriteFormError, WriteFormSnafu,
+};
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Form<T>(pub T);
@@ -38,14 +42,16 @@ where
         let content_type = head.content_type().unwrap_or_default();
 
         if <Self as RequestMediaType>::check_content_type(content_type) {
-            let bytes = Bytes::from_request(head, body).await?;
+            let bytes = Bytes::from_request(head, body)
+                .await
+                .map_err(|e| ReadFormBytesSnafu.into_error(e))?;
 
-            match crate::util::deserialize_form_from_bytes(&bytes) {
+            match crate::util::deserialize_form(&bytes) {
                 Ok(value) => Ok(Form(value)),
-                Err(err) => Err(ReadFormError::FormDeserializeError(err)),
+                Err(err) => Err(FormDeserializeSnafu.into_error(err)),
             }
         } else {
-            Err(ReadFormError::InvalidFormContentType)
+            InvalidFormContentTypeSnafu.fail()
         }
     }
 }
@@ -74,8 +80,8 @@ where
     type Error = WriteFormError;
 
     fn into_response(self) -> Result<Response, Self::Error> {
-        let mut response = crate::util::serialize_form_from_value(&self.0)
-            .map_err(WriteFormError)?
+        let mut response = crate::util::serialize_form(&self.0)
+            .map_err(|e| WriteFormSnafu.into_error(e))?
             .into_response()
             .unwrap_or_else(|a: Infallible| match a {});
 

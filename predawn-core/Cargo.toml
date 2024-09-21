@@ -21,7 +21,7 @@ hyper = { workspace = true }
 http = { workspace = true }
 http-body = { workspace = true }
 http-body-util = { workspace = true }
-thiserror = { workspace = true }
 mime = { workspace = true }
 openapiv3 = { workspace = true }
 indexmap = { workspace = true, features = ["std"] }
+snafu = { workspace = true, features = ["rust_1_65", "std"] }

@@ -8,8 +8,9 @@ use predawn_core::{
     openapi::{Parameter, Schema},
     request::Head,
 };
+use snafu::IntoError;
 
-use crate::response_error::TypedHeaderError;
+use crate::response_error::{DecodeSnafu, MissingSnafu, TypedHeaderError};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct TypedHeader<T>(pub T);
@@ -31,9 +32,9 @@ where
         match T::decode(&mut values) {
             Ok(o) => Ok(Self(o)),
             Err(e) => Err(if is_missing {
-                TypedHeaderError::Missing { name }
+                MissingSnafu { name }.build()
             } else {
-                TypedHeaderError::DecodeError { name, error: e }
+                DecodeSnafu { name }.into_error(e)
             }),
         }
     }

@@ -5,7 +5,10 @@ use serde::{
     forward_to_deserialize_any, Deserializer,
 };
 
-use crate::{path_params::PercentDecodedStr, response_error::PathError};
+use crate::{
+    path_params::PercentDecodedStr,
+    response_error::{DeserializePathError, ParseErrorAtKeySnafu, UnsupportedTypeSnafu},
+};
 
 macro_rules! unsupported_type {
     ($trait_fn:ident) => {
@@ -13,9 +16,10 @@ macro_rules! unsupported_type {
         where
             V: Visitor<'de>,
         {
-            Err(PathError::UnsupportedType {
+            UnsupportedTypeSnafu {
                 name: type_name::<V::Value>(),
-            })
+            }
+            .fail()
         }
     };
 }
@@ -32,7 +36,7 @@ impl<'de> PathDeserializer<'de> {
 }
 
 impl<'de> Deserializer<'de> for PathDeserializer<'de> {
-    type Error = PathError;
+    type Error = DeserializePathError;
 
     unsupported_type!(deserialize_any);
 
@@ -82,27 +86,30 @@ impl<'de> Deserializer<'de> for PathDeserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        Err(PathError::UnsupportedType {
+        UnsupportedTypeSnafu {
             name: type_name::<V::Value>(),
-        })
+        }
+        .fail()
     }
 
     fn deserialize_newtype_struct<V>(self, _: &'static str, _: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        Err(PathError::UnsupportedType {
+        UnsupportedTypeSnafu {
             name: type_name::<V::Value>(),
-        })
+        }
+        .fail()
     }
 
     fn deserialize_tuple<V>(self, _: usize, _: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        Err(PathError::UnsupportedType {
+        UnsupportedTypeSnafu {
             name: type_name::<V::Value>(),
-        })
+        }
+        .fail()
     }
 
     fn deserialize_tuple_struct<V>(
@@ -114,9 +121,10 @@ impl<'de> Deserializer<'de> for PathDeserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        Err(PathError::UnsupportedType {
+        UnsupportedTypeSnafu {
             name: type_name::<V::Value>(),
-        })
+        }
+        .fail()
     }
 
     fn deserialize_map<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -150,9 +158,10 @@ impl<'de> Deserializer<'de> for PathDeserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        Err(PathError::UnsupportedType {
+        UnsupportedTypeSnafu {
             name: type_name::<V::Value>(),
-        })
+        }
+        .fail()
     }
 }
 
@@ -162,7 +171,7 @@ struct MapDeserializer<'de> {
 }
 
 impl<'de> MapAccess<'de> for MapDeserializer<'de> {
-    type Error = PathError;
+    type Error = DeserializePathError;
 
     fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Self::Error>
     where
@@ -186,7 +195,7 @@ impl<'de> MapAccess<'de> for MapDeserializer<'de> {
     {
         match self.pair.take() {
             Some((key, value)) => seed.deserialize(ValueDeserializer { key, value }),
-            None => Err(PathError::custom("value is missing")),
+            None => Err(DeserializePathError::custom("value is missing")),
         }
     }
 }
@@ -207,7 +216,7 @@ macro_rules! parse_key {
 }
 
 impl<'de> Deserializer<'de> for KeyDeserializer {
-    type Error = PathError;
+    type Error = DeserializePathError;
 
     parse_key!(deserialize_identifier);
 
@@ -225,7 +234,7 @@ impl<'de> Deserializer<'de> for KeyDeserializer {
     where
         V: Visitor<'de>,
     {
-        Err(PathError::custom("Unexpected key type"))
+        Err(DeserializePathError::custom("Unexpected key type"))
     }
 }
 
@@ -235,10 +244,13 @@ macro_rules! parse_value {
         where
             V: Visitor<'de>,
         {
-            let v = self.value.parse().map_err(|_| PathError::ParseErrorAtKey {
-                key: self.key.clone(),
-                value: self.value.clone().into_inner(),
-                expected_type: $ty,
+            let v = self.value.parse().map_err(|_| {
+                ParseErrorAtKeySnafu {
+                    key: self.key.clone(),
+                    value: self.value.clone().into_inner(),
+                    expected_type: $ty,
+                }
+                .build()
             })?;
             visitor.$visit_fn(v)
         }
@@ -252,7 +264,7 @@ struct ValueDeserializer<'de> {
 }
 
 impl<'de> Deserializer<'de> for ValueDeserializer<'de> {
-    type Error = PathError;
+    type Error = DeserializePathError;
 
     unsupported_type!(deserialize_map);
 
@@ -326,9 +338,10 @@ impl<'de> Deserializer<'de> for ValueDeserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        Err(PathError::UnsupportedType {
+        UnsupportedTypeSnafu {
             name: type_name::<V::Value>(),
-        })
+        }
+        .fail()
     }
 
     fn deserialize_newtype_struct<V>(
@@ -346,18 +359,20 @@ impl<'de> Deserializer<'de> for ValueDeserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        Err(PathError::UnsupportedType {
+        UnsupportedTypeSnafu {
             name: type_name::<V::Value>(),
-        })
+        }
+        .fail()
     }
 
     fn deserialize_seq<V>(self, _: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        Err(PathError::UnsupportedType {
+        UnsupportedTypeSnafu {
             name: type_name::<V::Value>(),
-        })
+        }
+        .fail()
     }
 
     fn deserialize_tuple_struct<V>(
@@ -369,9 +384,10 @@ impl<'de> Deserializer<'de> for ValueDeserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        Err(PathError::UnsupportedType {
+        UnsupportedTypeSnafu {
             name: type_name::<V::Value>(),
-        })
+        }
+        .fail()
     }
 
     fn deserialize_struct<V>(
@@ -383,9 +399,10 @@ impl<'de> Deserializer<'de> for ValueDeserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        Err(PathError::UnsupportedType {
+        UnsupportedTypeSnafu {
             name: type_name::<V::Value>(),
-        })
+        }
+        .fail()
     }
 
     fn deserialize_enum<V>(
@@ -408,7 +425,7 @@ struct EnumDeserializer {
 }
 
 impl<'de> EnumAccess<'de> for EnumDeserializer {
-    type Error = PathError;
+    type Error = DeserializePathError;
     type Variant = UnitVariant;
 
     fn variant_seed<V>(self, seed: V) -> Result<(V::Value, Self::Variant), Self::Error>
@@ -425,7 +442,7 @@ impl<'de> EnumAccess<'de> for EnumDeserializer {
 struct UnitVariant;
 
 impl<'de> VariantAccess<'de> for UnitVariant {
-    type Error = PathError;
+    type Error = DeserializePathError;
 
     fn unit_variant(self) -> Result<(), Self::Error> {
         Ok(())
@@ -435,26 +452,29 @@ impl<'de> VariantAccess<'de> for UnitVariant {
     where
         T: DeserializeSeed<'de>,
     {
-        Err(PathError::UnsupportedType {
+        UnsupportedTypeSnafu {
             name: "newtype enum variant",
-        })
+        }
+        .fail()
     }
 
     fn tuple_variant<V>(self, _: usize, _: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        Err(PathError::UnsupportedType {
+        UnsupportedTypeSnafu {
             name: "tuple enum variant",
-        })
+        }
+        .fail()
     }
 
     fn struct_variant<V>(self, _: &'static [&'static str], _: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        Err(PathError::UnsupportedType {
+        UnsupportedTypeSnafu {
             name: "struct enum variant",
-        })
+        }
+        .fail()
     }
 }

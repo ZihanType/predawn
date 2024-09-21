@@ -37,7 +37,6 @@ predawn = { path = "../predawn", default-features = false, features = [
 
 http = { workspace = true }
 serde = { workspace = true }
-thiserror = { workspace = true }
 
 [features]
 default = ["auto-register"]

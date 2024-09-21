@@ -11,12 +11,14 @@ use predawn::{
     app::{run_app, Hooks},
     config::{logger::LoggerConfig, Config},
     controller,
+    error_stack::ErrorStack,
     extract::{
         multipart::{JsonField, Multipart, Upload},
         websocket::{Message, WebSocketRequest, WebSocketResponse},
         Path, Query,
     },
     handler::{Handler, HandlerExt},
+    location::Location,
     middleware::{TowerLayerCompatExt, Tracing},
     openapi::{self, SecurityRequirement},
     payload::{Form, Json},
@@ -27,6 +29,7 @@ use predawn::{
 };
 use rudi::{Context, Singleton};
 use serde::{Deserialize, Serialize};
+use snafu::Snafu;
 use tower::limit::RateLimitLayer;
 use tower_http::compression::CompressionLayer;
 use tracing_subscriber::{
@@ -65,7 +68,8 @@ impl Hooks for App {
 
         let router = router
             .with(CompressionLayer::new().zstd(true).compat())
-            .with(t);
+            .with(t)
+            .inspect_all_error(|e| tracing::error!("{:#?}", e.error_stack()));
 
         (cx, router)
     }
@@ -331,17 +335,24 @@ struct Nested {
     inner: Option<Box<Nested>>,
 }
 
-#[derive(Debug, thiserror::Error)]
-#[error("my error")]
-struct MyError;
+#[derive(Debug, Snafu)]
+#[snafu(display("my error"))]
+struct MyError {
+    #[snafu(implicit)]
+    location: Location,
+}
 
 impl ResponseError for MyError {
     fn as_status(&self) -> StatusCode {
         StatusCode::INTERNAL_SERVER_ERROR
     }
 
-    fn status_codes() -> BTreeSet<StatusCode> {
-        [StatusCode::INTERNAL_SERVER_ERROR].into()
+    fn status_codes(codes: &mut BTreeSet<StatusCode>) {
+        codes.insert(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    fn error_stack(&self, stack: &mut ErrorStack) {
+        stack.push(self, &self.location);
     }
 }
 

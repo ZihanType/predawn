@@ -1,6 +1,6 @@
 mod de;
 
-use std::{collections::BTreeMap, fmt::Display};
+use std::collections::BTreeMap;
 
 use predawn_core::{
     api_request::ApiRequestHead,
@@ -10,8 +10,16 @@ use predawn_core::{
     request::Head,
 };
 use serde::Deserialize;
+use snafu::IntoError;
 
-use crate::{path_params::PathParams, response_error::PathError, ToParameters};
+use self::de::PathDeserializer;
+use crate::{
+    path_params::PathParams,
+    response_error::{
+        DeserializePathSnafu, InvalidUtf8InPathParamSnafu, MissingPathParamsSnafu, PathError,
+    },
+    ToParameters,
+};
 
 #[derive(Debug)]
 pub struct Path<T>(pub T);
@@ -27,19 +35,27 @@ where
     async fn from_request_head(head: &'a mut Head) -> Result<Self, Self::Error> {
         let params = match head.extensions.get::<PathParams>() {
             Some(PathParams::Params(params)) => params,
-            Some(PathParams::InvalidUtf8InPathParam { key, error }) => {
-                let err = PathError::InvalidUtf8InPathParam {
+            Some(PathParams::InvalidUtf8InPathParam {
+                key,
+                error,
+                location,
+            }) => {
+                return InvalidUtf8InPathParamSnafu {
                     key: key.clone(),
                     error: *error,
-                };
-                return Err(err);
+                    error_location: *location,
+                }
+                .fail();
             }
-            None => {
-                return Err(PathError::MissingPathParams);
-            }
+            None => return MissingPathParamsSnafu.fail(),
         };
 
-        T::deserialize(de::PathDeserializer::new(params)).map(Path)
+        let deserializer = PathDeserializer::new(params);
+
+        match serde_path_to_error::deserialize(deserializer) {
+            Ok(path) => Ok(Path(path)),
+            Err(e) => Err(DeserializePathSnafu.into_error(e)),
+        }
     }
 }
 
@@ -57,14 +73,5 @@ impl<T: ToParameters> ApiRequestHead for Path<T> {
                 })
                 .collect(),
         )
-    }
-}
-
-impl serde::de::Error for PathError {
-    fn custom<T>(msg: T) -> Self
-    where
-        T: Display,
-    {
-        Self::Message(msg.to_string())
     }
 }

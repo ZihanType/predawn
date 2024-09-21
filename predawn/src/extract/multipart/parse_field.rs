@@ -9,8 +9,12 @@ use std::{
 use bytes::Bytes;
 use http::Uri;
 use multer::Field;
+use snafu::IntoError;
 
-use crate::response_error::MultipartError;
+use crate::response_error::{
+    ByParseFieldSnafu, DuplicateFieldSnafu, IncorrectNumberOfFieldsSnafu, MissingFieldSnafu,
+    MultipartError, ParseErrorAtNameSnafu,
+};
 
 pub trait ParseField: Sized + Send {
     type Holder: Send;
@@ -54,7 +58,7 @@ impl<T: ParseField> ParseField for Vec<T> {
     type Holder = Result<Self, MultipartError>;
 
     fn default_holder(name: &'static str) -> Self::Holder {
-        Err(MultipartError::MissingField { name })
+        MissingFieldSnafu { name }.fail()
     }
 
     async fn parse_field(
@@ -79,7 +83,7 @@ impl<T: ParseField, const N: usize> ParseField for [T; N] {
     type Holder = Result<Vec<T>, MultipartError>;
 
     fn default_holder(name: &'static str) -> Self::Holder {
-        Err(MultipartError::MissingField { name })
+        MissingFieldSnafu { name }.fail()
     }
 
     async fn parse_field(
@@ -96,10 +100,13 @@ impl<T: ParseField, const N: usize> ParseField for [T; N] {
     }
 
     fn extract(holder: Self::Holder, name: &'static str) -> Result<Self, MultipartError> {
-        Self::try_from(holder?).map_err(|v| MultipartError::IncorrectNumberOfFields {
-            name,
-            expected: N,
-            actual: v.len(),
+        Self::try_from(holder?).map_err(|v| {
+            IncorrectNumberOfFieldsSnafu {
+                name,
+                expected: N,
+                actual: v.len(),
+            }
+            .build()
         })
     }
 }
@@ -112,7 +119,7 @@ where
     type Holder = Result<Self, MultipartError>;
 
     fn default_holder(name: &'static str) -> Self::Holder {
-        Err(MultipartError::MissingField { name })
+        MissingFieldSnafu { name }.fail()
     }
 
     async fn parse_field(
@@ -137,7 +144,7 @@ impl<T: ParseField + Ord> ParseField for BTreeSet<T> {
     type Holder = Result<Self, MultipartError>;
 
     fn default_holder(name: &'static str) -> Self::Holder {
-        Err(MultipartError::MissingField { name })
+        MissingFieldSnafu { name }.fail()
     }
 
     async fn parse_field(
@@ -164,7 +171,7 @@ macro_rules! some_impl {
             type Holder = Result<Self, MultipartError>;
 
             fn default_holder(name: &'static str) -> Self::Holder {
-                Err(MultipartError::MissingField { name })
+                MissingFieldSnafu { name }.fail()
             }
 
             async fn parse_field(
@@ -173,12 +180,12 @@ macro_rules! some_impl {
                 name: &'static str,
             ) -> Result<Self::Holder, MultipartError> {
                 if holder.is_ok() {
-                    return Err(MultipartError::DuplicateField { name });
+                    return DuplicateFieldSnafu { name }.fail();
                 }
 
                 match field.$ident().await {
                     Ok(o) => Ok(Ok(o)),
-                    Err(e) => Err(MultipartError::ByParseField { name, error: e }),
+                    Err(e) => Err(ByParseFieldSnafu { name }.into_error(e)),
                 }
             }
 
@@ -199,7 +206,7 @@ macro_rules! some_impl_by_parse_str {
                 type Holder = Result<Self, MultipartError>;
 
                 fn default_holder(name: &'static str) -> Self::Holder {
-                    Err(MultipartError::MissingField { name })
+                    MissingFieldSnafu { name }.fail()
                 }
 
                 async fn parse_field(
@@ -208,7 +215,7 @@ macro_rules! some_impl_by_parse_str {
                     name: &'static str,
                 ) -> Result<Self::Holder, MultipartError> {
                     if holder.is_ok() {
-                        return Err(MultipartError::DuplicateField { name });
+                        return DuplicateFieldSnafu { name }.fail();
                     }
 
                     let text = <String as ParseField>::parse_field(
@@ -220,11 +227,14 @@ macro_rules! some_impl_by_parse_str {
 
                     match text.parse() {
                         Ok(o) => Ok(Ok(o)),
-                        Err(_) => Err(MultipartError::ParseErrorAtName {
-                            name,
-                            value: text.into(),
-                            expected_type: any::type_name::<Self>(),
-                        }),
+                        Err(_) => Err(
+                            ParseErrorAtNameSnafu {
+                                name,
+                                value: text,
+                                expected_type: any::type_name::<Self>(),
+                            }
+                            .build()
+                        ),
                     }
                 }
 
