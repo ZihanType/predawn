@@ -304,18 +304,19 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
     cx.insert_singleton(api);
 
     let mut router = Router::default();
+    let mut insert_errors = Vec::new();
 
-    // already checked for duplicates at `paths` above, so no need to check again here.
     for (path, handlers) in route_table {
         let path = root_path.clone().join(path);
 
+        // already checked for duplicates at `paths` above, so no need to check again here.
         let map = handlers.into_iter().collect::<IndexMap<_, _>>();
-        let method_router = MethodRouter::from(map);
 
-        let err_msg = format!("failed to insert path `{path}`");
+        let path = path.into_inner();
+        let path_cloned = path.clone();
 
-        if let Err(e) = router.insert(path, method_router) {
-            panic!("{}: {:?}", err_msg, e);
+        if let Err(e) = router.insert(path, MethodRouter::from(map)) {
+            insert_errors.push((e, path_cloned));
         }
     }
 
@@ -326,11 +327,16 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
 
         tracing::info!("registering plugin: {}", path);
 
-        let err_msg = format!("failed to insert path `{path}`");
+        let path = path.into_inner();
+        let path_cloned = path.clone();
 
         if let Err(e) = router.insert(path, MethodRouter::from(map)) {
-            panic!("{}: {:?}", err_msg, e);
+            insert_errors.push((e, path_cloned));
         }
+    }
+
+    if !insert_errors.is_empty() {
+        panic!("failed to insert paths: {:#?}", insert_errors);
     }
 
     H::after_routes(&router);
