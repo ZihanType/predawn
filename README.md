@@ -27,7 +27,7 @@ struct Controller;
 
 #[controller]
 impl Controller {
-    #[handler(paths = ["/"], methods = [post])]
+    #[endpoint(paths = ["/"], methods = [post])]
     async fn hello(&self, name: String) -> String {
         format!("Hello {name}")
     }
@@ -94,7 +94,7 @@ struct Controller {
 
 #[controller]
 impl Controller {
-    #[handler(paths = ["/"], methods = [GET])]
+    #[endpoint(paths = ["/"], methods = [GET])]
     async fn hello(&self) -> String {
         self.svc.hello().await
     }

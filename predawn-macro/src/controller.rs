@@ -22,7 +22,10 @@ pub(crate) struct ControllerAttr {
 }
 
 #[derive(FromAttr)]
-#[attribute(idents = [handler])]
+#[attribute(idents = [
+    handler, // FIXME: remove this
+    endpoint
+])]
 struct MethodAttr {
     paths: Vec<Expr>,
     methods: Vec<Method>,

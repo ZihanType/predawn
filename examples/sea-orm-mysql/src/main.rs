@@ -36,7 +36,7 @@ pub struct MyController {}
 
 #[controller]
 impl MyController {
-    #[handler(paths = ["/hello"], methods = [GET])]
+    #[endpoint(paths = ["/hello"], methods = [GET])]
     async fn hello(&self, Query(user): Query<User>) -> String {
         let User { name } = user;
 

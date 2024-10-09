@@ -135,43 +135,43 @@ impl MyController {
     /// ```shell
     /// curl http://localhost:9612/no_arg
     /// ```
-    #[handler(paths = ["/no_arg"], methods = [GET], security = [{}, { MyScheme2: [] }])] // override the global security
+    #[endpoint(paths = ["/no_arg"], methods = [GET], security = [{}, { MyScheme2: [] }])] // override the global security
     async fn no_arg(&self) {}
 
-    #[handler(methods = [GET, POST, PUT], middleware = add_middlewares, tags = [Hello])]
+    #[endpoint(methods = [GET, POST, PUT], middleware = add_middlewares, tags = [Hello])]
     async fn hello(&self, name: String) -> Result<String, MyError> {
         Ok(format!("hello, {}", name))
     }
 
-    #[handler(paths = ["/json"], methods = [POST], security = [{ MyScheme2: ["read", "write"] }])]
+    #[endpoint(paths = ["/json"], methods = [POST], security = [{ MyScheme2: ["read", "write"] }])]
     async fn json_person(&self, mut person: Json<Person>) -> Json<Person> {
         person.age += 1;
         person
     }
 
-    #[handler(paths = ["/form"], methods = [POST, GET])]
+    #[endpoint(paths = ["/form"], methods = [POST, GET])]
     async fn form_person(&self, mut person: Form<Person>) -> Form<Person> {
         person.age += 1;
         person
     }
 
-    #[handler(paths = ["/form_multi_value"], methods = [POST, GET])]
+    #[endpoint(paths = ["/form_multi_value"], methods = [POST, GET])]
     async fn form_multi_value(&self, Form(mut values): Form<MultiValue>) -> Form<MultiValue> {
         values.values.push(1);
         Form(values)
     }
 
-    #[handler(paths = ["/query"], methods = [POST, GET])]
+    #[endpoint(paths = ["/query"], methods = [POST, GET])]
     async fn query_person(&self, Query(multi_value): Query<MultiValue>) -> Json<MultiValue> {
         Json(multi_value)
     }
 
-    #[handler(paths = ["/{name}/{age}"], methods = [GET])]
+    #[endpoint(paths = ["/{name}/{age}"], methods = [GET])]
     async fn path_person(&self, Path(person): Path<Person>) -> Json<Person> {
         Json(person)
     }
 
-    #[handler(paths = ["/multipart"], methods = [POST])]
+    #[endpoint(paths = ["/multipart"], methods = [POST])]
     async fn multipart_person(&self, m: MultipartStruct) -> Json<Person> {
         let MultipartStruct {
             person: JsonField(person),
@@ -193,7 +193,7 @@ impl MyController {
         Json(person)
     }
 
-    #[handler(paths = ["/download_from_memory"], methods = [GET])]
+    #[endpoint(paths = ["/download_from_memory"], methods = [GET])]
     async fn download_from_memory(&self) -> Download<Json<Person>> {
         let json = Json(Person {
             name: Some("Alice".into()),
@@ -203,7 +203,7 @@ impl MyController {
         Download::attachment(json, "test.json")
     }
 
-    #[handler(paths = ["/download_from_disk"], methods = [GET])]
+    #[endpoint(paths = ["/download_from_disk"], methods = [GET])]
     async fn download_from_disk(&self) -> Download<Vec<u8>> {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("test.json");
 
@@ -212,22 +212,22 @@ impl MyController {
         Download::attachment(bytes, "test.json")
     }
 
-    #[handler(paths = ["/unit_enum"], methods = [GET])]
+    #[endpoint(paths = ["/unit_enum"], methods = [GET])]
     async fn unit_enum(&self) -> Json<UnitEnum> {
         Json(UnitEnum::A)
     }
 
-    #[handler(paths = ["/unit_with_description"], methods = [GET])]
+    #[endpoint(paths = ["/unit_with_description"], methods = [GET])]
     async fn unit_with_description(&self) -> Json<UnitWithDescription> {
         Json(UnitWithDescription::A)
     }
 
-    #[handler(paths = ["/complex_enum"], methods = [GET])]
+    #[endpoint(paths = ["/complex_enum"], methods = [GET])]
     async fn complex_enum(&self) -> Json<ComplexEnum> {
         Json(ComplexEnum::A)
     }
 
-    #[handler(paths = ["/nested_schema"], methods = [GET])]
+    #[endpoint(paths = ["/nested_schema"], methods = [GET])]
     async fn nested_schema(&self) -> Json<Nested> {
         Json(Nested {
             name: "Hello".to_string(),
@@ -235,7 +235,7 @@ impl MyController {
         })
     }
 
-    #[handler(paths = ["/websocket"], methods = [GET])]
+    #[endpoint(paths = ["/websocket"], methods = [GET])]
     async fn websocket(&self, ws: WebSocketRequest) -> WebSocketResponse {
         ws.on_upgrade(|mut socket| async move {
             loop {
@@ -248,7 +248,7 @@ impl MyController {
         })
     }
 
-    #[handler(paths = ["/event_stream"], methods = [GET])]
+    #[endpoint(paths = ["/event_stream"], methods = [GET])]
     async fn event_stream(&self) -> EventStream<Person> {
         EventStream::new(
             async_stream::stream! {

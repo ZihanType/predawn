@@ -1,5 +1,3 @@
-next error
-*兼容* 属性宏 `handler` 改名为 `endpoint` 以避免 rust-analyzer 的代码补全引入 `predawn::handler` mod
 统一处理InsertError
 推迟泛型限定
 用 all_of 重新实现 custom schema
