@@ -17,12 +17,12 @@ predawn = { workspace = true }
 async-trait = { workspace = true }
 sea-orm = { workspace = true }
 tokio = { workspace = true, features = ["rt"] }
-scc = { workspace = true }
 http = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 url = { workspace = true, features = ["serde"] }
 rudi = { workspace = true, features = ["rudi-macro"] }
 snafu = { workspace = true, features = ["rust_1_65", "std"] }
+duration-str = { workspace = true, features = ["serde"] }
 
 [features]
 

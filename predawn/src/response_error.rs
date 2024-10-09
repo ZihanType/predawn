@@ -155,17 +155,6 @@ impl ResponseError for PathError {
 #[derive(Debug, Snafu)]
 #[snafu(visibility(pub(crate)))]
 pub enum DeserializePathError {
-    /// The URI contained the wrong number of parameters.
-    #[snafu(display("wrong number of parameters: expected {expected} but actual {actual}"))]
-    WrongNumberOfParameters {
-        #[snafu(implicit)]
-        location: Location,
-        /// The number of actual parameters in the URI.
-        actual: usize,
-        /// The number of expected parameters.
-        expected: usize,
-    },
-
     /// Failed to parse the value at a specific key into the expected type.
     ///
     /// This variant is used when deserializing into types that have named fields, such as structs.
@@ -217,8 +206,7 @@ impl serde::de::Error for DeserializePathError {
 impl ResponseError for DeserializePathError {
     fn as_status(&self) -> StatusCode {
         match self {
-            DeserializePathError::WrongNumberOfParameters { .. }
-            | DeserializePathError::UnsupportedType { .. } => StatusCode::INTERNAL_SERVER_ERROR,
+            DeserializePathError::UnsupportedType { .. } => StatusCode::INTERNAL_SERVER_ERROR,
 
             DeserializePathError::ParseErrorAtKey { .. } | DeserializePathError::Message { .. } => {
                 StatusCode::BAD_REQUEST
@@ -233,8 +221,7 @@ impl ResponseError for DeserializePathError {
 
     fn error_stack(&self, stack: &mut ErrorStack) {
         match self {
-            DeserializePathError::WrongNumberOfParameters { location, .. }
-            | DeserializePathError::ParseErrorAtKey { location, .. }
+            DeserializePathError::ParseErrorAtKey { location, .. }
             | DeserializePathError::UnsupportedType { location, .. }
             | DeserializePathError::Message { location, .. } => {
                 stack.push(self, location);
@@ -258,7 +245,7 @@ pub enum ReadFormError {
         location: Location,
     },
     #[snafu(display("{source}"))]
-    FormDeserializeError {
+    DeserializeFormError {
         #[snafu(implicit)]
         location: Location,
         source: serde_path_to_error::Error<serde_html_form::de::Error>,
@@ -270,7 +257,7 @@ impl ResponseError for ReadFormError {
         match self {
             ReadFormError::ReadFormBytesError { source, .. } => source.as_status(),
             ReadFormError::InvalidFormContentType { .. } => StatusCode::UNSUPPORTED_MEDIA_TYPE,
-            ReadFormError::FormDeserializeError { .. } => StatusCode::BAD_REQUEST,
+            ReadFormError::DeserializeFormError { .. } => StatusCode::BAD_REQUEST,
         }
     }
 
@@ -289,7 +276,7 @@ impl ResponseError for ReadFormError {
             ReadFormError::InvalidFormContentType { location } => {
                 stack.push(self, location);
             }
-            ReadFormError::FormDeserializeError { location, source } => {
+            ReadFormError::DeserializeFormError { location, source } => {
                 stack.push(self, location);
                 stack.push_without_location(source);
             }
@@ -373,16 +360,16 @@ impl ResponseError for DeserializeJsonError {
 #[derive(Debug, Snafu)]
 #[snafu(visibility(pub(crate)))]
 pub enum ReadJsonError {
-    #[snafu(display("expected request with `{}: {}`", CONTENT_TYPE, <Json<()> as MediaType>::MEDIA_TYPE))]
-    InvalidJsonContentType {
-        #[snafu(implicit)]
-        location: Location,
-    },
     #[snafu(display("{source}"))]
     ReadJsonBytesError {
         #[snafu(implicit)]
         location: Location,
         source: ReadBytesError,
+    },
+    #[snafu(display("expected request with `{}: {}`", CONTENT_TYPE, <Json<()> as MediaType>::MEDIA_TYPE))]
+    InvalidJsonContentType {
+        #[snafu(implicit)]
+        location: Location,
     },
     #[snafu(display("{source}"))]
     DeserializeJsonError {

@@ -5,7 +5,7 @@ use http::Method;
 use indexmap::IndexMap;
 use matchit::{InsertError, Match};
 use predawn_core::{error::Error, request::Request, response::Response};
-use snafu::IntoError;
+use snafu::ResultExt;
 
 use crate::{
     handler::{DynHandler, Handler},
@@ -93,9 +93,7 @@ impl Handler for Router {
     async fn call(&self, mut req: Request) -> Result<Response, Error> {
         let head = &mut req.head;
 
-        let matched = self
-            .at(head.uri.path())
-            .map_err(|e| MatchSnafu.into_error(e))?;
+        let matched = self.at(head.uri.path()).context(MatchSnafu)?;
 
         head.extensions
             .get_or_insert_default::<PathParams>()

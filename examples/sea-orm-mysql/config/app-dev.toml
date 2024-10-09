@@ -1,9 +1,25 @@
 [data_sources]
-# default data source with url, username and password
-default = { url = "mysql://localhost/workspace", username = "root", password = "123456" }
-
 # data source with url only
 db1 = "mysql://root:123456@localhost/workspace"
 
 # data source with full url
 db2 = "mysql://root:123456@localhost:3306/workspace"
+
+# `default` data source with all options
+[data_sources.default]
+url = "mysql://localhost/workspace"
+username = "root"
+password = "123456"
+max_connections = 20
+min_connections = 10
+connect_timeout = "1d"
+idle_timeout = "1h"
+acquire_timeout = "1m"
+max_lifetime = "1m 30s"
+sqlx_logging = true
+sqlx_logging_level = "debug"
+sqlx_slow_statements_logging_settings = { level = "debug", threshold = "1m 30s 10ms" }
+sqlcipher_key = "sea-orm"
+schema_search_path = "public"
+test_before_acquire = true
+connect_lazy = true

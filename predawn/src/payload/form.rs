@@ -20,10 +20,10 @@ use predawn_core::{
 };
 use predawn_schema::ToSchema;
 use serde::{de::DeserializeOwned, Serialize};
-use snafu::IntoError;
+use snafu::ResultExt;
 
 use crate::response_error::{
-    FormDeserializeSnafu, InvalidFormContentTypeSnafu, ReadFormBytesSnafu, ReadFormError,
+    DeserializeFormSnafu, InvalidFormContentTypeSnafu, ReadFormBytesSnafu, ReadFormError,
     WriteFormError, WriteFormSnafu,
 };
 
@@ -44,12 +44,10 @@ where
         if <Self as RequestMediaType>::check_content_type(content_type) {
             let bytes = Bytes::from_request(head, body)
                 .await
-                .map_err(|e| ReadFormBytesSnafu.into_error(e))?;
+                .context(ReadFormBytesSnafu)?;
 
-            match crate::util::deserialize_form(&bytes) {
-                Ok(value) => Ok(Form(value)),
-                Err(err) => Err(FormDeserializeSnafu.into_error(err)),
-            }
+            let form = crate::util::deserialize_form(&bytes).context(DeserializeFormSnafu)?;
+            Ok(Form(form))
         } else {
             InvalidFormContentTypeSnafu.fail()
         }
@@ -81,7 +79,7 @@ where
 
     fn into_response(self) -> Result<Response, Self::Error> {
         let mut response = crate::util::serialize_form(&self.0)
-            .map_err(|e| WriteFormSnafu.into_error(e))?
+            .context(WriteFormSnafu)?
             .into_response()
             .unwrap_or_else(|a: Infallible| match a {});
 

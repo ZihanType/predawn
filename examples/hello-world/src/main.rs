@@ -42,6 +42,10 @@ impl Hooks for App {
     fn init_logger(config: &Config, map: &mut AnyMap) {
         let cfg = LoggerConfig::new(config);
 
+        let Some(level) = cfg.level.as_tracing_level() else {
+            return;
+        };
+
         let file_appender = tracing_appender::rolling::daily(
             concat!(env!("CARGO_MANIFEST_DIR"), "/log"),
             "hello-world.log",
@@ -50,10 +54,10 @@ impl Hooks for App {
 
         let file_layer = tracing_subscriber::fmt::layer()
             .with_ansi(false)
-            .with_writer(non_blocking.with_max_level(tracing::Level::from(cfg.level)));
+            .with_writer(non_blocking.with_max_level(level));
 
-        let stdout_layer = tracing_subscriber::fmt::layer()
-            .with_writer(std::io::stdout.with_max_level(tracing::Level::from(cfg.level)));
+        let stdout_layer =
+            tracing_subscriber::fmt::layer().with_writer(std::io::stdout.with_max_level(level));
 
         tracing_subscriber::registry()
             .with(file_layer)
@@ -68,8 +72,8 @@ impl Hooks for App {
 
         let router = router
             .with(CompressionLayer::new().zstd(true).compat())
-            .with(t)
-            .inspect_all_error(|e| tracing::error!("{:#?}", e.error_stack()));
+            .inspect_all_error(|e| tracing::error!("{:#?}", e.error_stack()))
+            .with(t);
 
         (cx, router)
     }

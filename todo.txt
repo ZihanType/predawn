@@ -1,39 +1,27 @@
+next error
+*兼容* 属性宏 `handler` 改名为 `endpoint` 以避免 rust-analyzer 的代码补全引入 `predawn::handler` mod
+统一处理InsertError
+推迟泛型限定
 用 all_of 重新实现 custom schema
+flatten panic
+pretty openapi json
+丰富 Error response 的信息？ 在 ErrorStack 中添加字段
 
 discriminator
 ToParameter flatten
 
 tempfile
 
+serde ignore
+
 SecuritySchema
 OAuth2
 OpenIDConnect
 HttpAuthScheme
 
-1.
-#[derive(Debug)]
-pub struct Connection {
-    name: Arc<str>,
-    conn: DatabaseConnection,
-    transactions: Vec<Option<Transaction>>,
-    current_transaction: usize,
-}
-
-usize::MAX 表示没有事务
-
-嵌套事务
-第一个事务由 conn 创建，后续事务由 current 事务创建
-
-独立事务 ?
-
-2.
-数据库连接参数
-
-3.
-set_username
-set_password
-
 predawn schema macro
+
+delete `predawn-sea-orm` unnacessary `async` in `async fn inject`
 
 controller: condition, skip
 
@@ -58,6 +46,7 @@ Header
 Cookie
 Base64
 Html
+ProtoBuf
 split controller trait
 more openapi ui
 more ToSchema impl

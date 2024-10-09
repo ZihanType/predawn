@@ -9,7 +9,7 @@ use std::{
 use bytes::Bytes;
 use http::Uri;
 use multer::Field;
-use snafu::IntoError;
+use snafu::ResultExt;
 
 use crate::response_error::{
     ByParseFieldSnafu, DuplicateFieldSnafu, IncorrectNumberOfFieldsSnafu, MissingFieldSnafu,
@@ -183,10 +183,8 @@ macro_rules! some_impl {
                     return DuplicateFieldSnafu { name }.fail();
                 }
 
-                match field.$ident().await {
-                    Ok(o) => Ok(Ok(o)),
-                    Err(e) => Err(ByParseFieldSnafu { name }.into_error(e)),
-                }
+                let f = field.$ident().await.context(ByParseFieldSnafu { name })?;
+                Ok(Ok(f))
             }
 
             fn extract(holder: Self::Holder, _: &'static str) -> Result<Self, MultipartError> {

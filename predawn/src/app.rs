@@ -32,9 +32,9 @@ pub trait Hooks {
 
         let cfg = LoggerConfig::new(config);
 
-        tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::from(cfg.level))
-            .init();
+        if let Some(level) = cfg.level.as_tracing_level() {
+            tracing_subscriber::fmt().with_max_level(level).init();
+        }
     }
 
     #[allow(async_fn_in_trait)]

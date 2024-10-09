@@ -5,6 +5,8 @@ use predawn::{error_stack::ErrorStack, location::Location, response_error::Respo
 use sea_orm::DbErr;
 use snafu::Snafu;
 
+use crate::Transaction;
+
 #[derive(Debug, Snafu)]
 #[snafu(visibility(pub(crate)))]
 pub enum Error {
@@ -15,40 +17,45 @@ pub enum Error {
         source: DbErr,
     },
 
-    #[snafu(display(
-        "data source `{name}` has more than one strong reference to its transaction"
-    ))]
-    TransactionReferencesError {
-        #[snafu(implicit)]
-        location: Location,
-        name: Arc<str>,
-    },
-
     #[snafu(display("not found a data source `{name}`"))]
-    NotFoundDataSourceError {
+    NotFoundDataSource {
         #[snafu(implicit)]
         location: Location,
         name: Box<str>,
     },
 
     #[snafu(display("not set data sources in the current context"))]
-    NotSetDataSourcesError {
+    NotSetDataSources {
         #[snafu(implicit)]
         location: Location,
     },
 
-    #[snafu(display("data source `{name}` no transactions to commit"))]
-    NoTransactionsToCommit {
+    #[snafu(display("inconsistent data source and transaction, data source name: `{data_source_name}`, transaction name : `{transaction_name}`"))]
+    InconsistentDataSourceAndTransaction {
         #[snafu(implicit)]
         location: Location,
-        name: Arc<str>,
+        data_source_name: Arc<str>,
+        transaction_name: Arc<str>,
+        txn: Transaction,
     },
 
-    #[snafu(display("data source `{name}` no transactions to rollback"))]
-    NoTransactionsToRollback {
+    #[snafu(display("transaction have more than one reference, data source name: `{data_source_name}`, transaction hierarchy: `{transaction_hierarchy}`"))]
+    TransactionHaveMoreThanOneReference {
         #[snafu(implicit)]
         location: Location,
-        name: Arc<str>,
+        data_source_name: Arc<str>,
+        transaction_hierarchy: usize,
+        txn: Transaction,
+    },
+
+    #[snafu(display("nested transaction have more than one reference, data source name: `{data_source_name}`, current transaction hierarchy: `{current_transaction_hierarchy}`, nested transaction hierarchy: `{nested_transaction_hierarchy}`"))]
+    NestedTransactionHaveMoreThanOneReference {
+        #[snafu(implicit)]
+        location: Location,
+        data_source_name: Arc<str>,
+        current_transaction_hierarchy: usize,
+        nested_transaction_hierarchy: usize,
+        txn: Transaction,
     },
 }
 
@@ -67,19 +74,12 @@ impl ResponseError for Error {
                 stack.push(self, location);
                 stack.push_without_location(source);
             }
-            Error::TransactionReferencesError { location, .. } => {
-                stack.push(self, location);
-            }
-            Error::NotFoundDataSourceError { location, .. } => {
-                stack.push(self, location);
-            }
-            Error::NotSetDataSourcesError { location } => {
-                stack.push(self, location);
-            }
-            Error::NoTransactionsToCommit { location, .. } => {
-                stack.push(self, location);
-            }
-            Error::NoTransactionsToRollback { location, .. } => {
+
+            Error::NotFoundDataSource { location, .. }
+            | Error::NotSetDataSources { location }
+            | Error::InconsistentDataSourceAndTransaction { location, .. }
+            | Error::TransactionHaveMoreThanOneReference { location, .. }
+            | Error::NestedTransactionHaveMoreThanOneReference { location, .. } => {
                 stack.push(self, location);
             }
         }

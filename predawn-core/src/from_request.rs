@@ -4,7 +4,7 @@ use bytes::Bytes;
 use futures_util::FutureExt;
 use http::{HeaderMap, Method, Uri, Version};
 use http_body_util::{BodyExt, LengthLimitError};
-use snafu::IntoError;
+use snafu::{IntoError, ResultExt};
 
 use crate::{
     body::RequestBody,
@@ -122,9 +122,9 @@ impl<'a> FromRequest<'a> for String {
     async fn from_request(head: &'a mut Head, body: RequestBody) -> Result<Self, Self::Error> {
         let bytes = Vec::<u8>::from_request(head, body)
             .await
-            .map_err(|e| ReadBytesSnafu.into_error(e))?;
+            .context(ReadBytesSnafu)?;
 
-        let string = String::from_utf8(bytes).map_err(|e| InvalidUtf8Snafu.into_error(e))?;
+        let string = String::from_utf8(bytes).context(InvalidUtf8Snafu)?;
 
         Ok(string)
     }

@@ -23,7 +23,7 @@ use predawn_core::{
 };
 use predawn_schema::ToSchema;
 use serde::{de::DeserializeOwned, Serialize};
-use snafu::IntoError;
+use snafu::ResultExt;
 
 use crate::response_error::{
     DeserializeJsonSnafu, InvalidJsonContentTypeSnafu, ReadJsonBytesSnafu, ReadJsonError,
@@ -47,12 +47,10 @@ where
         if <Self as RequestMediaType>::check_content_type(content_type) {
             let bytes = Bytes::from_request(head, body)
                 .await
-                .map_err(|e| ReadJsonBytesSnafu.into_error(e))?;
+                .context(ReadJsonBytesSnafu)?;
 
-            match crate::util::deserialize_json(&bytes) {
-                Ok(o) => Ok(Json(o)),
-                Err(e) => Err(DeserializeJsonSnafu.into_error(e)),
-            }
+            let json = crate::util::deserialize_json(&bytes).context(DeserializeJsonSnafu)?;
+            Ok(Json(json))
         } else {
             InvalidJsonContentTypeSnafu.fail()
         }
@@ -84,7 +82,7 @@ where
 
     fn into_response(self) -> Result<Response, Self::Error> {
         let mut response = crate::util::serialize_json(&self.0)
-            .map_err(|e| WriteJsonSnafu.into_error(e))?
+            .context(WriteJsonSnafu)?
             .into_response()
             .unwrap_or_else(|a: Infallible| match a {});
 

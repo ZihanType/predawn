@@ -5,7 +5,7 @@ use super::{Config, ConfigPrefix};
 use crate::normalized_path::NormalizedPath;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 pub struct OpenAPIConfig {
     #[serde(default = "default_json_path")]
     pub json_path: NormalizedPath,
@@ -25,7 +25,7 @@ pub struct OpenAPIConfig {
 impl OpenAPIConfig {
     #[di]
     pub fn new(#[di(ref)] config: &Config) -> Self {
-        config.get().unwrap()
+        config.get().expect("failed to load `OpenAPIConfig`")
     }
 }
 

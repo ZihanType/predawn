@@ -8,7 +8,7 @@ use predawn_core::{
 };
 use predawn_schema::ToSchema;
 use serde::de::DeserializeOwned;
-use snafu::IntoError;
+use snafu::ResultExt;
 
 use super::ParseField;
 use crate::response_error::{
@@ -76,10 +76,8 @@ impl<T: Send + DeserializeOwned> ParseField for JsonField<T> {
         )
         .await??;
 
-        match crate::util::deserialize_json(&bytes) {
-            Ok(o) => Ok(Ok(JsonField(o))),
-            Err(e) => Err(InvalidJsonFieldSnafu { name }.into_error(e)),
-        }
+        let f = crate::util::deserialize_json(&bytes).context(InvalidJsonFieldSnafu { name })?;
+        Ok(Ok(JsonField(f)))
     }
 
     fn extract(holder: Self::Holder, _: &'static str) -> Result<Self, MultipartError> {

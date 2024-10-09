@@ -8,7 +8,7 @@ use super::{Config, ConfigPrefix};
 use crate::normalized_path::NormalizedPath;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 pub struct ServerConfig {
     #[serde(default = "default_ip")]
     pub ip: IpAddr,
@@ -26,7 +26,7 @@ pub struct ServerConfig {
 impl ServerConfig {
     #[di]
     pub fn new(#[di(ref)] config: &Config) -> Self {
-        config.get().unwrap()
+        config.get().expect("failed to load `ServerConfig`")
     }
 
     pub fn full_non_application_root_path(self) -> NormalizedPath {

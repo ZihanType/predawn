@@ -10,7 +10,7 @@ use predawn_core::{
     request::Head,
 };
 use serde::Deserialize;
-use snafu::IntoError;
+use snafu::ResultExt;
 
 use self::de::PathDeserializer;
 use crate::{
@@ -52,10 +52,8 @@ where
 
         let deserializer = PathDeserializer::new(params);
 
-        match serde_path_to_error::deserialize(deserializer) {
-            Ok(path) => Ok(Path(path)),
-            Err(e) => Err(DeserializePathSnafu.into_error(e)),
-        }
+        let path = serde_path_to_error::deserialize(deserializer).context(DeserializePathSnafu)?;
+        Ok(Path(path))
     }
 }
 

@@ -1,117 +1,67 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
-use rudi::Singleton;
-use scc::HashMap;
-use sea_orm::{Database, DatabaseConnection, DbErr};
+use rudi::SingleOwner;
+use sea_orm::DatabaseConnection;
 
-use crate::{
-    error::NotFoundDataSourceSnafu, Connection, DataSourcesConfig, Error, Transaction,
-    DEFAULT_DATA_SOURCE_NAME,
-};
+use crate::{inner::Inner, DataSource, Error, DEFAULT_DATA_SOURCE};
 
-#[derive(Debug, Default, Clone)]
-pub struct DataSources(HashMap<Arc<str>, Connection>);
+#[derive(Debug)]
+pub struct DataSources(HashMap<Arc<str>, DataSource>);
 
 impl DataSources {
-    pub async fn with_default(conn: DatabaseConnection) -> Self {
-        let name = Arc::<str>::from(DEFAULT_DATA_SOURCE_NAME);
+    pub fn with_default(conn: DatabaseConnection) -> Self {
+        let name = Arc::<str>::from(DEFAULT_DATA_SOURCE);
 
-        let map = HashMap::new();
-
-        let _ = map
-            .insert_async(name.clone(), Connection::new(name, conn))
-            .await;
+        let mut map = HashMap::new();
+        map.insert(name.clone(), DataSource::new(name, conn));
 
         Self(map)
     }
 
-    pub async fn insert<N: Into<Arc<str>>>(
-        &self,
-        name: N,
-        conn: DatabaseConnection,
-    ) -> Result<(), (Arc<str>, Connection)> {
-        self._insert(name.into(), conn).await
+    pub fn new(map: HashMap<Arc<str>, DatabaseConnection>) -> Self {
+        let map = map
+            .into_iter()
+            .map(|(name, conn)| (name.clone(), DataSource::new(name, conn)))
+            .collect();
+
+        Self(map)
     }
 
-    async fn _insert(
-        &self,
-        name: Arc<str>,
-        conn: DatabaseConnection,
-    ) -> Result<(), (Arc<str>, Connection)> {
-        self.0
-            .insert_async(name.clone(), Connection::new(name, conn))
-            .await
+    pub fn get(&self, name: &str) -> Option<&DataSource> {
+        self.0.get(name)
+    }
+
+    pub fn standalone(&self) -> Self {
+        let map = self
+            .0
+            .iter()
+            .map(|(name, conn)| (name.clone(), conn.standalone()))
+            .collect();
+
+        Self(map)
+    }
+
+    pub async fn commit_all(&self) -> Result<(), Error> {
+        for source in self.0.values() {
+            source.commit_all().await?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn rollback_all(&self) -> Result<(), Error> {
+        for source in self.0.values() {
+            source.rollback_all().await?;
+        }
+
+        Ok(())
     }
 }
 
-macro_rules! single_operation {
-    ($ident:ident, $ty:ty) => {
-        pub async fn $ident(&self, name: &str) -> Result<$ty, Error> {
-            match self.0.get_async(name).await {
-                Some(mut entry) => entry.get_mut().$ident().await,
-                None => NotFoundDataSourceSnafu { name }.fail(),
-            }
-        }
-    };
-}
-
-macro_rules! multi_operation {
-    ($ident:ident) => {
-        pub async fn $ident(&self) -> Result<(), Error> {
-            let mut option_entry = self.0.first_entry_async().await;
-
-            while let Some(mut entry) = option_entry {
-                entry.get_mut().$ident().await?;
-                option_entry = entry.next_async().await;
-            }
-
-            Ok(())
-        }
-    };
-}
-
-impl DataSources {
-    single_operation!(current_txn, Transaction);
-
-    single_operation!(new_txn, Transaction);
-
-    single_operation!(commit, ());
-
-    single_operation!(rollback, ());
-
-    multi_operation!(commit_all);
-
-    multi_operation!(rollback_all);
-}
-
-#[Singleton]
+#[SingleOwner]
 impl DataSources {
     #[di]
-    async fn create(cfg: DataSourcesConfig) -> Self {
-        Self::_create(cfg)
-            .await
-            .expect("failed to create `DataSources`")
-    }
-
-    async fn _create(cfg: DataSourcesConfig) -> Result<Self, DbErr> {
-        let DataSourcesConfig {
-            default,
-            data_sources,
-        } = cfg;
-
-        let this = match default {
-            Some(url) => {
-                let conn = Database::connect(url).await?;
-                Self::with_default(conn).await
-            }
-            None => Self::default(),
-        };
-
-        for (name, url) in data_sources {
-            let conn = Database::connect(url).await?;
-            let _ = this.insert(name, conn).await;
-        }
-
-        Ok(this)
+    async fn inject(Inner(map): Inner) -> Self {
+        Self::new(map)
     }
 }
