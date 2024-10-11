@@ -64,6 +64,22 @@ macro_rules! define_from_request_error {
             }
         }
 
+        impl $crate::error_ext::ErrorExt for $name {
+            fn entry(&self) -> ($crate::location::Location, $crate::error_ext::NextError<'_>) {
+                match self {
+                    $(
+                        $name::$error(e) => <$error as $crate::error_ext::ErrorExt>::entry(e),
+                    )+
+
+                    $name::InvalidContentType(e) => <
+                        $crate::response_error::InvalidContentType<{ $crate::count!($($error,)+) }>
+                        as
+                        $crate::error_ext::ErrorExt
+                    >::entry(e),
+                }
+            }
+        }
+
         impl $crate::response_error::ResponseError for $name {
             fn as_status(&self) -> $crate::http::StatusCode {
                 match self {
@@ -102,20 +118,6 @@ macro_rules! define_from_request_error {
                         as
                         $crate::response_error::ResponseError
                     >::inner(e),
-                }
-            }
-
-            fn error_stack(&self, stack: &mut $crate::error_stack::ErrorStack) {
-                match self {
-                    $(
-                        $name::$error(e) => <$error as $crate::response_error::ResponseError>::error_stack(e, stack),
-                    )+
-
-                    $name::InvalidContentType(e) => <
-                        $crate::response_error::InvalidContentType<{ $crate::count!($($error,)+) }>
-                        as
-                        $crate::response_error::ResponseError
-                    >::error_stack(e, stack),
                 }
             }
         }
@@ -169,6 +171,16 @@ macro_rules! define_into_response_error {
             }
         }
 
+        impl $crate::error_ext::ErrorExt for $name {
+            fn entry(&self) -> ($crate::location::Location, $crate::error_ext::NextError<'_>) {
+                match self {
+                    $(
+                        $name::$error(e) => <$error as $crate::error_ext::ErrorExt>::entry(e),
+                    )+
+                }
+            }
+        }
+
         impl $crate::response_error::ResponseError for $name {
             fn as_status(&self) -> $crate::http::StatusCode {
                 match self {
@@ -189,14 +201,6 @@ macro_rules! define_into_response_error {
                 match self {
                     $(
                         $name::$error(e) => <$error as $crate::response_error::ResponseError>::inner(e),
-                    )+
-                }
-            }
-
-            fn error_stack(&self, stack: &mut $crate::error_stack::ErrorStack) {
-                match self {
-                    $(
-                        $name::$error(e) => <$error as $crate::response_error::ResponseError>::error_stack(e, stack),
                     )+
                 }
             }

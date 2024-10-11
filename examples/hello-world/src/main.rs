@@ -11,7 +11,7 @@ use predawn::{
     app::{run_app, Hooks},
     config::{logger::LoggerConfig, Config},
     controller,
-    error_stack::ErrorStack,
+    error_ext::{ErrorExt, NextError},
     extract::{
         multipart::{JsonField, Multipart, Upload},
         websocket::{Message, WebSocketRequest, WebSocketResponse},
@@ -346,6 +346,12 @@ struct MyError {
     location: Location,
 }
 
+impl ErrorExt for MyError {
+    fn entry(&self) -> (Location, NextError<'_>) {
+        (self.location, NextError::None)
+    }
+}
+
 impl ResponseError for MyError {
     fn as_status(&self) -> StatusCode {
         StatusCode::INTERNAL_SERVER_ERROR
@@ -353,10 +359,6 @@ impl ResponseError for MyError {
 
     fn status_codes(codes: &mut BTreeSet<StatusCode>) {
         codes.insert(StatusCode::INTERNAL_SERVER_ERROR);
-    }
-
-    fn error_stack(&self, stack: &mut ErrorStack) {
-        stack.push(self, &self.location);
     }
 }
 

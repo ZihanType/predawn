@@ -3,9 +3,7 @@ use std::{error::Error as StdError, fmt};
 use http::{header::CONTENT_TYPE, HeaderValue, StatusCode};
 use mime::TEXT_PLAIN_UTF_8;
 
-use crate::{
-    error_stack::ErrorStack, location::Location, response::Response, response_error::ResponseError,
-};
+use crate::{location::Location, response::Response, response_error::ResponseError};
 
 /// Alias for a type-erased error type.
 pub type BoxError = Box<dyn StdError + Send + Sync>;
@@ -72,16 +70,14 @@ where
 {
     fn from(error: T) -> Self {
         let response = error.as_response();
-
-        let mut error_stack = ErrorStack::default();
-        error.error_stack(&mut error_stack);
+        let error_stack = error.error_stack();
 
         let inner = error.inner();
 
         Self {
             response,
             inner,
-            error_stack: error_stack.finish(),
+            error_stack,
         }
     }
 }
@@ -114,13 +110,13 @@ impl From<(StatusCode, BoxError)> for Error {
             .body(error.to_string().into())
             .unwrap();
 
-        let mut error_stack = ErrorStack::default();
-        error_stack.push(&error, &Location::caller());
+        let mut stack = Vec::new();
+        stack.push(format!("0: {}, at: {}", error, Location::caller()).into_boxed_str());
 
         Self {
             response,
             inner: error,
-            error_stack: error_stack.finish(),
+            error_stack: stack.into_boxed_slice(),
         }
     }
 }

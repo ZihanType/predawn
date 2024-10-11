@@ -10,13 +10,13 @@ use predawn_core::{
     request::Head,
 };
 use serde::Deserialize;
-use snafu::ResultExt;
+use snafu::{IntoError, ResultExt};
 
 use self::de::PathDeserializer;
 use crate::{
     path_params::PathParams,
     response_error::{
-        DeserializePathSnafu, InvalidUtf8InPathParamSnafu, MissingPathParamsSnafu, PathError,
+        DeserializePathSnafu, InvalidUtf8PathParamSnafu, MissingPathParamsSnafu, PathError,
     },
     ToParameters,
 };
@@ -35,24 +35,15 @@ where
     async fn from_request_head(head: &'a mut Head) -> Result<Self, Self::Error> {
         let params = match head.extensions.get::<PathParams>() {
             Some(PathParams::Params(params)) => params,
-            Some(PathParams::InvalidUtf8InPathParam {
-                key,
-                error,
-                location,
-            }) => {
-                return InvalidUtf8InPathParamSnafu {
-                    key: key.clone(),
-                    error: *error,
-                    error_location: *location,
-                }
-                .fail();
+            Some(PathParams::InvalidUtf8InPathParam(error)) => {
+                return Err(InvalidUtf8PathParamSnafu.into_error(error.clone()));
             }
             None => return MissingPathParamsSnafu.fail(),
         };
 
         let deserializer = PathDeserializer::new(params);
 
-        let path = serde_path_to_error::deserialize(deserializer).context(DeserializePathSnafu)?;
+        let path = T::deserialize(deserializer).context(DeserializePathSnafu)?;
         Ok(Path(path))
     }
 }

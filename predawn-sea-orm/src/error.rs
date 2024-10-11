@@ -1,7 +1,11 @@
 use std::{collections::BTreeSet, sync::Arc};
 
 use http::StatusCode;
-use predawn::{error_stack::ErrorStack, location::Location, response_error::ResponseError};
+use predawn::{
+    error_ext::{ErrorExt, NextError},
+    location::Location,
+    response_error::ResponseError,
+};
 use sea_orm::DbErr;
 use snafu::Snafu;
 
@@ -59,6 +63,22 @@ pub enum Error {
     },
 }
 
+impl ErrorExt for Error {
+    fn entry(&self) -> (Location, NextError<'_>) {
+        match self {
+            Error::DbErr { location, source } => (*location, NextError::Std(source)),
+
+            Error::NotFoundDataSource { location, .. }
+            | Error::NotSetDataSources { location }
+            | Error::InconsistentDataSourceAndTransaction { location, .. }
+            | Error::TransactionHaveMoreThanOneReference { location, .. }
+            | Error::NestedTransactionHaveMoreThanOneReference { location, .. } => {
+                (*location, NextError::None)
+            }
+        }
+    }
+}
+
 impl ResponseError for Error {
     fn as_status(&self) -> StatusCode {
         StatusCode::INTERNAL_SERVER_ERROR
@@ -66,22 +86,5 @@ impl ResponseError for Error {
 
     fn status_codes(codes: &mut BTreeSet<StatusCode>) {
         codes.insert(StatusCode::INTERNAL_SERVER_ERROR);
-    }
-
-    fn error_stack(&self, stack: &mut ErrorStack) {
-        match self {
-            Error::DbErr { location, source } => {
-                stack.push(self, location);
-                stack.push_without_location(source);
-            }
-
-            Error::NotFoundDataSource { location, .. }
-            | Error::NotSetDataSources { location }
-            | Error::InconsistentDataSourceAndTransaction { location, .. }
-            | Error::TransactionHaveMoreThanOneReference { location, .. }
-            | Error::NestedTransactionHaveMoreThanOneReference { location, .. } => {
-                stack.push(self, location);
-            }
-        }
     }
 }

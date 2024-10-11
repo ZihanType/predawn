@@ -8,7 +8,8 @@ use http::StatusCode;
 
 use crate::{
     error::BoxError,
-    error_stack::ErrorStack,
+    error_ext::{ErrorExt, NextError},
+    location::Location,
     openapi::{self, merge_responses, Schema},
     response::Response,
     response_error::ResponseError,
@@ -42,6 +43,19 @@ where
         match self {
             Either::Left(l) => l.source(),
             Either::Right(r) => r.source(),
+        }
+    }
+}
+
+impl<L, R> ErrorExt for Either<L, R>
+where
+    L: ErrorExt,
+    R: ErrorExt,
+{
+    fn entry(&self) -> (Location, NextError<'_>) {
+        match self {
+            Either::Left(l) => l.entry(),
+            Either::Right(r) => r.entry(),
         }
     }
 }
@@ -84,13 +98,6 @@ where
         match self {
             Either::Left(l) => l.inner(),
             Either::Right(r) => r.inner(),
-        }
-    }
-
-    fn error_stack(&self, stack: &mut ErrorStack) {
-        match self {
-            Either::Left(l) => l.error_stack(stack),
-            Either::Right(r) => r.error_stack(stack),
         }
     }
 }

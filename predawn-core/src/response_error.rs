@@ -12,14 +12,14 @@ use snafu::Snafu;
 
 use crate::{
     error::BoxError,
-    error_stack::ErrorStack,
+    error_ext::{ErrorExt, NextError},
     location::Location,
     media_type::MultiResponseMediaType,
     openapi::{self, Schema},
     response::Response,
 };
 
-pub trait ResponseError: Error + Send + Sync + Sized + 'static {
+pub trait ResponseError: ErrorExt + Send + Sync + Sized + 'static {
     fn as_status(&self) -> StatusCode;
 
     fn status_codes(codes: &mut BTreeSet<StatusCode>);
@@ -65,8 +65,12 @@ pub trait ResponseError: Error + Send + Sync + Sized + 'static {
     fn inner(self) -> BoxError {
         Box::new(self)
     }
+}
 
-    fn error_stack(&self, stack: &mut ErrorStack);
+impl ErrorExt for Infallible {
+    fn entry(&self) -> (Location, NextError<'_>) {
+        match *self {}
+    }
 }
 
 impl ResponseError for Infallible {
@@ -85,10 +89,6 @@ impl ResponseError for Infallible {
         _: &mut Vec<String>,
     ) -> BTreeMap<StatusCode, openapi::Response> {
         BTreeMap::new()
-    }
-
-    fn error_stack(&self, _: &mut ErrorStack) {
-        match *self {}
     }
 }
 
@@ -122,6 +122,12 @@ impl fmt::Display for RequestBodyLimitError {
 
 impl Error for RequestBodyLimitError {}
 
+impl ErrorExt for RequestBodyLimitError {
+    fn entry(&self) -> (Location, NextError<'_>) {
+        (self.location, NextError::None)
+    }
+}
+
 impl ResponseError for RequestBodyLimitError {
     fn as_status(&self) -> StatusCode {
         StatusCode::PAYLOAD_TOO_LARGE
@@ -129,10 +135,6 @@ impl ResponseError for RequestBodyLimitError {
 
     fn status_codes(codes: &mut BTreeSet<StatusCode>) {
         codes.insert(StatusCode::PAYLOAD_TOO_LARGE);
-    }
-
-    fn error_stack(&self, stack: &mut ErrorStack) {
-        stack.push(self, &self.location);
     }
 }
 
@@ -153,6 +155,19 @@ pub enum ReadBytesError {
     },
 }
 
+impl ErrorExt for ReadBytesError {
+    fn entry(&self) -> (Location, NextError<'_>) {
+        match self {
+            ReadBytesError::RequestBodyLimitError { location, source } => {
+                (*location, NextError::Ext(source))
+            }
+            ReadBytesError::UnknownBodyError { location, source } => {
+                (*location, NextError::Std(source.as_ref()))
+            }
+        }
+    }
+}
+
 impl ResponseError for ReadBytesError {
     fn as_status(&self) -> StatusCode {
         match self {
@@ -164,19 +179,6 @@ impl ResponseError for ReadBytesError {
     fn status_codes(codes: &mut BTreeSet<StatusCode>) {
         RequestBodyLimitError::status_codes(codes);
         codes.insert(StatusCode::BAD_REQUEST);
-    }
-
-    fn error_stack(&self, stack: &mut ErrorStack) {
-        match self {
-            ReadBytesError::RequestBodyLimitError { location, source } => {
-                stack.push(self, location);
-                source.error_stack(stack);
-            }
-            ReadBytesError::UnknownBodyError { location, source } => {
-                stack.push(self, location);
-                stack.push_without_location(source);
-            }
-        }
     }
 }
 
@@ -197,6 +199,17 @@ pub enum ReadStringError {
     },
 }
 
+impl ErrorExt for ReadStringError {
+    fn entry(&self) -> (Location, NextError<'_>) {
+        match self {
+            ReadStringError::ReadBytes { location, source } => (*location, NextError::Ext(source)),
+            ReadStringError::InvalidUtf8 { location, source } => {
+                (*location, NextError::Std(source))
+            }
+        }
+    }
+}
+
 impl ResponseError for ReadStringError {
     fn as_status(&self) -> StatusCode {
         match self {
@@ -208,18 +221,5 @@ impl ResponseError for ReadStringError {
     fn status_codes(codes: &mut BTreeSet<StatusCode>) {
         ReadBytesError::status_codes(codes);
         codes.insert(StatusCode::BAD_REQUEST);
-    }
-
-    fn error_stack(&self, stack: &mut ErrorStack) {
-        match self {
-            ReadStringError::ReadBytes { location, source } => {
-                stack.push(self, location);
-                source.error_stack(stack);
-            }
-            ReadStringError::InvalidUtf8 { location, source } => {
-                stack.push(self, location);
-                stack.push_without_location(source);
-            }
-        }
     }
 }

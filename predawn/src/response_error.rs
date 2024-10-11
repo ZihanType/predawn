@@ -6,7 +6,11 @@ use http::{
 };
 use http_body_util::LengthLimitError;
 pub use predawn_core::response_error::*;
-use predawn_core::{error_stack::ErrorStack, location::Location, media_type::MediaType};
+use predawn_core::{
+    error_ext::{ErrorExt, NextError},
+    location::Location,
+    media_type::MediaType,
+};
 use snafu::Snafu;
 
 use crate::{
@@ -23,6 +27,12 @@ pub struct MethodNotAllowedError {
     location: Location,
 }
 
+impl ErrorExt for MethodNotAllowedError {
+    fn entry(&self) -> (Location, NextError<'_>) {
+        (self.location, NextError::None)
+    }
+}
+
 impl ResponseError for MethodNotAllowedError {
     fn as_status(&self) -> StatusCode {
         StatusCode::METHOD_NOT_ALLOWED
@@ -30,10 +40,6 @@ impl ResponseError for MethodNotAllowedError {
 
     fn status_codes(codes: &mut BTreeSet<StatusCode>) {
         codes.insert(StatusCode::METHOD_NOT_ALLOWED);
-    }
-
-    fn error_stack(&self, stack: &mut ErrorStack) {
-        stack.push(self, &self.location);
     }
 }
 
@@ -46,6 +52,12 @@ pub struct MatchError {
     source: matchit::MatchError,
 }
 
+impl ErrorExt for MatchError {
+    fn entry(&self) -> (Location, NextError<'_>) {
+        (self.location, NextError::Std(&self.source))
+    }
+}
+
 impl ResponseError for MatchError {
     fn as_status(&self) -> StatusCode {
         match self.source {
@@ -55,11 +67,6 @@ impl ResponseError for MatchError {
 
     fn status_codes(codes: &mut BTreeSet<StatusCode>) {
         codes.insert(StatusCode::NOT_FOUND);
-    }
-
-    fn error_stack(&self, stack: &mut ErrorStack) {
-        stack.push(self, &self.location);
-        stack.push_without_location(&self.source);
     }
 }
 
@@ -72,6 +79,12 @@ pub struct QueryError {
     source: serde_path_to_error::Error<serde_html_form::de::Error>,
 }
 
+impl ErrorExt for QueryError {
+    fn entry(&self) -> (Location, NextError<'_>) {
+        (self.location, NextError::Std(&self.source))
+    }
+}
+
 impl ResponseError for QueryError {
     fn as_status(&self) -> StatusCode {
         StatusCode::BAD_REQUEST
@@ -80,10 +93,31 @@ impl ResponseError for QueryError {
     fn status_codes(codes: &mut BTreeSet<StatusCode>) {
         codes.insert(StatusCode::BAD_REQUEST);
     }
+}
 
-    fn error_stack(&self, stack: &mut ErrorStack) {
-        stack.push(self, &self.location);
-        stack.push_without_location(&self.source);
+#[derive(Debug, Snafu, Clone)]
+#[snafu(visibility(pub(crate)))]
+#[snafu(display("{error} in `{key}`"))]
+pub struct InvalidUtf8InPathParam {
+    #[snafu(implicit)]
+    location: Location,
+    key: Arc<str>,
+    error: Utf8Error,
+}
+
+impl ErrorExt for InvalidUtf8InPathParam {
+    fn entry(&self) -> (Location, NextError<'_>) {
+        (self.location, NextError::None)
+    }
+}
+
+impl ResponseError for InvalidUtf8InPathParam {
+    fn as_status(&self) -> StatusCode {
+        StatusCode::BAD_REQUEST
+    }
+
+    fn status_codes(codes: &mut BTreeSet<StatusCode>) {
+        codes.insert(StatusCode::BAD_REQUEST);
     }
 }
 
@@ -97,58 +131,48 @@ pub enum PathError {
     },
 
     /// A parameter contained text that, once percent decoded, wasn't valid UTF-8.
-    #[snafu(display("{error} in `{key}`"))]
-    InvalidUtf8InPathParam {
+    #[snafu(display("{source}"))]
+    InvalidUtf8PathParam {
         #[snafu(implicit)]
         location: Location,
-        /// The key at which the invalid value was located.
-        key: Arc<str>,
-        error: Utf8Error,
-        error_location: Location,
+        source: InvalidUtf8InPathParam,
     },
 
     #[snafu(display("{source}"))]
     DeserializePathError {
         #[snafu(implicit)]
         location: Location,
-        source: serde_path_to_error::Error<DeserializePathError>,
+        source: DeserializePathError,
     },
+}
+
+impl ErrorExt for PathError {
+    fn entry(&self) -> (Location, NextError<'_>) {
+        match self {
+            PathError::MissingPathParams { location } => (*location, NextError::None),
+            PathError::InvalidUtf8PathParam { location, source } => {
+                (*location, NextError::Ext(source))
+            }
+            PathError::DeserializePathError { location, source } => {
+                (*location, NextError::Ext(source))
+            }
+        }
+    }
 }
 
 impl ResponseError for PathError {
     fn as_status(&self) -> StatusCode {
         match self {
             PathError::MissingPathParams { .. } => StatusCode::INTERNAL_SERVER_ERROR,
-            PathError::InvalidUtf8InPathParam { .. } => StatusCode::BAD_REQUEST,
-            PathError::DeserializePathError { source, .. } => source.inner().as_status(),
+            PathError::InvalidUtf8PathParam { source, .. } => source.as_status(),
+            PathError::DeserializePathError { source, .. } => source.as_status(),
         }
     }
 
     fn status_codes(codes: &mut BTreeSet<StatusCode>) {
         codes.insert(StatusCode::INTERNAL_SERVER_ERROR);
-        codes.insert(StatusCode::BAD_REQUEST);
+        InvalidUtf8InPathParam::status_codes(codes);
         DeserializePathError::status_codes(codes);
-    }
-
-    fn error_stack(&self, stack: &mut ErrorStack) {
-        match self {
-            PathError::MissingPathParams { location } => {
-                stack.push(self, location);
-            }
-            PathError::InvalidUtf8InPathParam {
-                location,
-                error,
-                error_location,
-                ..
-            } => {
-                stack.push(self, location);
-                stack.push(error, error_location);
-            }
-            PathError::DeserializePathError { location, source } => {
-                stack.push(self, location);
-                source.inner().error_stack(stack);
-            }
-        }
     }
 }
 
@@ -203,6 +227,16 @@ impl serde::de::Error for DeserializePathError {
     }
 }
 
+impl ErrorExt for DeserializePathError {
+    fn entry(&self) -> (Location, NextError<'_>) {
+        match self {
+            DeserializePathError::ParseErrorAtKey { location, .. }
+            | DeserializePathError::UnsupportedType { location, .. }
+            | DeserializePathError::Message { location, .. } => (*location, NextError::None),
+        }
+    }
+}
+
 impl ResponseError for DeserializePathError {
     fn as_status(&self) -> StatusCode {
         match self {
@@ -218,31 +252,21 @@ impl ResponseError for DeserializePathError {
         codes.insert(StatusCode::INTERNAL_SERVER_ERROR);
         codes.insert(StatusCode::BAD_REQUEST);
     }
-
-    fn error_stack(&self, stack: &mut ErrorStack) {
-        match self {
-            DeserializePathError::ParseErrorAtKey { location, .. }
-            | DeserializePathError::UnsupportedType { location, .. }
-            | DeserializePathError::Message { location, .. } => {
-                stack.push(self, location);
-            }
-        }
-    }
 }
 
 #[derive(Debug, Snafu)]
 #[snafu(visibility(pub(crate)))]
 pub enum ReadFormError {
+    #[snafu(display("expected request with `{}: {}`", CONTENT_TYPE, <Form<()> as MediaType>::MEDIA_TYPE))]
+    InvalidFormContentType {
+        #[snafu(implicit)]
+        location: Location,
+    },
     #[snafu(display("{source}"))]
     ReadFormBytesError {
         #[snafu(implicit)]
         location: Location,
         source: ReadBytesError,
-    },
-    #[snafu(display("expected request with `{}: {}`", CONTENT_TYPE, <Form<()> as MediaType>::MEDIA_TYPE))]
-    InvalidFormContentType {
-        #[snafu(implicit)]
-        location: Location,
     },
     #[snafu(display("{source}"))]
     DeserializeFormError {
@@ -252,35 +276,33 @@ pub enum ReadFormError {
     },
 }
 
+impl ErrorExt for ReadFormError {
+    fn entry(&self) -> (Location, NextError<'_>) {
+        match self {
+            ReadFormError::InvalidFormContentType { location } => (*location, NextError::None),
+            ReadFormError::ReadFormBytesError { location, source } => {
+                (*location, NextError::Ext(source))
+            }
+            ReadFormError::DeserializeFormError { location, source } => {
+                (*location, NextError::Std(source))
+            }
+        }
+    }
+}
+
 impl ResponseError for ReadFormError {
     fn as_status(&self) -> StatusCode {
         match self {
-            ReadFormError::ReadFormBytesError { source, .. } => source.as_status(),
             ReadFormError::InvalidFormContentType { .. } => StatusCode::UNSUPPORTED_MEDIA_TYPE,
+            ReadFormError::ReadFormBytesError { source, .. } => source.as_status(),
             ReadFormError::DeserializeFormError { .. } => StatusCode::BAD_REQUEST,
         }
     }
 
     fn status_codes(codes: &mut BTreeSet<StatusCode>) {
-        ReadBytesError::status_codes(codes);
         codes.insert(StatusCode::UNSUPPORTED_MEDIA_TYPE);
+        ReadBytesError::status_codes(codes);
         codes.insert(StatusCode::BAD_REQUEST);
-    }
-
-    fn error_stack(&self, stack: &mut ErrorStack) {
-        match self {
-            ReadFormError::ReadFormBytesError { location, source } => {
-                stack.push(self, location);
-                source.error_stack(stack);
-            }
-            ReadFormError::InvalidFormContentType { location } => {
-                stack.push(self, location);
-            }
-            ReadFormError::DeserializeFormError { location, source } => {
-                stack.push(self, location);
-                stack.push_without_location(source);
-            }
-        }
     }
 }
 
@@ -293,6 +315,12 @@ pub struct WriteFormError {
     source: serde_path_to_error::Error<serde_html_form::ser::Error>,
 }
 
+impl ErrorExt for WriteFormError {
+    fn entry(&self) -> (Location, NextError<'_>) {
+        (self.location, NextError::Std(&self.source))
+    }
+}
+
 impl ResponseError for WriteFormError {
     fn as_status(&self) -> StatusCode {
         StatusCode::INTERNAL_SERVER_ERROR
@@ -300,11 +328,6 @@ impl ResponseError for WriteFormError {
 
     fn status_codes(codes: &mut BTreeSet<StatusCode>) {
         codes.insert(StatusCode::INTERNAL_SERVER_ERROR);
-    }
-
-    fn error_stack(&self, stack: &mut ErrorStack) {
-        stack.push(self, &self.location);
-        stack.push_without_location(&self.source);
     }
 }
 
@@ -331,6 +354,18 @@ pub enum DeserializeJsonError {
     },
 }
 
+impl ErrorExt for DeserializeJsonError {
+    fn entry(&self) -> (Location, NextError<'_>) {
+        match self {
+            DeserializeJsonError::SyntaxError { location, source }
+            | DeserializeJsonError::DataError { location, source }
+            | DeserializeJsonError::EofError { location, source } => {
+                (*location, NextError::Std(source))
+            }
+        }
+    }
+}
+
 impl ResponseError for DeserializeJsonError {
     fn as_status(&self) -> StatusCode {
         match self {
@@ -344,32 +379,21 @@ impl ResponseError for DeserializeJsonError {
         codes.insert(StatusCode::BAD_REQUEST);
         codes.insert(StatusCode::UNPROCESSABLE_ENTITY);
     }
-
-    fn error_stack(&self, stack: &mut ErrorStack) {
-        match self {
-            DeserializeJsonError::SyntaxError { location, source }
-            | DeserializeJsonError::DataError { location, source }
-            | DeserializeJsonError::EofError { location, source } => {
-                stack.push(self, location);
-                stack.push_without_location(source);
-            }
-        }
-    }
 }
 
 #[derive(Debug, Snafu)]
 #[snafu(visibility(pub(crate)))]
 pub enum ReadJsonError {
+    #[snafu(display("expected request with `{}: {}`", CONTENT_TYPE, <Json<()> as MediaType>::MEDIA_TYPE))]
+    InvalidJsonContentType {
+        #[snafu(implicit)]
+        location: Location,
+    },
     #[snafu(display("{source}"))]
     ReadJsonBytesError {
         #[snafu(implicit)]
         location: Location,
         source: ReadBytesError,
-    },
-    #[snafu(display("expected request with `{}: {}`", CONTENT_TYPE, <Json<()> as MediaType>::MEDIA_TYPE))]
-    InvalidJsonContentType {
-        #[snafu(implicit)]
-        location: Location,
     },
     #[snafu(display("{source}"))]
     DeserializeJsonError {
@@ -377,6 +401,20 @@ pub enum ReadJsonError {
         location: Location,
         source: DeserializeJsonError,
     },
+}
+
+impl ErrorExt for ReadJsonError {
+    fn entry(&self) -> (Location, NextError<'_>) {
+        match self {
+            ReadJsonError::InvalidJsonContentType { location } => (*location, NextError::None),
+            ReadJsonError::ReadJsonBytesError { location, source } => {
+                (*location, NextError::Ext(source))
+            }
+            ReadJsonError::DeserializeJsonError { location, source } => {
+                (*location, NextError::Ext(source))
+            }
+        }
+    }
 }
 
 impl ResponseError for ReadJsonError {
@@ -393,22 +431,6 @@ impl ResponseError for ReadJsonError {
         ReadBytesError::status_codes(codes);
         DeserializeJsonError::status_codes(codes);
     }
-
-    fn error_stack(&self, stack: &mut ErrorStack) {
-        match self {
-            ReadJsonError::InvalidJsonContentType { location } => {
-                stack.push(self, location);
-            }
-            ReadJsonError::ReadJsonBytesError { location, source } => {
-                stack.push(self, location);
-                source.error_stack(stack);
-            }
-            ReadJsonError::DeserializeJsonError { location, source } => {
-                stack.push(self, location);
-                source.error_stack(stack);
-            }
-        }
-    }
 }
 
 #[derive(Debug, Snafu)]
@@ -420,6 +442,12 @@ pub struct WriteJsonError {
     source: serde_path_to_error::Error<serde_json::Error>,
 }
 
+impl ErrorExt for WriteJsonError {
+    fn entry(&self) -> (Location, NextError<'_>) {
+        (self.location, NextError::Std(&self.source))
+    }
+}
+
 impl ResponseError for WriteJsonError {
     fn as_status(&self) -> StatusCode {
         StatusCode::INTERNAL_SERVER_ERROR
@@ -427,11 +455,6 @@ impl ResponseError for WriteJsonError {
 
     fn status_codes(codes: &mut BTreeSet<StatusCode>) {
         codes.insert(StatusCode::INTERNAL_SERVER_ERROR);
-    }
-
-    fn error_stack(&self, stack: &mut ErrorStack) {
-        stack.push(self, &self.location);
-        stack.push_without_location(&self.source);
     }
 }
 
@@ -518,6 +541,31 @@ pub enum MultipartError {
     },
 }
 
+impl ErrorExt for MultipartError {
+    fn entry(&self) -> (Location, NextError<'_>) {
+        match self {
+            MultipartError::InvalidJsonField {
+                location, source, ..
+            } => (*location, NextError::Ext(source)),
+
+            MultipartError::ByParseMultipart { location, source }
+            | MultipartError::ByParseField {
+                location, source, ..
+            } => (*location, NextError::Std(source)),
+
+            MultipartError::InvalidMultipartContentType { location }
+            | MultipartError::DuplicateField { location, .. }
+            | MultipartError::ParseErrorAtName { location, .. }
+            | MultipartError::MissingField { location, .. }
+            | MultipartError::MissingFileName { location, .. }
+            | MultipartError::MissingContentType { location, .. }
+            | MultipartError::IncorrectNumberOfFields { location, .. } => {
+                (*location, NextError::None)
+            }
+        }
+    }
+}
+
 impl ResponseError for MultipartError {
     fn as_status(&self) -> StatusCode {
         match self {
@@ -544,35 +592,6 @@ impl ResponseError for MultipartError {
         codes.insert(StatusCode::BAD_REQUEST);
         codes.insert(StatusCode::PAYLOAD_TOO_LARGE);
         codes.insert(StatusCode::INTERNAL_SERVER_ERROR);
-    }
-
-    fn error_stack(&self, stack: &mut ErrorStack) {
-        match self {
-            MultipartError::InvalidJsonField {
-                location, source, ..
-            } => {
-                stack.push(self, location);
-                source.error_stack(stack);
-            }
-
-            MultipartError::ByParseMultipart { location, source }
-            | MultipartError::ByParseField {
-                location, source, ..
-            } => {
-                stack.push(self, location);
-                stack.push_without_location(source);
-            }
-
-            MultipartError::InvalidMultipartContentType { location, .. }
-            | MultipartError::DuplicateField { location, .. }
-            | MultipartError::ParseErrorAtName { location, .. }
-            | MultipartError::MissingField { location, .. }
-            | MultipartError::MissingFileName { location, .. }
-            | MultipartError::MissingContentType { location, .. }
-            | MultipartError::IncorrectNumberOfFields { location, .. } => {
-                stack.push(self, location);
-            }
-        }
     }
 }
 
@@ -616,6 +635,12 @@ pub struct InvalidContentDisposition {
     value: Box<str>,
 }
 
+impl ErrorExt for InvalidContentDisposition {
+    fn entry(&self) -> (Location, NextError<'_>) {
+        (self.location, NextError::None)
+    }
+}
+
 impl ResponseError for InvalidContentDisposition {
     fn as_status(&self) -> StatusCode {
         StatusCode::INTERNAL_SERVER_ERROR
@@ -623,10 +648,6 @@ impl ResponseError for InvalidContentDisposition {
 
     fn status_codes(codes: &mut BTreeSet<StatusCode>) {
         codes.insert(StatusCode::INTERNAL_SERVER_ERROR);
-    }
-
-    fn error_stack(&self, stack: &mut ErrorStack) {
-        stack.push(self, &self.location);
     }
 }
 
@@ -648,6 +669,17 @@ pub enum TypedHeaderError {
     },
 }
 
+impl ErrorExt for TypedHeaderError {
+    fn entry(&self) -> (Location, NextError<'_>) {
+        match self {
+            TypedHeaderError::Missing { location, .. } => (*location, NextError::None),
+            TypedHeaderError::DecodeError {
+                location, source, ..
+            } => (*location, NextError::Std(source)),
+        }
+    }
+}
+
 impl ResponseError for TypedHeaderError {
     fn as_status(&self) -> StatusCode {
         StatusCode::BAD_REQUEST
@@ -655,20 +687,6 @@ impl ResponseError for TypedHeaderError {
 
     fn status_codes(codes: &mut BTreeSet<StatusCode>) {
         codes.insert(StatusCode::BAD_REQUEST);
-    }
-
-    fn error_stack(&self, stack: &mut ErrorStack) {
-        match self {
-            TypedHeaderError::Missing { location, .. } => {
-                stack.push(self, location);
-            }
-            TypedHeaderError::DecodeError {
-                location, source, ..
-            } => {
-                stack.push(self, location);
-                stack.push_without_location(source);
-            }
-        }
     }
 }
 
@@ -684,6 +702,12 @@ pub struct InvalidContentType<const N: usize> {
     pub expected: [&'static str; N],
 }
 
+impl<const N: usize> ErrorExt for InvalidContentType<N> {
+    fn entry(&self) -> (Location, NextError<'_>) {
+        (self.location, NextError::None)
+    }
+}
+
 impl<const N: usize> ResponseError for InvalidContentType<N> {
     fn as_status(&self) -> StatusCode {
         StatusCode::UNSUPPORTED_MEDIA_TYPE
@@ -691,10 +715,6 @@ impl<const N: usize> ResponseError for InvalidContentType<N> {
 
     fn status_codes(codes: &mut BTreeSet<StatusCode>) {
         codes.insert(StatusCode::UNSUPPORTED_MEDIA_TYPE);
-    }
-
-    fn error_stack(&self, stack: &mut ErrorStack) {
-        stack.push(self, &self.location);
     }
 }
 
@@ -780,6 +800,12 @@ impl fmt::Display for InvalidHeaderValue {
 
 impl Error for InvalidHeaderValue {}
 
+impl ErrorExt for InvalidHeaderValue {
+    fn entry(&self) -> (Location, NextError<'_>) {
+        (self.location, NextError::None)
+    }
+}
+
 impl ResponseError for InvalidHeaderValue {
     fn as_status(&self) -> StatusCode {
         StatusCode::INTERNAL_SERVER_ERROR
@@ -787,10 +813,6 @@ impl ResponseError for InvalidHeaderValue {
 
     fn status_codes(codes: &mut BTreeSet<StatusCode>) {
         codes.insert(StatusCode::INTERNAL_SERVER_ERROR);
-    }
-
-    fn error_stack(&self, stack: &mut ErrorStack) {
-        stack.push(self, &self.location);
     }
 }
 
@@ -834,6 +856,19 @@ pub enum WebSocketError {
     },
 }
 
+impl ErrorExt for WebSocketError {
+    fn entry(&self) -> (Location, NextError<'_>) {
+        match self {
+            WebSocketError::MethodNotGet { location }
+            | WebSocketError::ConnectionHeaderNotContainsUpgrade { location }
+            | WebSocketError::UpgradeHeaderNotEqualWebSocket { location }
+            | WebSocketError::SecWebSocketVersionHeaderNotEqual13 { location }
+            | WebSocketError::SecWebSocketKeyHeaderNotPresent { location }
+            | WebSocketError::ConnectionNotUpgradable { location } => (*location, NextError::None),
+        }
+    }
+}
+
 impl ResponseError for WebSocketError {
     fn as_status(&self) -> StatusCode {
         match self {
@@ -850,19 +885,6 @@ impl ResponseError for WebSocketError {
         codes.insert(StatusCode::METHOD_NOT_ALLOWED);
         codes.insert(StatusCode::BAD_REQUEST);
         codes.insert(StatusCode::UPGRADE_REQUIRED);
-    }
-
-    fn error_stack(&self, stack: &mut ErrorStack) {
-        match self {
-            WebSocketError::MethodNotGet { location }
-            | WebSocketError::ConnectionHeaderNotContainsUpgrade { location }
-            | WebSocketError::UpgradeHeaderNotEqualWebSocket { location }
-            | WebSocketError::SecWebSocketVersionHeaderNotEqual13 { location }
-            | WebSocketError::SecWebSocketKeyHeaderNotPresent { location }
-            | WebSocketError::ConnectionNotUpgradable { location } => {
-                stack.push(self, location);
-            }
-        }
     }
 }
 
@@ -932,6 +954,12 @@ impl fmt::Display for EventStreamError {
 
 impl Error for EventStreamError {}
 
+impl ErrorExt for EventStreamError {
+    fn entry(&self) -> (Location, NextError<'_>) {
+        (self.location, NextError::None)
+    }
+}
+
 impl ResponseError for EventStreamError {
     fn as_status(&self) -> StatusCode {
         StatusCode::INTERNAL_SERVER_ERROR
@@ -939,10 +967,6 @@ impl ResponseError for EventStreamError {
 
     fn status_codes(codes: &mut BTreeSet<StatusCode>) {
         codes.insert(StatusCode::INTERNAL_SERVER_ERROR);
-    }
-
-    fn error_stack(&self, stack: &mut ErrorStack) {
-        stack.push(self, &self.location);
     }
 }
 

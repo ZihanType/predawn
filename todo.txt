@@ -1,8 +1,7 @@
-推迟泛型限定
 用 all_of 重新实现 custom schema
 flatten panic
 pretty openapi json
-丰富 Error response 的信息？ 在 ErrorStack 中添加字段
+丰富 Error.response.body 的错误内容
 
 discriminator
 ToParameter flatten
@@ -34,6 +33,7 @@ actual_type
 
 update references in doc comments by search `https://docs.rs`
 
+推迟泛型限定
 features
 refactor `Plugin`
 service attribute macro

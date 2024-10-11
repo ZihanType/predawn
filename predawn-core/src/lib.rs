@@ -3,7 +3,7 @@ pub mod api_response;
 pub mod body;
 pub mod either;
 pub mod error;
-pub mod error_stack;
+pub mod error_ext;
 pub mod from_request;
 pub mod into_response;
 pub mod location;
