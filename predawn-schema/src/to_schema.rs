@@ -52,7 +52,7 @@ where
 
         schemas_in_progress.push(key);
         let schema = S::schema(schemas, schemas_in_progress);
-        let key = schemas_in_progress.pop().expect("must have a name");
+        let key = schemas_in_progress.pop().expect("must have a key");
 
         debug_assert_eq!(key, S::key());
 

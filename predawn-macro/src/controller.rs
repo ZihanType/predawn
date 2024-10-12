@@ -372,7 +372,7 @@ fn generate_single_fn_impl<'a>(
     let add_summary = if summary.is_empty() {
         TokenStream::new()
     } else {
-        let summary = util::generate_string_expr(&summary);
+        let summary = predawn_macro_core::util::generate_string_expr(&summary);
         quote! {
             operation.summary = Some(#summary);
         }
@@ -381,7 +381,7 @@ fn generate_single_fn_impl<'a>(
     let add_description = if description.is_empty() {
         TokenStream::new()
     } else {
-        let description = util::generate_string_expr(&description);
+        let description = predawn_macro_core::util::generate_string_expr(&description);
         quote! {
             operation.description = Some(#description);
         }

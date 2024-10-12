@@ -15,17 +15,13 @@ readme.workspace = true
 proc-macro = true
 
 [dependencies]
+predawn-macro-core = { workspace = true }
+
 from-attr = { workspace = true }
 proc-macro2 = { workspace = true }
 quote = { workspace = true }
 quote-use = { workspace = true }
-syn = { workspace = true, features = [
-    "extra-traits",
-    "parsing",
-    "proc-macro",
-    "printing",
-    "full",
-] }
+syn = { workspace = true, features = ["full"] }
 http = { workspace = true, features = ["std"] }
 
 [dev-dependencies]
@@ -34,8 +30,9 @@ predawn = { path = "../predawn", default-features = false, features = [
     "macro",
     "auto-register",
 ] }
+# just close errors when run `cargo test --doc` in root workspace
+predawn-schema = { path = "../predawn-schema", default-features = false }
 
-http = { workspace = true }
 serde = { workspace = true }
 
 [features]

@@ -1,6 +1,6 @@
 use std::collections::{btree_map::Entry, BTreeMap};
 
-pub use openapiv3::*;
+pub use predawn_schema::openapi::*;
 
 #[doc(hidden)]
 pub fn merge_responses(

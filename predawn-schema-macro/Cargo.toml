@@ -1,0 +1,25 @@
+[package]
+name = "predawn-schema-macro"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+include.workspace = true
+readme.workspace = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+predawn-macro-core = { workspace = true, features = ["schema"] }
+
+from-attr = { workspace = true }
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+quote-use = { workspace = true }
+syn = { workspace = true }
+
+[features]
+schema = []

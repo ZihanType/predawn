@@ -87,8 +87,8 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         }
     });
 
-    let description = util::extract_description(&attrs);
-    let description = util::generate_string_expr(&description);
+    let description = predawn_macro_core::util::extract_description(&attrs);
+    let description = predawn_macro_core::util::generate_string_expr(&description);
 
     match handle_last_field(last, fields_len - 1, &mut header_names) {
         Ok(Last::Header {
@@ -414,11 +414,11 @@ fn handle_single_field(
         None => Member::from(idx),
     };
 
-    let description = util::extract_description(&attrs);
+    let description = predawn_macro_core::util::extract_description(&attrs);
     let description = if description.is_empty() {
         quote! { None }
     } else {
-        let description = util::generate_string_expr(&description);
+        let description = predawn_macro_core::util::generate_string_expr(&description);
         quote! { Some(#description) }
     };
 
@@ -454,11 +454,11 @@ fn handle_last_field(
         return Ok(Last::Body { member, ty });
     };
 
-    let description = util::extract_description(&attrs);
+    let description = predawn_macro_core::util::extract_description(&attrs);
     let description = if description.is_empty() {
         quote! { None }
     } else {
-        let description = util::generate_string_expr(&description);
+        let description = predawn_macro_core::util::generate_string_expr(&description);
         quote! { Some(#description) }
     };
 

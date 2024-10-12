@@ -95,14 +95,15 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
         })
     });
 
-    let default_expr = util::generate_default_expr(&ty, serde_default, schema_default)?;
-    let add_default = util::generate_add_default_to_schema(&ty, default_expr);
+    let default_expr =
+        predawn_macro_core::util::generate_default_expr(&ty, serde_default, schema_default)?;
+    let add_default = predawn_macro_core::util::generate_add_default_to_schema(&ty, default_expr);
 
-    let description = util::extract_description(&attrs);
+    let description = predawn_macro_core::util::extract_description(&attrs);
     let description = if description.is_empty() {
         quote! { None }
     } else {
-        let description = util::generate_string_expr(&description);
+        let description = predawn_macro_core::util::generate_string_expr(&description);
         quote! { Some(#description) }
     };
 

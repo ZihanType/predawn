@@ -1,4 +1,5 @@
 use from_attr::{AttrsValue, FromAttr};
+use predawn_macro_core::{SchemaAttr, SerdeAttr};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use quote_use::quote_use;
@@ -6,12 +7,7 @@ use syn::{
     punctuated::Punctuated, Attribute, DeriveInput, Field, GenericParam, Generics, Ident, Token,
 };
 
-use crate::{
-    schema_attr::SchemaAttr,
-    serde_attr::SerdeAttr,
-    types::{SchemaFields, SchemaProperties, SchemaVariant, UnitVariant},
-    util,
-};
+use crate::types::{SchemaFields, SchemaProperties, SchemaVariant, UnitVariant};
 
 pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
     let DeriveInput {
@@ -22,18 +18,23 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         ..
     } = input;
 
-    match util::extract_schema_properties(data)? {
+    let crate_name = crate::util::get_crate_name();
+
+    match crate::util::extract_schema_properties(data)? {
         SchemaProperties::NamedStruct(fields) => {
-            generate_named_struct(attrs, ident, generics, fields)
+            generate_named_struct(&crate_name, attrs, ident, generics, fields)
         }
-        SchemaProperties::OnlyUnitEnum(variants) => generate_only_unit(attrs, ident, variants),
+        SchemaProperties::OnlyUnitEnum(variants) => {
+            generate_only_unit(&crate_name, attrs, ident, variants)
+        }
         SchemaProperties::NormalEnum(variants) => {
-            generate_normal_enum(attrs, ident, generics, variants)
+            generate_normal_enum(&crate_name, attrs, ident, generics, variants)
         }
     }
 }
 
 fn generate_named_struct(
+    crate_name: &TokenStream,
     attrs: Vec<Attribute>,
     ident: Ident,
     generics: Generics,
@@ -43,7 +44,7 @@ fn generate_named_struct(
 
     let add_properties = fields
         .into_iter()
-        .filter_map(|field| match generate_single_field(field) {
+        .filter_map(|field| match generate_single_field(crate_name, field) {
             Ok(o) => Some(o),
             Err(e) => {
                 errors.push(e);
@@ -59,13 +60,13 @@ fn generate_named_struct(
         return Err(e);
     }
 
-    let title_fn = generate_title_fn(ident.to_string(), &generics);
+    let title_fn = generate_title_fn(crate_name, ident.to_string(), &generics);
 
-    let description = util::extract_description(&attrs);
+    let description = predawn_macro_core::util::extract_description(&attrs);
     let add_description = if description.is_empty() {
         TokenStream::new()
     } else {
-        let description = util::generate_string_expr(&description);
+        let description = predawn_macro_core::util::generate_string_expr(&description);
         quote! {
             data.description = Some(#description);
         }
@@ -75,8 +76,8 @@ fn generate_named_struct(
 
     let expand = quote_use! {
         # use std::collections::BTreeMap;
-        # use predawn::ToSchema;
-        # use predawn::openapi::{Schema, ObjectType, SchemaData, SchemaKind, Type};
+        # use #crate_name::ToSchema;
+        # use #crate_name::openapi::{Schema, ObjectType, SchemaData, SchemaKind, Type};
 
         impl #impl_generics ToSchema for #ident #ty_generics #where_clause {
             #title_fn
@@ -102,7 +103,7 @@ fn generate_named_struct(
     Ok(expand)
 }
 
-fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
+fn generate_single_field(crate_name: &TokenStream, field: Field) -> syn::Result<TokenStream> {
     let Field {
         attrs, ident, ty, ..
     } = field;
@@ -127,8 +128,8 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
 
     if serde_flatten || schema_flatten {
         return Ok(quote_use! {
-            # use predawn::ToSchema;
-            # use predawn::openapi::{AnySchema, ObjectType, SchemaKind, Type};
+            # use #crate_name::ToSchema;
+            # use #crate_name::openapi::{AnySchema, ObjectType, SchemaKind, Type};
 
             match <#ty as ToSchema>::schema(schemas, schemas_in_progress).schema_kind {
                 SchemaKind::Any(AnySchema {
@@ -149,8 +150,9 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
         });
     }
 
-    let default_expr = util::generate_default_expr(&ty, serde_default, schema_default)?;
-    let add_default = util::generate_add_default_to_schema(&ty, default_expr);
+    let default_expr =
+        predawn_macro_core::util::generate_default_expr(&ty, serde_default, schema_default)?;
+    let add_default = predawn_macro_core::util::generate_add_default_to_schema(&ty, default_expr);
 
     let ident = schema_rename.unwrap_or_else(|| {
         serde_rename.unwrap_or_else(|| {
@@ -160,11 +162,11 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
         })
     });
 
-    let description = util::extract_description(&attrs);
+    let description = predawn_macro_core::util::extract_description(&attrs);
     let add_description = if description.is_empty() {
         TokenStream::new()
     } else {
-        let description = util::generate_string_expr(&description);
+        let description = predawn_macro_core::util::generate_string_expr(&description);
         quote! {
             schema.schema_data.description = Some(#description);
         }
@@ -172,15 +174,15 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
 
     let generate_schema = if add_description.is_empty() && add_default.is_empty() {
         quote_use! {
-            # use predawn::ToSchema;
+            # use #crate_name::ToSchema;
 
             <#ty as ToSchema>::schema_ref_box(schemas, schemas_in_progress)
         }
     } else {
         quote_use! {
             # use std::boxed::Box;
-            # use predawn::ToSchema;
-            # use predawn::openapi::ReferenceOr;
+            # use #crate_name::ToSchema;
+            # use #crate_name::openapi::ReferenceOr;
 
             {
                 // TODO: add example
@@ -197,7 +199,7 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
     let push_required = if add_default.is_empty() {
         quote_use! {
             # use std::string::ToString;
-            # use predawn::ToSchema;
+            # use #crate_name::ToSchema;
 
             if <#ty as ToSchema>::REQUIRED {
                 obj.required.push(ToString::to_string(#ident));
@@ -209,7 +211,7 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
 
     let expand = quote_use! {
         # use std::string::ToString;
-        # use predawn::ToSchema;
+        # use #crate_name::ToSchema;
 
         {
             let schema = #generate_schema;
@@ -223,7 +225,7 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
     Ok(expand)
 }
 
-fn generate_title_fn(ident: String, generics: &Generics) -> TokenStream {
+fn generate_title_fn(crate_name: &TokenStream, ident: String, generics: &Generics) -> TokenStream {
     let mut have_first = false;
     let mut variable_definitions = Vec::new();
     let mut variable_idents = Vec::new();
@@ -238,7 +240,7 @@ fn generate_title_fn(ident: String, generics: &Generics) -> TokenStream {
                 let ty = &ty.ident;
 
                 quote_use! {
-                    # use predawn::ToSchema;
+                    # use #crate_name::ToSchema;
 
                     let #var_ident = <#ty as ToSchema>::title();
                 }
@@ -299,17 +301,18 @@ fn generate_title_fn(ident: String, generics: &Generics) -> TokenStream {
 // }
 
 fn generate_only_unit(
+    crate_name: &TokenStream,
     attrs: Vec<Attribute>,
     ident: Ident,
     variants: Vec<UnitVariant>,
 ) -> syn::Result<TokenStream> {
     let title_literal = ident.to_string();
 
-    let description = util::extract_description(&attrs);
+    let description = predawn_macro_core::util::extract_description(&attrs);
     let add_description = if description.is_empty() {
         TokenStream::new()
     } else {
-        let description = util::generate_string_expr(&description);
+        let description = predawn_macro_core::util::generate_string_expr(&description);
         quote! {
             data.description = Some(#description);
         }
@@ -338,8 +341,8 @@ fn generate_only_unit(
     let expand = quote_use! {
         # use std::collections::BTreeMap;
         # use std::borrow::Cow;
-        # use predawn::ToSchema;
-        # use predawn::openapi::{Schema, StringType, SchemaData, SchemaKind, Type};
+        # use #crate_name::ToSchema;
+        # use #crate_name::openapi::{Schema, StringType, SchemaData, SchemaKind, Type};
 
         impl ToSchema for #ident {
             fn title() -> Cow<'static, str> {
@@ -396,6 +399,7 @@ fn generate_single_unit_variant(variant: UnitVariant) -> syn::Result<TokenStream
 }
 
 fn generate_normal_enum(
+    crate_name: &TokenStream,
     attrs: Vec<Attribute>,
     ident: Ident,
     generics: Generics,
@@ -415,9 +419,13 @@ fn generate_normal_enum(
             } = variant;
 
             let result = match fields {
-                SchemaFields::Unit => generate_unit_variant(attrs, ident),
-                SchemaFields::Unnamed(field) => generate_unnamed_variant(attrs, ident, field),
-                SchemaFields::Named(fields) => generate_named_variant(attrs, ident, fields),
+                SchemaFields::Unit => generate_unit_variant(crate_name, attrs, ident),
+                SchemaFields::Unnamed(field) => {
+                    generate_unnamed_variant(crate_name, attrs, ident, field)
+                }
+                SchemaFields::Named(fields) => {
+                    generate_named_variant(crate_name, attrs, ident, fields)
+                }
             };
 
             match result {
@@ -437,13 +445,13 @@ fn generate_normal_enum(
         return Err(e);
     }
 
-    let title_fn = generate_title_fn(ident.to_string(), &generics);
+    let title_fn = generate_title_fn(crate_name, ident.to_string(), &generics);
 
-    let description = util::extract_description(&attrs);
+    let description = predawn_macro_core::util::extract_description(&attrs);
     let add_description = if description.is_empty() {
         TokenStream::new()
     } else {
-        let description = util::generate_string_expr(&description);
+        let description = predawn_macro_core::util::generate_string_expr(&description);
         quote! {
             data.description = Some(#description);
         }
@@ -453,8 +461,8 @@ fn generate_normal_enum(
 
     let expand = quote_use! {
         # use std::collections::BTreeMap;
-        # use predawn::ToSchema;
-        # use predawn::openapi::{Schema, ObjectType, SchemaData, SchemaKind, Type};
+        # use #crate_name::ToSchema;
+        # use #crate_name::openapi::{Schema, ObjectType, SchemaData, SchemaKind, Type};
 
         impl #impl_generics ToSchema for #ident #ty_generics #where_clause {
             #title_fn
@@ -482,7 +490,11 @@ fn generate_normal_enum(
     Ok(expand)
 }
 
-fn generate_unit_variant(attrs: Vec<Attribute>, ident: Ident) -> syn::Result<TokenStream> {
+fn generate_unit_variant(
+    crate_name: &TokenStream,
+    attrs: Vec<Attribute>,
+    ident: Ident,
+) -> syn::Result<TokenStream> {
     let SerdeAttr {
         rename: serde_rename,
         flatten: _,
@@ -503,18 +515,18 @@ fn generate_unit_variant(attrs: Vec<Attribute>, ident: Ident) -> syn::Result<Tok
 
     let ident = schema_rename.unwrap_or_else(|| serde_rename.unwrap_or_else(|| ident.to_string()));
 
-    let description = util::extract_description(&attrs);
+    let description = predawn_macro_core::util::extract_description(&attrs);
     let add_description = if description.is_empty() {
         TokenStream::new()
     } else {
-        let description = util::generate_string_expr(&description);
+        let description = predawn_macro_core::util::generate_string_expr(&description);
         quote! {
             data.description = Some(#description);
         }
     };
 
     let expand = quote_use! {
-        # use predawn::openapi::{Schema, StringType, SchemaData, SchemaKind, Type, ReferenceOr};
+        # use #crate_name::openapi::{Schema, StringType, SchemaData, SchemaKind, Type, ReferenceOr};
 
         {
             let mut data = SchemaData::default();
@@ -538,6 +550,7 @@ fn generate_unit_variant(attrs: Vec<Attribute>, ident: Ident) -> syn::Result<Tok
 }
 
 fn generate_unnamed_variant(
+    crate_name: &TokenStream,
     attrs: Vec<Attribute>,
     ident: Ident,
     field: Field,
@@ -564,11 +577,11 @@ fn generate_unnamed_variant(
 
     let ident = schema_rename.unwrap_or_else(|| serde_rename.unwrap_or_else(|| ident.to_string()));
 
-    let description = util::extract_description(&attrs);
+    let description = predawn_macro_core::util::extract_description(&attrs);
     let add_description = if description.is_empty() {
         TokenStream::new()
     } else {
-        let description = util::generate_string_expr(&description);
+        let description = predawn_macro_core::util::generate_string_expr(&description);
         quote! {
             data.description = Some(#description);
         }
@@ -576,8 +589,8 @@ fn generate_unnamed_variant(
 
     let expand = quote_use! {
         # use std::string::ToString;
-        # use predawn::ToSchema;
-        # use predawn::openapi::{Schema, ObjectType, SchemaData, SchemaKind, Type, ReferenceOr};
+        # use #crate_name::ToSchema;
+        # use #crate_name::openapi::{Schema, ObjectType, SchemaData, SchemaKind, Type, ReferenceOr};
 
         {
             let mut data = SchemaData::default();
@@ -601,6 +614,7 @@ fn generate_unnamed_variant(
 }
 
 fn generate_named_variant(
+    crate_name: &TokenStream,
     attrs: Vec<Attribute>,
     ident: Ident,
     fields: Punctuated<Field, Token![,]>,
@@ -609,7 +623,7 @@ fn generate_named_variant(
 
     let add_properties = fields
         .into_iter()
-        .filter_map(|field| match generate_single_field(field) {
+        .filter_map(|field| match generate_single_field(crate_name, field) {
             Ok(o) => Some(o),
             Err(e) => {
                 errors.push(e);
@@ -645,11 +659,11 @@ fn generate_named_variant(
 
     let ident = schema_rename.unwrap_or_else(|| serde_rename.unwrap_or_else(|| ident.to_string()));
 
-    let description = util::extract_description(&attrs);
+    let description = predawn_macro_core::util::extract_description(&attrs);
     let add_description = if description.is_empty() {
         TokenStream::new()
     } else {
-        let description = util::generate_string_expr(&description);
+        let description = predawn_macro_core::util::generate_string_expr(&description);
         quote! {
             data.description = Some(#description);
         }
@@ -657,8 +671,8 @@ fn generate_named_variant(
 
     let expand = quote_use! {
         # use std::string::ToString;
-        # use predawn::ToSchema;
-        # use predawn::openapi::{Schema, ObjectType, SchemaData, SchemaKind, Type, ReferenceOr};
+        # use #crate_name::ToSchema;
+        # use #crate_name::openapi::{Schema, ObjectType, SchemaData, SchemaKind, Type, ReferenceOr};
 
         {
             let mut data = SchemaData::default();

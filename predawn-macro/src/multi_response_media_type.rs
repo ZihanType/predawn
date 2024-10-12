@@ -64,8 +64,8 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
 
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
-    let description = util::extract_description(&attrs);
-    let description = util::generate_string_expr(&description);
+    let description = predawn_macro_core::util::extract_description(&attrs);
+    let description = predawn_macro_core::util::generate_string_expr(&description);
 
     let expand = quote_use! {
         # use std::string::String;

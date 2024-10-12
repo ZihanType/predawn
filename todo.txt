@@ -1,4 +1,6 @@
+为 `predawn-macro-core` 和 `predawn-shcema-macro` 2 个 crate 添加 description 和 keywords
 用 all_of 重新实现 custom schema
+
 flatten panic
 pretty openapi json
 丰富 Error.response.body 的错误内容
@@ -14,8 +16,6 @@ SecuritySchema
 OAuth2
 OpenIDConnect
 HttpAuthScheme
-
-predawn schema macro
 
 delete `predawn-sea-orm` unnacessary `async` in `async fn inject`
 
@@ -34,7 +34,6 @@ actual_type
 update references in doc comments by search `https://docs.rs`
 
 推迟泛型限定
-features
 refactor `Plugin`
 service attribute macro
 operation id [repeated]

@@ -10,8 +10,6 @@ mod serde_attr;
 mod single_response;
 mod tag;
 mod to_parameters;
-mod to_schema;
-mod types;
 mod util;
 
 use from_attr::FromAttr;
@@ -27,15 +25,6 @@ pub fn controller(attr: TokenStream, item: TokenStream) -> TokenStream {
     let item_impl = parse_macro_input!(item as ItemImpl);
 
     controller::generate(attr, item_impl)
-        .unwrap_or_else(|e| e.to_compile_error())
-        .into()
-}
-
-#[proc_macro_derive(ToSchema, attributes(schema))]
-pub fn to_schema(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as DeriveInput);
-
-    to_schema::generate(input)
         .unwrap_or_else(|e| e.to_compile_error())
         .into()
 }

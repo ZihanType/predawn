@@ -12,6 +12,10 @@ include.workspace = true
 readme.workspace = true
 
 [dependencies]
+predawn-schema-macro = { workspace = true, optional = true, features = [
+    "schema",
+] }
+
 openapiv3 = { workspace = true }
 indexmap = { workspace = true }
 serde_json = { workspace = true }
@@ -21,7 +25,10 @@ paste = { workspace = true }
 schemars = { workspace = true, optional = true }
 
 [features]
+default = ["macro"]
+macro = ["dep:predawn-schema-macro"]
 raw_value = ["serde_json/raw_value"]
+schemars = ["dep:schemars"]
 
 [package.metadata.docs.rs]
 all-features = true

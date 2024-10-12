@@ -75,11 +75,11 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         }
     };
 
-    let description = util::extract_description(&attrs);
+    let description = predawn_macro_core::util::extract_description(&attrs);
     let description = if description.is_empty() {
         quote! { None }
     } else {
-        let description = util::generate_string_expr(&description);
+        let description = predawn_macro_core::util::generate_string_expr(&description);
         quote! { Some(#description) }
     };
 

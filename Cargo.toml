@@ -1,12 +1,14 @@
 [workspace]
 resolver = "2"
 members = [
+    "examples/*",
     "predawn",
     "predawn-core",
     "predawn-macro",
+    "predawn-macro-core",
     "predawn-schema",
+    "predawn-schema-macro",
     "predawn-sea-orm",
-    "examples/*",
 ]
 
 [workspace.package]
@@ -21,10 +23,12 @@ readme = "README.md"
 
 [workspace.dependencies]
 # self
-predawn = { version = "0.9.0", path = "./predawn", default-features = false }
+predawn-macro-core = { version = "0.9.0", path = "./predawn-macro-core", default-features = false }
+predawn-schema-macro = { version = "0.9.0", path = "./predawn-schema-macro", default-features = false }
+predawn-schema = { version = "0.9.0", path = "./predawn-schema", default-features = false }
 predawn-core = { version = "0.9.0", path = "./predawn-core", default-features = false }
 predawn-macro = { version = "0.9.0", path = "./predawn-macro", default-features = false }
-predawn-schema = { version = "0.9.0", path = "./predawn-schema", default-features = false }
+predawn = { version = "0.9.0", path = "./predawn", default-features = false }
 predawn-sea-orm = { version = "0.9.0", path = "./predawn-sea-orm", default-features = false }
 
 # dependencies

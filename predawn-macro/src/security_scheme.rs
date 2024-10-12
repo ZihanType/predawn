@@ -5,8 +5,6 @@ use quote::quote;
 use quote_use::quote_use;
 use syn::{parse_quote, spanned::Spanned, Attribute, DeriveInput, Ident, LitStr};
 
-use crate::util;
-
 #[derive(FromAttr)]
 #[attribute(idents = [api_key])]
 struct ApiKeyAttr {
@@ -154,11 +152,11 @@ fn generate_api_key(
 
     let location = location.as_ident();
 
-    let description = util::extract_description(attrs);
+    let description = predawn_macro_core::util::extract_description(attrs);
     let description = if description.is_empty() {
         quote! { None }
     } else {
-        let description = util::generate_string_expr(&description);
+        let description = predawn_macro_core::util::generate_string_expr(&description);
         quote! { Some(#description) }
     };
 
@@ -203,11 +201,11 @@ fn generate_http(attrs: &[Attribute], ident: &Ident, http: HttpAttr) -> syn::Res
         _ => quote!(::core::option::Option::None),
     };
 
-    let description = util::extract_description(attrs);
+    let description = predawn_macro_core::util::extract_description(attrs);
     let description = if description.is_empty() {
         quote! { None }
     } else {
-        let description = util::generate_string_expr(&description);
+        let description = predawn_macro_core::util::generate_string_expr(&description);
         quote! { Some(#description) }
     };
 

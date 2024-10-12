@@ -1,12 +1,25 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 mod impls;
-#[cfg_attr(docsrs, doc(cfg(feature = "schemars")))]
-#[cfg(feature = "schemars")]
-mod schemars_transform;
-mod to_schema;
 
 #[cfg_attr(docsrs, doc(cfg(feature = "schemars")))]
 #[cfg(feature = "schemars")]
-pub use schemars_transform::schemars_transform;
-pub use to_schema::ToSchema;
+mod schemars_transform;
+
+#[doc(hidden)]
+pub mod to_schema;
+
+pub use openapiv3 as openapi;
+#[cfg_attr(docsrs, doc(cfg(feature = "macro")))]
+#[cfg(feature = "macro")]
+pub use predawn_schema_macro::ToSchema;
+
+#[cfg_attr(docsrs, doc(cfg(feature = "schemars")))]
+#[cfg(feature = "schemars")]
+pub use self::schemars_transform::schemars_transform;
+pub use self::to_schema::ToSchema;
+
+#[doc(hidden)]
+pub mod __internal {
+    pub use serde_json;
+}
