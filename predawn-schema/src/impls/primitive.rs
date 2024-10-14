@@ -110,6 +110,10 @@ unsigned_impl!(u128, "uint128");
 unsigned_impl!(usize, "uint");
 
 impl<T: ToSchema, const N: usize> ToSchema for [T; N] {
+    fn key() -> String {
+        format!("Array{}<{}>", N, T::key())
+    }
+
     fn title() -> Cow<'static, str> {
         format!("Array{}<{}>", N, T::title()).into()
     }

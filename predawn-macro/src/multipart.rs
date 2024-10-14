@@ -1,10 +1,11 @@
 use from_attr::{AttrsValue, FromAttr};
+use predawn_macro_core::{SchemaAttr, SerdeAttr};
 use proc_macro2::TokenStream;
 use quote::quote;
 use quote_use::quote_use;
 use syn::{DeriveInput, Field, Ident};
 
-use crate::{schema_attr::SchemaAttr, serde_attr::SerdeAttr, util};
+use crate::util;
 
 pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
     let DeriveInput {

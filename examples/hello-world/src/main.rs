@@ -300,6 +300,7 @@ struct MultiValue {
 
 #[derive(Debug, ToSchema, Multipart)]
 struct MultipartStruct {
+    /// Override description for person.
     person: JsonField<Person>,
     sex: String,
     files: [Upload; 2],

@@ -82,19 +82,17 @@ pub fn generate_default_expr(
     Ok(Some(default_expr))
 }
 
-pub fn generate_add_default_to_schema(ty: &Type, default_expr: Option<Expr>) -> TokenStream {
+pub fn generate_json_value(ty: &Type, expr: &Expr) -> TokenStream {
     let crate_name = get_crate_name();
 
-    match default_expr {
-        Some(expr) => quote_use! {
-            # use std::{concat, stringify, file, line, column};
-            # use #crate_name::__internal::serde_json;
+    quote_use! {
+        # use std::{concat, stringify, file, line, column};
+        # use #crate_name::__internal::serde_json;
 
-            schema.schema_data.default = Some(
-                serde_json::to_value::<#ty>(#expr)
-                    .expect(concat!("failed to serialize `", stringify!(#ty), "` type at ", file!(), ":", line!(), ":", column!()))
-            );
-        },
-        None => TokenStream::new(),
+        serde_json::to_value::<#ty>(#expr)
+            .expect(concat!(
+                "failed to serialize expression `", stringify!(#expr), "` of type `", stringify!(#ty),
+                "`, at ", file!(), ":", line!(), ":", column!()
+            ))
     }
 }

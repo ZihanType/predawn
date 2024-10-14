@@ -1,10 +1,11 @@
 use from_attr::{AttrsValue, FromAttr};
+use predawn_macro_core::{SchemaAttr, SerdeAttr};
 use proc_macro2::TokenStream;
 use quote::quote;
 use quote_use::quote_use;
 use syn::{DeriveInput, Field};
 
-use crate::{schema_attr::SchemaAttr, serde_attr::SerdeAttr, util};
+use crate::util;
 
 pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
     let DeriveInput {
@@ -97,7 +98,10 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
 
     let default_expr =
         predawn_macro_core::util::generate_default_expr(&ty, serde_default, schema_default)?;
-    let add_default = predawn_macro_core::util::generate_add_default_to_schema(&ty, default_expr);
+
+    let default_json_value = default_expr
+        .as_ref()
+        .map(|expr| predawn_macro_core::util::generate_json_value(&ty, expr));
 
     let description = predawn_macro_core::util::extract_description(&attrs);
     let description = if description.is_empty() {
@@ -107,26 +111,38 @@ fn generate_single_field(field: Field) -> syn::Result<TokenStream> {
         quote! { Some(#description) }
     };
 
-    let generate_schema = if add_default.is_empty() {
+    let generate_schema = if default_json_value.is_none() {
         quote_use! {
             # use predawn::ToSchema;
 
             <#ty as ToSchema>::schema_ref(schemas, schemas_in_progress)
         }
     } else {
+        let add_default = default_json_value.as_ref().map(|json_value| {
+            quote! {
+                data.default = Some(#json_value);
+            }
+        });
+
         quote_use! {
             # use predawn::ToSchema;
-            # use predawn::openapi::ReferenceOr;
+            # use predawn::openapi::{ReferenceOr, Schema, SchemaData, SchemaKind};
 
             {
-                let mut schema = <#ty as ToSchema>::schema(schemas, schemas_in_progress);
+                let mut data = SchemaData::default();
                 #add_default
-                ReferenceOr::Item(schema)
+
+                ReferenceOr::Item(Schema {
+                    schema_data: data,
+                    schema_kind: SchemaKind::AllOf {
+                        all_of: vec![<#ty as ToSchema>::schema_ref(schemas, schemas_in_progress)]
+                    },
+                })
             }
         }
     };
 
-    let required = if add_default.is_empty() {
+    let required = if default_json_value.is_none() {
         quote! { <#ty as ::predawn::ToSchema>::REQUIRED }
     } else {
         quote! { false }

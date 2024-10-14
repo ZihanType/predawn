@@ -150,9 +150,14 @@ fn generate_single_field(crate_name: &TokenStream, field: Field) -> syn::Result<
         });
     }
 
+    let description = predawn_macro_core::util::extract_description(&attrs);
+
     let default_expr =
         predawn_macro_core::util::generate_default_expr(&ty, serde_default, schema_default)?;
-    let add_default = predawn_macro_core::util::generate_add_default_to_schema(&ty, default_expr);
+
+    let default_json_value = default_expr
+        .as_ref()
+        .map(|expr| predawn_macro_core::util::generate_json_value(&ty, expr));
 
     let ident = schema_rename.unwrap_or_else(|| {
         serde_rename.unwrap_or_else(|| {
@@ -162,41 +167,50 @@ fn generate_single_field(crate_name: &TokenStream, field: Field) -> syn::Result<
         })
     });
 
-    let description = predawn_macro_core::util::extract_description(&attrs);
-    let add_description = if description.is_empty() {
-        TokenStream::new()
-    } else {
-        let description = predawn_macro_core::util::generate_string_expr(&description);
-        quote! {
-            schema.schema_data.description = Some(#description);
-        }
-    };
-
-    let generate_schema = if add_description.is_empty() && add_default.is_empty() {
+    let generate_schema = if description.is_empty() && default_json_value.is_none() {
         quote_use! {
             # use #crate_name::ToSchema;
 
             <#ty as ToSchema>::schema_ref_box(schemas, schemas_in_progress)
         }
     } else {
+        let add_description = if description.is_empty() {
+            TokenStream::new()
+        } else {
+            let description = predawn_macro_core::util::generate_string_expr(&description);
+            quote! {
+                data.description = Some(#description);
+            }
+        };
+
+        let add_default = default_json_value.as_ref().map(|json_value| {
+            quote! {
+                data.default = Some(#json_value);
+            }
+        });
+
         quote_use! {
             # use std::boxed::Box;
             # use #crate_name::ToSchema;
-            # use #crate_name::openapi::ReferenceOr;
+            # use predawn::openapi::{ReferenceOr, Schema, SchemaData, SchemaKind};
 
             {
                 // TODO: add example
-                let mut schema = <#ty as ToSchema>::schema(schemas, schemas_in_progress);
-
+                let mut data = SchemaData::default();
                 #add_description
                 #add_default
 
-                ReferenceOr::Item(Box::new(schema))
+                ReferenceOr::Item(Box::new(Schema {
+                    schema_data: data,
+                    schema_kind: SchemaKind::AllOf {
+                        all_of: vec![<#ty as ToSchema>::schema_ref(schemas, schemas_in_progress)]
+                    },
+                }))
             }
         }
     };
 
-    let push_required = if add_default.is_empty() {
+    let push_required = if default_json_value.is_none() {
         quote_use! {
             # use std::string::ToString;
             # use #crate_name::ToSchema;
@@ -530,11 +544,9 @@ fn generate_unit_variant(
 
         {
             let mut data = SchemaData::default();
-
             #add_description
 
             let mut ty = StringType::default();
-
             ty.enumeration.push(Some(#ident.to_string()));
 
             let schema = Schema {
@@ -594,7 +606,6 @@ fn generate_unnamed_variant(
 
         {
             let mut data = SchemaData::default();
-
             #add_description
 
             let mut obj = ObjectType::default();
@@ -676,7 +687,6 @@ fn generate_named_variant(
 
         {
             let mut data = SchemaData::default();
-
             #add_description
 
             let mut obj = ObjectType::default();

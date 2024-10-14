@@ -1,5 +1,4 @@
 为 `predawn-macro-core` 和 `predawn-shcema-macro` 2 个 crate 添加 description 和 keywords
-用 all_of 重新实现 custom schema
 
 flatten panic
 pretty openapi json
