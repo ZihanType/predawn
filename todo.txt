@@ -4,6 +4,7 @@ flatten panic
 pretty openapi json
 丰富 Error.response.body 的错误内容
 
+抽出 ErrorExt
 discriminator
 ToParameter flatten
 

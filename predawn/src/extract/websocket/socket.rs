@@ -8,9 +8,10 @@ use futures_util::{sink::Sink, SinkExt, StreamExt};
 use http::HeaderValue;
 use hyper::upgrade::Upgraded;
 use hyper_util::rt::TokioIo;
-use tokio_tungstenite::{tungstenite, WebSocketStream};
-
-use super::Message;
+use tokio_tungstenite::{
+    tungstenite::{self, Message},
+    WebSocketStream,
+};
 
 #[derive(Debug)]
 pub struct WebSocket {
@@ -28,7 +29,7 @@ impl WebSocket {
 
     /// Send a message.
     pub async fn send(&mut self, msg: Message) -> Result<(), tungstenite::Error> {
-        self.inner.send(msg.into_tungstenite()).await
+        self.inner.send(msg).await
     }
 
     /// Gracefully close this WebSocket.
@@ -46,17 +47,7 @@ impl Stream for WebSocket {
     type Item = Result<Message, tungstenite::Error>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        loop {
-            match std::task::ready!(self.inner.poll_next_unpin(cx)) {
-                Some(Ok(msg)) => {
-                    if let Some(msg) = Message::from_tungstenite(msg) {
-                        return Poll::Ready(Some(Ok(msg)));
-                    }
-                }
-                Some(Err(e)) => return Poll::Ready(Some(Err(e))),
-                None => return Poll::Ready(None),
-            }
-        }
+        Pin::new(&mut self.inner).poll_next(cx)
     }
 }
 
@@ -68,7 +59,7 @@ impl Sink<Message> for WebSocket {
     }
 
     fn start_send(mut self: Pin<&mut Self>, item: Message) -> Result<(), Self::Error> {
-        Pin::new(&mut self.inner).start_send(item.into_tungstenite())
+        Pin::new(&mut self.inner).start_send(item)
     }
 
     fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
