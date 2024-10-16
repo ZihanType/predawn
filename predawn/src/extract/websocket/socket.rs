@@ -24,7 +24,7 @@ impl WebSocket {
     ///
     /// Returns `None` if the stream has closed.
     pub async fn recv(&mut self) -> Option<Result<Message, tungstenite::Error>> {
-        self.next().await
+        self.inner.next().await
     }
 
     /// Send a message.

@@ -4,7 +4,7 @@ mod socket;
 
 pub use tokio_tungstenite::tungstenite::protocol::{
     frame::{coding::CloseCode, CloseFrame, Frame},
-    Message, WebSocketConfig,
+    Message,
 };
 
 pub use self::{
