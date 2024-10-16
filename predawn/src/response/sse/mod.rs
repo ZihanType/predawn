@@ -1,9 +1,11 @@
+mod builder;
 mod event;
-mod event_stream;
 mod keep_alive;
+mod stream;
 
 pub use self::{
+    builder::{DefaultOnCreateEvent, EventStreamBuilder, OnCreateEvent},
     event::Event,
-    event_stream::{DefaultOnCreateEvent, EventStream, EventStreamBuilder, OnCreateEvent},
     keep_alive::KeepAlive,
+    stream::EventStream,
 };
