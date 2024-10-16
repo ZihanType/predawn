@@ -5,7 +5,6 @@ use http::{
     request::Parts,
     Extensions, HeaderMap, HeaderValue, Method, Uri, Version,
 };
-use http_body_util::Limited;
 use hyper::body::Incoming;
 use snafu::{OptionExt, Snafu};
 
@@ -58,7 +57,7 @@ impl Request {
 
         let limit = head.body_limit.0;
 
-        (head, Limited::new(body, limit))
+        (head, RequestBody::new(body, limit))
     }
 }
 

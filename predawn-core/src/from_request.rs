@@ -3,17 +3,16 @@ use std::{convert::Infallible, future::Future};
 use bytes::Bytes;
 use futures_util::FutureExt;
 use http::{HeaderMap, Method, Uri, Version};
-use http_body_util::{BodyExt, LengthLimitError};
+use http_body_util::BodyExt;
 use snafu::{IntoError, ResultExt};
 
 use crate::{
     body::RequestBody,
-    location::Location,
     private::{ViaRequest, ViaRequestHead},
     request::{BodyLimit, Head, LocalAddr, OriginalUri, RemoteAddr},
     response_error::{
-        InvalidUtf8Snafu, ReadBytesError, ReadBytesSnafu, ReadStringError, RequestBodyLimitError,
-        RequestBodyLimitSnafu, ResponseError, UnknownBodySnafu,
+        InvalidUtf8Snafu, LengthLimit, LengthLimitSnafu, ReadBytesError, ReadBytesSnafu,
+        ReadStringError, ResponseError, UnknownBodySnafu,
     },
 };
 
@@ -93,15 +92,16 @@ impl<'a> FromRequest<'a> for RequestBody {
 impl<'a> FromRequest<'a> for Bytes {
     type Error = ReadBytesError;
 
-    async fn from_request(head: &'a mut Head, body: RequestBody) -> Result<Self, Self::Error> {
+    async fn from_request(_: &'a mut Head, body: RequestBody) -> Result<Self, Self::Error> {
+        let limit = body.limit();
+
         match body.collect().await {
             Ok(collected) => Ok(collected.to_bytes()),
-            Err(err) => match err.downcast::<LengthLimitError>() {
-                Ok(_) => Err(RequestBodyLimitSnafu.into_error(RequestBodyLimitError {
-                    location: Location::caller(),
-                    actual: head.content_length(),
-                    expected: head.body_limit.0,
-                })),
+            Err(err) => match err.downcast::<http_body_util::LengthLimitError>() {
+                Ok(_) => {
+                    let err = LengthLimit { limit }.build();
+                    Err(LengthLimitSnafu.into_error(err))
+                }
                 Err(err) => Err(UnknownBodySnafu.into_error(err)),
             },
         }

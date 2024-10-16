@@ -1,13 +1,11 @@
 use predawn_core::{
     error::Error,
-    location::Location,
     request::{BodyLimit, Request},
     response::Response,
-    response_error::RequestBodyLimitError,
 };
 
 use super::Middleware;
-use crate::handler::Handler;
+use crate::{handler::Handler, response_error::RequestBodyLimitSnafu};
 
 pub struct RequestBodyLimit {
     limit: usize,
@@ -38,21 +36,19 @@ pub struct RequestBodyLimitHandler<H> {
 impl<H: Handler> Handler for RequestBodyLimitHandler<H> {
     async fn call(&self, mut req: Request) -> Result<Response, Error> {
         let content_length = req.head.content_length();
+        let limit = self.limit;
 
         let limit = match content_length {
-            Some(len) => {
-                if len > self.limit {
-                    return Err(RequestBodyLimitError {
-                        location: Location::caller(),
-                        actual: Some(len),
-                        expected: self.limit,
-                    }
-                    .into());
-                } else {
-                    len
+            Some(content_length) if content_length > limit => {
+                return Err(RequestBodyLimitSnafu {
+                    content_length,
+                    limit,
                 }
+                .build()
+                .into());
             }
-            None => self.limit,
+            Some(content_length) => content_length,
+            None => limit,
         };
 
         req.head.body_limit = BodyLimit(limit);

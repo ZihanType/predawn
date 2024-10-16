@@ -1,8 +1,6 @@
 use std::{
     collections::{BTreeMap, BTreeSet},
     convert::Infallible,
-    error::Error,
-    fmt,
     string::FromUtf8Error,
 };
 
@@ -92,43 +90,23 @@ impl ResponseError for Infallible {
     }
 }
 
-#[derive(Debug)]
-pub struct RequestBodyLimitError {
+#[derive(Debug, Snafu)]
+#[snafu(visibility(pub(crate)))]
+#[snafu(context(suffix(false)))]
+#[snafu(display("length limit exceeded, limit is `{}`", limit))]
+pub struct LengthLimitError {
+    #[snafu(implicit)]
     pub location: Location,
-    pub actual: Option<usize>,
-    pub expected: usize,
+    pub limit: usize,
 }
 
-impl fmt::Display for RequestBodyLimitError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.actual {
-            Some(actual) => {
-                write!(
-                    f,
-                    "payload too large: expected `{}` but actual `{}`",
-                    self.expected, actual
-                )
-            }
-            None => {
-                write!(
-                    f,
-                    "payload too large (no content length): expected `{}`",
-                    self.expected
-                )
-            }
-        }
-    }
-}
-
-impl Error for RequestBodyLimitError {}
-
-impl ErrorExt for RequestBodyLimitError {
+impl ErrorExt for LengthLimitError {
     fn entry(&self) -> (Location, NextError<'_>) {
         (self.location, NextError::None)
     }
 }
 
-impl ResponseError for RequestBodyLimitError {
+impl ResponseError for LengthLimitError {
     fn as_status(&self) -> StatusCode {
         StatusCode::PAYLOAD_TOO_LARGE
     }
@@ -142,10 +120,10 @@ impl ResponseError for RequestBodyLimitError {
 #[snafu(visibility(pub(crate)))]
 pub enum ReadBytesError {
     #[snafu(display("{source}"))]
-    RequestBodyLimitError {
+    LengthLimitError {
         #[snafu(implicit)]
         location: Location,
-        source: RequestBodyLimitError,
+        source: LengthLimitError,
     },
     #[snafu(display("failed to read bytes from request body"))]
     UnknownBodyError {
@@ -158,7 +136,7 @@ pub enum ReadBytesError {
 impl ErrorExt for ReadBytesError {
     fn entry(&self) -> (Location, NextError<'_>) {
         match self {
-            ReadBytesError::RequestBodyLimitError { location, source } => {
+            ReadBytesError::LengthLimitError { location, source } => {
                 (*location, NextError::Ext(source))
             }
             ReadBytesError::UnknownBodyError { location, source } => {
@@ -171,13 +149,13 @@ impl ErrorExt for ReadBytesError {
 impl ResponseError for ReadBytesError {
     fn as_status(&self) -> StatusCode {
         match self {
-            ReadBytesError::RequestBodyLimitError { source, .. } => source.as_status(),
+            ReadBytesError::LengthLimitError { source, .. } => source.as_status(),
             ReadBytesError::UnknownBodyError { .. } => StatusCode::BAD_REQUEST,
         }
     }
 
     fn status_codes(codes: &mut BTreeSet<StatusCode>) {
-        RequestBodyLimitError::status_codes(codes);
+        LengthLimitError::status_codes(codes);
         codes.insert(StatusCode::BAD_REQUEST);
     }
 }

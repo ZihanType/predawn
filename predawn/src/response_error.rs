@@ -4,7 +4,6 @@ use http::{
     header::{CONTENT_DISPOSITION, CONTENT_TYPE},
     HeaderName, StatusCode,
 };
-use http_body_util::LengthLimitError;
 pub use predawn_core::response_error::*;
 use predawn_core::{
     error_ext::{ErrorExt, NextError},
@@ -615,7 +614,7 @@ fn status_code_from_multer_error(err: &multer::Error) -> StatusCode {
                 return status_code_from_multer_error(err);
             }
 
-            if err.is::<LengthLimitError>() {
+            if err.is::<http_body_util::LengthLimitError>() {
                 return StatusCode::PAYLOAD_TOO_LARGE;
             }
 
@@ -967,6 +966,32 @@ impl ResponseError for EventStreamError {
 
     fn status_codes(codes: &mut BTreeSet<StatusCode>) {
         codes.insert(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+}
+
+#[derive(Debug, Snafu)]
+#[snafu(visibility(pub(crate)))]
+#[snafu(display("payload too large, limit is `{limit}` but content-length is `{content_length}`"))]
+pub struct RequestBodyLimitError {
+    #[snafu(implicit)]
+    pub location: Location,
+    pub content_length: usize,
+    pub limit: usize,
+}
+
+impl ErrorExt for RequestBodyLimitError {
+    fn entry(&self) -> (Location, NextError<'_>) {
+        (self.location, NextError::None)
+    }
+}
+
+impl ResponseError for RequestBodyLimitError {
+    fn as_status(&self) -> StatusCode {
+        StatusCode::PAYLOAD_TOO_LARGE
+    }
+
+    fn status_codes(codes: &mut BTreeSet<StatusCode>) {
+        codes.insert(StatusCode::PAYLOAD_TOO_LARGE);
     }
 }
 
