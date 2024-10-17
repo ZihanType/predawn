@@ -888,59 +888,18 @@ impl ResponseError for WebSocketError {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EventStreamErrorKind {
-    Type,
-    Id,
-    Comment,
-}
-
-#[derive(Debug)]
-pub struct EventStreamError {
-    kind: EventStreamErrorKind,
-    location: Location,
-}
-
-impl EventStreamError {
-    #[track_caller]
-    #[inline]
-    fn new(kind: EventStreamErrorKind) -> Self {
-        Self {
-            kind,
-            location: Location::caller(),
-        }
-    }
-
-    #[track_caller]
-    #[inline]
-    pub fn invalid_type() -> Self {
-        Self::new(EventStreamErrorKind::Type)
-    }
-
-    #[track_caller]
-    #[inline]
-    pub fn invalid_id() -> Self {
-        Self::new(EventStreamErrorKind::Id)
-    }
-
-    #[track_caller]
-    #[inline]
-    pub fn invalid_comment() -> Self {
-        Self::new(EventStreamErrorKind::Comment)
-    }
-
-    pub fn kind(&self) -> EventStreamErrorKind {
-        self.kind
-    }
+pub enum EventStreamError {
+    InvalidType { location: Location },
+    InvalidId { location: Location },
+    InvalidComment { location: Location },
 }
 
 impl fmt::Display for EventStreamError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use EventStreamErrorKind::*;
-
-        let field = match self.kind {
-            Type => "event",
-            Id => "id",
-            Comment => "comment",
+        let field = match self {
+            EventStreamError::InvalidType { .. } => "event",
+            EventStreamError::InvalidId { .. } => "id",
+            EventStreamError::InvalidComment { .. } => "comment",
         };
 
         write!(
@@ -955,7 +914,11 @@ impl Error for EventStreamError {}
 
 impl ErrorExt for EventStreamError {
     fn entry(&self) -> (Location, NextError<'_>) {
-        (self.location, NextError::None)
+        match self {
+            EventStreamError::InvalidType { location }
+            | EventStreamError::InvalidId { location }
+            | EventStreamError::InvalidComment { location } => (*location, NextError::None),
+        }
     }
 }
 

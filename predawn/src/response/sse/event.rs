@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use bytes::{BufMut, Bytes, BytesMut};
+use predawn_core::location::Location;
 
 use crate::response_error::EventStreamError;
 
@@ -89,7 +90,9 @@ impl Event {
             if valid(bytes) {
                 append_line(&mut buf, "event", bytes);
             } else {
-                return Err(EventStreamError::invalid_type());
+                return Err(EventStreamError::InvalidType {
+                    location: Location::caller(),
+                });
             }
         }
 
@@ -99,7 +102,9 @@ impl Event {
             if valid(bytes) {
                 append_line(&mut buf, "id", bytes);
             } else {
-                return Err(EventStreamError::invalid_id());
+                return Err(EventStreamError::InvalidId {
+                    location: Location::caller(),
+                });
             }
         }
 
@@ -109,7 +114,9 @@ impl Event {
             if valid(bytes) {
                 append_line(&mut buf, "", bytes);
             } else {
-                return Err(EventStreamError::invalid_comment());
+                return Err(EventStreamError::InvalidComment {
+                    location: Location::caller(),
+                });
             }
         }
 
