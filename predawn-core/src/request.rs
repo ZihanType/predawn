@@ -21,8 +21,8 @@ pub struct Request {
 impl Request {
     pub fn new(
         request: http::Request<Incoming>,
-        local_addr: SocketAddr,
-        remote_addr: SocketAddr,
+        local_addr: LocalAddr,
+        remote_addr: RemoteAddr,
     ) -> Self {
         let (
             Parts {
@@ -44,12 +44,16 @@ impl Request {
                 headers,
                 extensions,
                 body_limit: BodyLimit(DEFAULT_BODY_LIMIT),
-                local_addr: LocalAddr(local_addr),
-                remote_addr: RemoteAddr(remote_addr),
+                local_addr,
+                remote_addr,
                 original_uri: OriginalUri(uri),
             },
             body,
         }
+    }
+
+    pub fn body_limit(&mut self) -> &mut BodyLimit {
+        &mut self.head.body_limit
     }
 
     pub fn split(self) -> (Head, RequestBody) {
@@ -79,7 +83,7 @@ pub struct Head {
     /// The request's extensions
     pub extensions: Extensions,
 
-    pub body_limit: BodyLimit,
+    pub(crate) body_limit: BodyLimit,
 
     pub(crate) local_addr: LocalAddr,
 
@@ -115,6 +119,10 @@ impl Head {
         self.headers
             .get(CONTENT_LENGTH)
             .and_then(|value| value.to_str().ok()?.parse::<usize>().ok())
+    }
+
+    pub fn body_limit(&self) -> BodyLimit {
+        self.body_limit
     }
 
     pub fn local_addr(&self) -> LocalAddr {

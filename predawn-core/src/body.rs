@@ -14,44 +14,7 @@ use hyper::body::{Frame, Incoming};
 
 use crate::error::BoxError;
 
-#[derive(Debug)]
-pub struct RequestBody {
-    limit: usize,
-    inner: Limited<Incoming>,
-}
-
-impl RequestBody {
-    pub(crate) fn new(inner: Incoming, limit: usize) -> Self {
-        Self {
-            limit,
-            inner: Limited::new(inner, limit),
-        }
-    }
-
-    pub fn limit(&self) -> usize {
-        self.limit
-    }
-}
-
-impl http_body::Body for RequestBody {
-    type Data = <Limited<Incoming> as http_body::Body>::Data;
-    type Error = <Limited<Incoming> as http_body::Body>::Error;
-
-    fn poll_frame(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
-        Pin::new(&mut self.inner).poll_frame(cx)
-    }
-
-    fn is_end_stream(&self) -> bool {
-        self.inner.is_end_stream()
-    }
-
-    fn size_hint(&self) -> SizeHint {
-        self.inner.size_hint()
-    }
-}
+pub type RequestBody = Limited<Incoming>;
 
 #[derive(Debug)]
 pub struct ResponseBody(UnsyncBoxBody<Bytes, BoxError>);

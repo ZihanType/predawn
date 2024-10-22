@@ -51,7 +51,7 @@ impl<H: Handler> Handler for RequestBodyLimitHandler<H> {
             None => limit,
         };
 
-        req.head.body_limit = BodyLimit(limit);
+        *req.body_limit() = BodyLimit(limit);
 
         self.inner.call(req).await
     }

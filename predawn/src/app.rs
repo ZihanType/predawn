@@ -344,7 +344,7 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
     let (cx, router) = H::before_run(cx, router).await;
 
     let router = router.before(move |mut req| async move {
-        req.head.body_limit = BodyLimit(request_body_limit);
+        *req.body_limit() = BodyLimit(request_body_limit);
         Ok(req)
     });
 

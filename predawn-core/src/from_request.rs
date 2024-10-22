@@ -92,8 +92,8 @@ impl<'a> FromRequest<'a> for RequestBody {
 impl<'a> FromRequest<'a> for Bytes {
     type Error = ReadBytesError;
 
-    async fn from_request(_: &'a mut Head, body: RequestBody) -> Result<Self, Self::Error> {
-        let limit = body.limit();
+    async fn from_request(head: &'a mut Head, body: RequestBody) -> Result<Self, Self::Error> {
+        let limit = head.body_limit().0;
 
         match body.collect().await {
             Ok(collected) => Ok(collected.to_bytes()),

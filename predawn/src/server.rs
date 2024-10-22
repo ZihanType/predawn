@@ -2,7 +2,6 @@ use std::{
     convert::Infallible,
     future::{self, Future},
     io,
-    net::SocketAddr,
     sync::Arc,
     time::Duration,
 };
@@ -12,7 +11,10 @@ use hyper_util::{
     rt::{TokioExecutor, TokioIo},
     server::conn::auto::Builder,
 };
-use predawn_core::{body::ResponseBody, request::Request};
+use predawn_core::{
+    body::ResponseBody,
+    request::{LocalAddr, RemoteAddr, Request},
+};
 use tokio::{
     net::{TcpListener, TcpStream},
     signal,
@@ -68,7 +70,7 @@ impl Server {
         S: Future<Output = ()> + Send + 'static,
     {
         let Self { tcp_listener } = self;
-        let local_addr = tcp_listener.local_addr()?;
+        let local_addr = LocalAddr(tcp_listener.local_addr()?);
         let handler = Arc::new(handler);
 
         tracing::info!("listening {}", local_addr);
@@ -129,9 +131,9 @@ fn is_connection_error(e: &io::Error) -> bool {
     )
 }
 
-async fn tcp_accept(listener: &TcpListener) -> Option<(TcpStream, SocketAddr)> {
+async fn tcp_accept(listener: &TcpListener) -> Option<(TcpStream, RemoteAddr)> {
     match listener.accept().await {
-        Ok(conn) => Some(conn),
+        Ok((tcp_stream, remote_addr)) => Some((tcp_stream, RemoteAddr(remote_addr))),
         Err(e) => {
             if is_connection_error(&e) {
                 return None;
@@ -146,8 +148,8 @@ async fn tcp_accept(listener: &TcpListener) -> Option<(TcpStream, SocketAddr)> {
 
 async fn handle_conn<H: Handler + Clone>(
     tcp_stream: TcpStream,
-    local_addr: SocketAddr,
-    remote_addr: SocketAddr,
+    local_addr: LocalAddr,
+    remote_addr: RemoteAddr,
     signal_sender: Sender<()>,
     close_receiver: Receiver<()>,
     handler: H,
