@@ -15,7 +15,7 @@ pub struct Event {
 }
 
 impl Event {
-    pub fn data<T: Into<String>>(data: T) -> Self {
+    pub(crate) fn data<T: Into<String>>(data: T) -> Self {
         fn inner(data: String) -> Event {
             Event {
                 ty: Default::default(),
