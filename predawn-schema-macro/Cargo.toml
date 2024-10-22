@@ -1,5 +1,7 @@
 [package]
 name = "predawn-schema-macro"
+description = "Macros for predawn-schema"
+keywords = ["predawn", "schema", "macro"]
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

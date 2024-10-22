@@ -1,5 +1,7 @@
 [package]
 name = "predawn-macro-core"
+description = "Core types and functions for macros in predawn"
+keywords = ["predawn", "macro"]
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

@@ -1,5 +1,3 @@
-为 `predawn-macro-core` 和 `predawn-shcema-macro` 2 个 crate 添加 description 和 keywords
-
 flatten panic
 pretty openapi json
 丰富 Error.response.body 的错误内容
