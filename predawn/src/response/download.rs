@@ -1,20 +1,18 @@
 use std::{borrow::Cow, collections::BTreeMap};
 
+use bytes::{BufMut, BytesMut};
 use http::{
     header::{CONTENT_DISPOSITION, CONTENT_TYPE},
     HeaderValue, StatusCode,
 };
 use predawn_core::{
     api_response::ApiResponse,
-    either::Either,
     into_response::IntoResponse,
     media_type::{MediaType, MultiResponseMediaType, ResponseMediaType, SingleMediaType},
     openapi::{self, Schema},
     response::{MultiResponse, Response, SingleResponse},
 };
 use predawn_schema::ToSchema;
-
-use crate::response_error::{InvalidContentDisposition, InvalidContentDispositionSnafu};
 
 #[derive(Debug)]
 enum DownloadType {
@@ -35,15 +33,15 @@ impl DownloadType {
 pub struct Download<T> {
     data: T,
     ty: DownloadType,
-    file_name: Box<str>,
+    file_name: HeaderValue,
 }
 
 impl<T> Download<T> {
-    pub fn inline<N>(data: T, file_name: N) -> Self
+    pub fn inline<N>(data: T, file_name: N) -> Result<Self, N::Error>
     where
-        N: Into<Box<str>>,
+        N: TryInto<HeaderValue>,
     {
-        fn inner_inline<T>(data: T, file_name: Box<str>) -> Download<T> {
+        fn inner<T>(data: T, file_name: HeaderValue) -> Download<T> {
             Download {
                 data,
                 ty: DownloadType::Inline,
@@ -51,14 +49,14 @@ impl<T> Download<T> {
             }
         }
 
-        inner_inline(data, file_name.into())
+        Ok(inner(data, file_name.try_into()?))
     }
 
-    pub fn attachment<N>(data: T, file_name: N) -> Self
+    pub fn attachment<N>(data: T, file_name: N) -> Result<Self, N::Error>
     where
-        N: Into<Box<str>>,
+        N: TryInto<HeaderValue>,
     {
-        fn inner_attachment<T>(data: T, file_name: Box<str>) -> Download<T> {
+        fn inner<T>(data: T, file_name: HeaderValue) -> Download<T> {
             Download {
                 data,
                 ty: DownloadType::Attachment,
@@ -66,21 +64,23 @@ impl<T> Download<T> {
             }
         }
 
-        inner_attachment(data, file_name.into())
+        Ok(inner(data, file_name.try_into()?))
     }
 
-    fn content_disposition(
-        ty: DownloadType,
-        file_name: Box<str>,
-    ) -> Result<HeaderValue, InvalidContentDisposition> {
-        let value = format!("{}; filename=\"{}\"", ty.as_str(), file_name);
+    fn content_disposition(ty: DownloadType, file_name: HeaderValue) -> HeaderValue {
+        let mut buf = BytesMut::with_capacity(16);
 
-        HeaderValue::from_str(&value).map_err(|_| InvalidContentDispositionSnafu { value }.build())
+        buf.extend_from_slice(ty.as_str().as_bytes());
+        buf.extend_from_slice(b"; filename=\"");
+        buf.extend_from_slice(file_name.as_bytes());
+        buf.put_u8(b'"');
+
+        HeaderValue::from_maybe_shared(buf.freeze()).unwrap()
     }
 }
 
 impl<T: IntoResponse + MediaType> IntoResponse for Download<T> {
-    type Error = Either<T::Error, InvalidContentDisposition>;
+    type Error = T::Error;
 
     fn into_response(self) -> Result<Response, Self::Error> {
         let Download {
@@ -89,7 +89,7 @@ impl<T: IntoResponse + MediaType> IntoResponse for Download<T> {
             file_name,
         } = self;
 
-        let mut response = data.into_response().map_err(Either::Left)?;
+        let mut response = data.into_response()?;
 
         let headers = response.headers_mut();
 
@@ -100,7 +100,7 @@ impl<T: IntoResponse + MediaType> IntoResponse for Download<T> {
 
         headers.insert(
             CONTENT_DISPOSITION,
-            Self::content_disposition(ty, file_name).map_err(Either::Right)?,
+            Self::content_disposition(ty, file_name),
         );
 
         Ok(response)

@@ -1,9 +1,6 @@
 use std::{collections::BTreeSet, error::Error, fmt, str::Utf8Error, sync::Arc};
 
-use http::{
-    header::{CONTENT_DISPOSITION, CONTENT_TYPE},
-    HeaderName, StatusCode,
-};
+use http::{header::CONTENT_TYPE, HeaderName, StatusCode};
 pub use predawn_core::response_error::*;
 use predawn_core::{
     error_ext::{ErrorExt, NextError},
@@ -622,31 +619,6 @@ fn status_code_from_multer_error(err: &multer::Error) -> StatusCode {
         }
         multer::Error::LockFailure => StatusCode::INTERNAL_SERVER_ERROR,
         _ => StatusCode::INTERNAL_SERVER_ERROR,
-    }
-}
-
-#[derive(Debug, Snafu)]
-#[snafu(visibility(pub(crate)))]
-#[snafu(display("invalid `{CONTENT_DISPOSITION}` header value: `{value}`"))]
-pub struct InvalidContentDisposition {
-    #[snafu(implicit)]
-    location: Location,
-    value: Box<str>,
-}
-
-impl ErrorExt for InvalidContentDisposition {
-    fn entry(&self) -> (Location, NextError<'_>) {
-        (self.location, NextError::None)
-    }
-}
-
-impl ResponseError for InvalidContentDisposition {
-    fn as_status(&self) -> StatusCode {
-        StatusCode::INTERNAL_SERVER_ERROR
-    }
-
-    fn status_codes(codes: &mut BTreeSet<StatusCode>) {
-        codes.insert(StatusCode::INTERNAL_SERVER_ERROR);
     }
 }
 

@@ -200,7 +200,7 @@ impl MyController {
             age: 18,
         });
 
-        Download::attachment(json, "test.json")
+        Download::attachment(json, "test.json").unwrap()
     }
 
     #[endpoint(paths = ["/download_from_disk"], methods = [GET])]
@@ -209,7 +209,7 @@ impl MyController {
 
         let bytes = std::fs::read(path).unwrap();
 
-        Download::attachment(bytes, "test.json")
+        Download::attachment(bytes, "test.json").unwrap()
     }
 
     #[endpoint(paths = ["/unit_enum"], methods = [GET])]
