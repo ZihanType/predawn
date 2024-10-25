@@ -1,6 +1,6 @@
 use std::{collections::HashMap, time::Duration};
 
-use predawn::config::{logger::LogLevel, Config, ConfigPrefix};
+use predawn::config::{logger::Level, Config, ConfigPrefix};
 use rudi::Singleton;
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -8,7 +8,7 @@ use url::Url;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DataSourcesConfig {
     #[serde(flatten)]
-    pub data_sources: HashMap<String, Options>,
+    pub data_sources: HashMap<String, ConnectOptions>,
 }
 
 #[Singleton]
@@ -24,26 +24,10 @@ impl ConfigPrefix for DataSourcesConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum Options {
-    Simple(Url),
-    Detailed(Box<ConnectOptions>),
-}
-
-impl From<Options> for sea_orm::ConnectOptions {
-    fn from(options: Options) -> Self {
-        match options {
-            Options::Simple(url) => sea_orm::ConnectOptions::new(url),
-            Options::Detailed(connect_options) => (*connect_options).into(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SlowStatementsLoggingSettings {
     #[serde(default)]
-    pub level: LogLevel,
+    pub level: Level,
     #[serde(deserialize_with = "duration_str::deserialize_duration")]
     #[serde(default)]
     pub threshold: Duration,
@@ -79,7 +63,7 @@ pub struct ConnectOptions {
     #[serde(default)]
     pub sqlx_logging: Option<bool>,
     #[serde(default)]
-    pub sqlx_logging_level: Option<LogLevel>,
+    pub sqlx_logging_level: Option<Level>,
     #[serde(default)]
     pub sqlx_slow_statements_logging_settings: Option<SlowStatementsLoggingSettings>,
 

@@ -1,9 +1,10 @@
-[data_sources]
 # data source with url only
-db1 = "mysql://root:123456@localhost/workspace"
+[data_sources.db1]
+url = "mysql://root:123456@localhost/workspace"
 
 # data source with full url
-db2 = "mysql://root:123456@localhost:3306/workspace"
+[data_sources.db2]
+url = "mysql://root:123456@localhost:3306/workspace"
 
 # `default` data source with all options
 [data_sources.default]

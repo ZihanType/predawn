@@ -1,7 +1,7 @@
-use std::fmt;
+use std::{fmt, str::FromStr};
 
 use rudi::Singleton;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use super::{Config, ConfigPrefix};
 
@@ -9,7 +9,7 @@ use super::{Config, ConfigPrefix};
 #[serde(default, deny_unknown_fields)]
 pub struct LoggerConfig {
     #[serde(default)]
-    pub level: LogLevel,
+    pub level: Level,
 }
 
 #[Singleton]
@@ -24,8 +24,8 @@ impl ConfigPrefix for LoggerConfig {
     const PREFIX: &'static str = "logger";
 }
 
-#[derive(Debug, Default, Copy, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub enum LogLevel {
+#[derive(Debug, Default, Copy, Clone, Serialize, PartialEq, Eq)]
+pub enum Level {
     /// The "trace" level.
     Trace,
     /// The "debug" level.
@@ -41,61 +41,98 @@ pub enum LogLevel {
     Off,
 }
 
-impl LogLevel {
+impl<'de> Deserialize<'de> for Level {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        const VARIANTS: [&str; 6] = ["trace", "debug", "info", "warn", "error", "off"];
+
+        let s = String::deserialize(deserializer)?;
+        s.parse()
+            .map_err(|_| <D::Error as serde::de::Error>::unknown_variant(&s, &VARIANTS))
+    }
+}
+
+#[non_exhaustive]
+#[derive(Debug)]
+pub struct ParseLevelError;
+
+impl FromStr for Level {
+    type Err = ParseLevelError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            s if s.eq_ignore_ascii_case("trace") => Ok(Level::Trace),
+            s if s.eq_ignore_ascii_case("debug") => Ok(Level::Debug),
+            s if s.eq_ignore_ascii_case("info") => Ok(Level::Info),
+            s if s.eq_ignore_ascii_case("warn") => Ok(Level::Warn),
+            s if s.eq_ignore_ascii_case("error") => Ok(Level::Error),
+            s if s.eq_ignore_ascii_case("off") => Ok(Level::Off),
+            _ => Err(ParseLevelError),
+        }
+    }
+}
+
+impl Level {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Level::Trace => "Trace",
+            Level::Debug => "Debug",
+            Level::Info => "Info",
+            Level::Warn => "Warn",
+            Level::Error => "Error",
+            Level::Off => "Off",
+        }
+    }
+
     pub fn as_tracing_level(&self) -> Option<tracing::Level> {
         match self {
-            LogLevel::Trace => Some(tracing::Level::TRACE),
-            LogLevel::Debug => Some(tracing::Level::DEBUG),
-            LogLevel::Info => Some(tracing::Level::INFO),
-            LogLevel::Warn => Some(tracing::Level::WARN),
-            LogLevel::Error => Some(tracing::Level::ERROR),
-            LogLevel::Off => None,
+            Level::Trace => Some(tracing::Level::TRACE),
+            Level::Debug => Some(tracing::Level::DEBUG),
+            Level::Info => Some(tracing::Level::INFO),
+            Level::Warn => Some(tracing::Level::WARN),
+            Level::Error => Some(tracing::Level::ERROR),
+            Level::Off => None,
         }
     }
 
     pub fn as_tracing_level_filter(&self) -> tracing::level_filters::LevelFilter {
         match self {
-            LogLevel::Trace => tracing::level_filters::LevelFilter::TRACE,
-            LogLevel::Debug => tracing::level_filters::LevelFilter::DEBUG,
-            LogLevel::Info => tracing::level_filters::LevelFilter::INFO,
-            LogLevel::Warn => tracing::level_filters::LevelFilter::WARN,
-            LogLevel::Error => tracing::level_filters::LevelFilter::ERROR,
-            LogLevel::Off => tracing::level_filters::LevelFilter::OFF,
+            Level::Trace => tracing::level_filters::LevelFilter::TRACE,
+            Level::Debug => tracing::level_filters::LevelFilter::DEBUG,
+            Level::Info => tracing::level_filters::LevelFilter::INFO,
+            Level::Warn => tracing::level_filters::LevelFilter::WARN,
+            Level::Error => tracing::level_filters::LevelFilter::ERROR,
+            Level::Off => tracing::level_filters::LevelFilter::OFF,
         }
     }
 
     pub fn as_log_level(&self) -> Option<log::Level> {
         match self {
-            LogLevel::Trace => Some(log::Level::Trace),
-            LogLevel::Debug => Some(log::Level::Debug),
-            LogLevel::Info => Some(log::Level::Info),
-            LogLevel::Warn => Some(log::Level::Warn),
-            LogLevel::Error => Some(log::Level::Error),
-            LogLevel::Off => None,
+            Level::Trace => Some(log::Level::Trace),
+            Level::Debug => Some(log::Level::Debug),
+            Level::Info => Some(log::Level::Info),
+            Level::Warn => Some(log::Level::Warn),
+            Level::Error => Some(log::Level::Error),
+            Level::Off => None,
         }
     }
 
     pub fn as_log_level_filter(&self) -> log::LevelFilter {
         match self {
-            LogLevel::Trace => log::LevelFilter::Trace,
-            LogLevel::Debug => log::LevelFilter::Debug,
-            LogLevel::Info => log::LevelFilter::Info,
-            LogLevel::Warn => log::LevelFilter::Warn,
-            LogLevel::Error => log::LevelFilter::Error,
-            LogLevel::Off => log::LevelFilter::Off,
+            Level::Trace => log::LevelFilter::Trace,
+            Level::Debug => log::LevelFilter::Debug,
+            Level::Info => log::LevelFilter::Info,
+            Level::Warn => log::LevelFilter::Warn,
+            Level::Error => log::LevelFilter::Error,
+            Level::Off => log::LevelFilter::Off,
         }
     }
 }
 
-impl fmt::Display for LogLevel {
+impl fmt::Display for Level {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            LogLevel::Trace => write!(f, "Trace"),
-            LogLevel::Debug => write!(f, "Debug"),
-            LogLevel::Info => write!(f, "Info"),
-            LogLevel::Warn => write!(f, "Warn"),
-            LogLevel::Error => write!(f, "Error"),
-            LogLevel::Off => write!(f, "Off"),
-        }
+        f.pad(self.as_str())
     }
 }

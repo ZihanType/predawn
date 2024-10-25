@@ -18,10 +18,10 @@ impl DataSources {
         Self(map)
     }
 
-    pub fn new(map: HashMap<Arc<str>, DatabaseConnection>) -> Self {
+    pub fn new(map: &HashMap<Arc<str>, DatabaseConnection>) -> Self {
         let map = map
-            .into_iter()
-            .map(|(name, conn)| (name.clone(), DataSource::new(name, conn)))
+            .iter()
+            .map(|(name, conn)| (name.clone(), DataSource::new(name.clone(), conn.clone())))
             .collect();
 
         Self(map)
@@ -61,7 +61,7 @@ impl DataSources {
 #[SingleOwner]
 impl DataSources {
     #[di]
-    async fn inject(Inner(map): Inner) -> Self {
+    async fn inject(#[di(ref)] Inner(map): &Inner) -> Self {
         Self::new(map)
     }
 }

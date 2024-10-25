@@ -14,7 +14,7 @@ tokio::task_local! {
 }
 
 pub use self::{
-    config::{ConnectOptions, DataSourcesConfig, Options, SlowStatementsLoggingSettings},
+    config::{ConnectOptions, DataSourcesConfig, SlowStatementsLoggingSettings},
     data_source::DataSource,
     data_sources::DataSources,
     error::Error,

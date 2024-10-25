@@ -53,7 +53,7 @@ pub struct SeaOrmHandler<H> {
 
 impl<H: Handler> Handler for SeaOrmHandler<H> {
     async fn call(&self, req: Request) -> Result<Response, Error> {
-        let data_sources = Arc::new(DataSources::new(self.data_sources.clone()));
+        let data_sources = Arc::new(DataSources::new(&self.data_sources));
 
         let result = DATA_SOURCES
             .scope(data_sources.clone(), async { self.inner.call(req).await })
