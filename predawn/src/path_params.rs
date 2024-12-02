@@ -18,6 +18,10 @@ impl Default for PathParams {
 
 impl PathParams {
     pub(crate) fn insert(&mut self, params: Params) {
+        if params.is_empty() {
+            return;
+        }
+
         let PathParams::Params(current) = self else {
             return;
         };
@@ -29,7 +33,7 @@ impl PathParams {
 
                 match PercentDecodedStr::new(v) {
                     Ok(decoded) => Ok((key, decoded)),
-                    Err(error) => Err((key, error)),
+                    Err(_) => Err((key, v)),
                 }
             })
             .collect::<Result<Vec<_>, _>>();
@@ -38,9 +42,9 @@ impl PathParams {
             Ok(params) => {
                 current.extend(params);
             }
-            Err((key, error)) => {
+            Err((key, value)) => {
                 *self = PathParams::InvalidUtf8InPathParam(
-                    InvalidUtf8InPathParamSnafu { key, error }.build(),
+                    InvalidUtf8InPathParamSnafu { key, value }.build(),
                 );
             }
         }
@@ -52,7 +56,7 @@ pub(crate) struct PercentDecodedStr(Arc<str>);
 
 impl PercentDecodedStr {
     fn new(s: &str) -> Result<Self, Utf8Error> {
-        percent_encoding::percent_decode_str(s)
+        percent_encoding::percent_decode(s.as_bytes())
             .decode_utf8()
             .map(|decoded| Self(decoded.as_ref().into()))
     }

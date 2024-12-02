@@ -65,7 +65,7 @@ impl<'a> From<&'static panic::Location<'a>> for Location {
 #[macro_v(pub)]
 macro_rules! location {
     () => {
-        $crate::location::Location::new(file!(), line!(), column!())
+        $crate::location::Location::new(::core::file!(), ::core::line!(), ::core::column!())
     };
 }
 

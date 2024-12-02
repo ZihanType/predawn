@@ -8,9 +8,38 @@ use http::{
 use hyper::body::Incoming;
 use snafu::{OptionExt, Snafu};
 
-use crate::{body::RequestBody, impl_deref, impl_display, location::Location};
+use crate::{
+    body::RequestBody,
+    error_ext::{ErrorExt, NextError},
+    impl_deref, impl_display,
+    location::Location,
+};
 
 pub const DEFAULT_BODY_LIMIT: usize = 2 * 1024 * 1024; // 2 mb
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct BodyLimit(pub usize);
+
+impl_deref!(BodyLimit : usize);
+impl_display!(BodyLimit);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct LocalAddr(pub SocketAddr);
+
+impl_deref!(LocalAddr : SocketAddr);
+impl_display!(LocalAddr);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct RemoteAddr(pub SocketAddr);
+
+impl_deref!(RemoteAddr : SocketAddr);
+impl_display!(RemoteAddr);
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct OriginalUri(pub Uri);
+
+impl_deref!(OriginalUri : Uri);
+impl_display!(OriginalUri);
 
 #[derive(Debug)]
 pub struct Request {
@@ -59,7 +88,7 @@ impl Request {
     pub fn split(self) -> (Head, RequestBody) {
         let Self { head, body } = self;
 
-        let limit = head.body_limit.0;
+        let BodyLimit(limit) = head.body_limit;
 
         (head, RequestBody::new(body, limit))
     }
@@ -138,29 +167,17 @@ impl Head {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct BodyLimit(pub usize);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct PrivateBodyLimit(usize);
 
-impl_deref!(BodyLimit : usize);
-impl_display!(BodyLimit);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct PrivateLocalAddr(SocketAddr);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct LocalAddr(pub SocketAddr);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct PrivateRemoteAddr(SocketAddr);
 
-impl_deref!(LocalAddr : SocketAddr);
-impl_display!(LocalAddr);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct RemoteAddr(pub SocketAddr);
-
-impl_deref!(RemoteAddr : SocketAddr);
-impl_display!(RemoteAddr);
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct OriginalUri(pub Uri);
-
-impl_deref!(OriginalUri : Uri);
-impl_display!(OriginalUri);
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct PrivateOriginalUri(Uri);
 
 impl From<Request> for http::Request<Incoming> {
     fn from(request: Request) -> Self {
@@ -172,10 +189,10 @@ impl From<Request> for http::Request<Incoming> {
                     version,
                     headers,
                     extensions,
-                    body_limit,
-                    local_addr,
-                    remote_addr,
-                    original_uri,
+                    body_limit: BodyLimit(body_limit),
+                    local_addr: LocalAddr(local_addr),
+                    remote_addr: RemoteAddr(remote_addr),
+                    original_uri: OriginalUri(original_uri),
                 },
             body,
         } = request;
@@ -188,10 +205,11 @@ impl From<Request> for http::Request<Incoming> {
         *req.headers_mut() = headers;
         *req.extensions_mut() = extensions;
 
-        req.extensions_mut().insert(body_limit);
-        req.extensions_mut().insert(local_addr);
-        req.extensions_mut().insert(remote_addr);
-        req.extensions_mut().insert(original_uri);
+        req.extensions_mut().insert(PrivateBodyLimit(body_limit));
+        req.extensions_mut().insert(PrivateLocalAddr(local_addr));
+        req.extensions_mut().insert(PrivateRemoteAddr(remote_addr));
+        req.extensions_mut()
+            .insert(PrivateOriginalUri(original_uri));
 
         req
     }
@@ -213,21 +231,12 @@ impl TryFrom<http::Request<Incoming>> for Request {
             body,
         ) = request.into_parts();
 
-        let body_limit = extensions
-            .remove::<BodyLimit>()
-            .context(NotFoundBodyLimitSnafu)?;
-
-        let local_addr = extensions
-            .remove::<LocalAddr>()
-            .context(NotFoundLocalAddrSnafu)?;
-
-        let remote_addr = extensions
-            .remove::<RemoteAddr>()
-            .context(NotFoundRemoteAddrSnafu)?;
-
-        let original_uri = extensions
-            .remove::<OriginalUri>()
-            .context(NotFoundOriginalUriSnafu)?;
+        let PrivateBodyLimit(body_limit) = extensions.remove().context(NotFoundBodyLimitSnafu)?;
+        let PrivateLocalAddr(local_addr) = extensions.remove().context(NotFoundLocalAddrSnafu)?;
+        let PrivateRemoteAddr(remote_addr) =
+            extensions.remove().context(NotFoundRemoteAddrSnafu)?;
+        let PrivateOriginalUri(original_uri) =
+            extensions.remove().context(NotFoundOriginalUriSnafu)?;
 
         Ok(Self {
             head: Head {
@@ -236,10 +245,10 @@ impl TryFrom<http::Request<Incoming>> for Request {
                 version,
                 headers,
                 extensions,
-                body_limit,
-                local_addr,
-                remote_addr,
-                original_uri,
+                body_limit: BodyLimit(body_limit),
+                local_addr: LocalAddr(local_addr),
+                remote_addr: RemoteAddr(remote_addr),
+                original_uri: OriginalUri(original_uri),
             },
             body,
         })
@@ -271,4 +280,15 @@ pub enum ConvertRequestError {
         #[snafu(implicit)]
         location: Location,
     },
+}
+
+impl ErrorExt for ConvertRequestError {
+    fn entry(&self) -> (Location, NextError<'_>) {
+        match self {
+            Self::NotFoundBodyLimit { location }
+            | Self::NotFoundLocalAddr { location }
+            | Self::NotFoundRemoteAddr { location }
+            | Self::NotFoundOriginalUri { location } => (*location, NextError::None),
+        }
+    }
 }

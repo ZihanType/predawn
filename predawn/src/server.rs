@@ -105,7 +105,6 @@ impl Server {
                     tracing::info!("signal received, not accepting new connections");
                     break;
                 }
-
             }
         }
 

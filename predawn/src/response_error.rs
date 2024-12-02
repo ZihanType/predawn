@@ -1,4 +1,4 @@
-use std::{collections::BTreeSet, error::Error, fmt, str::Utf8Error, sync::Arc};
+use std::{collections::BTreeSet, error::Error, fmt, sync::Arc};
 
 use http::{header::CONTENT_TYPE, HeaderName, StatusCode};
 pub use predawn_core::response_error::*;
@@ -68,6 +68,31 @@ impl ResponseError for MatchError {
 
 #[derive(Debug, Snafu)]
 #[snafu(visibility(pub(crate)))]
+#[snafu(display("can not decode the percent encoded path `{path}` to utf-8"))]
+pub struct DecodePathToUtf8Error {
+    #[snafu(implicit)]
+    location: Location,
+    path: Box<str>,
+}
+
+impl ErrorExt for DecodePathToUtf8Error {
+    fn entry(&self) -> (Location, NextError<'_>) {
+        (self.location, NextError::None)
+    }
+}
+
+impl ResponseError for DecodePathToUtf8Error {
+    fn as_status(&self) -> StatusCode {
+        StatusCode::BAD_REQUEST
+    }
+
+    fn status_codes(codes: &mut BTreeSet<StatusCode>) {
+        codes.insert(StatusCode::BAD_REQUEST);
+    }
+}
+
+#[derive(Debug, Snafu)]
+#[snafu(visibility(pub(crate)))]
 #[snafu(display("{source}"))]
 pub struct QueryError {
     #[snafu(implicit)]
@@ -93,12 +118,14 @@ impl ResponseError for QueryError {
 
 #[derive(Debug, Snafu, Clone)]
 #[snafu(visibility(pub(crate)))]
-#[snafu(display("{error} in `{key}`"))]
+#[snafu(display(
+    "can not decode the percent encoded path `{value}` of the path parameter `{key}` to utf-8"
+))]
 pub struct InvalidUtf8InPathParam {
     #[snafu(implicit)]
     location: Location,
     key: Arc<str>,
-    error: Utf8Error,
+    value: Box<str>,
 }
 
 impl ErrorExt for InvalidUtf8InPathParam {

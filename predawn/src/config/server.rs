@@ -22,7 +22,7 @@ pub struct ServerConfig {
     pub request_body_limit: usize,
 }
 
-#[Singleton]
+#[Singleton(eager_create)]
 impl ServerConfig {
     #[di]
     pub fn new(#[di(ref)] config: &Config) -> Self {

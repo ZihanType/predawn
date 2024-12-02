@@ -21,7 +21,7 @@ pub struct OpenAPIConfig {
     pub openapi_explorer_path: NormalizedPath,
 }
 
-#[Singleton]
+#[Singleton(eager_create)]
 impl OpenAPIConfig {
     #[di]
     pub fn new(#[di(ref)] config: &Config) -> Self {

@@ -46,7 +46,10 @@ impl NormalizedPath {
         } else if postfix == "/" {
             prefix
         } else {
-            Self(format!("{}{}", prefix, postfix))
+            let mut path = prefix.0;
+            path.push_str(&postfix.0);
+
+            Self(path)
         }
     }
 

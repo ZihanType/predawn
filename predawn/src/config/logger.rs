@@ -12,7 +12,7 @@ pub struct LoggerConfig {
     pub level: Level,
 }
 
-#[Singleton]
+#[Singleton(eager_create)]
 impl LoggerConfig {
     #[di]
     pub fn new(#[di(ref)] config: &Config) -> Self {

@@ -119,7 +119,7 @@ impl<'a> FromRequestHead<'a> for WebSocketRequest {
         let connection_contains_upgrade = head
             .headers
             .typed_get::<Connection>()
-            .map_or(false, |connection| connection.contains(UPGRADE));
+            .is_some_and(|connection| connection.contains(UPGRADE));
 
         if !connection_contains_upgrade {
             return ConnectionHeaderNotContainsUpgradeSnafu.fail();
@@ -128,16 +128,14 @@ impl<'a> FromRequestHead<'a> for WebSocketRequest {
         let upgrade_eq_websocket = head
             .headers
             .typed_get::<Upgrade>()
-            .map_or(false, |upgrade| upgrade == Upgrade::websocket());
+            .is_some_and(|upgrade| upgrade == Upgrade::websocket());
 
         if !upgrade_eq_websocket {
             return UpgradeHeaderNotEqualWebSocketSnafu.fail();
         }
 
-        let sec_websocket_version_eq_13 = head
-            .headers
-            .typed_get::<SecWebsocketVersion>()
-            .map_or(false, |version| version == SecWebsocketVersion::V13);
+        let sec_websocket_version_eq_13 =
+            head.headers.typed_get::<SecWebsocketVersion>() == Some(SecWebsocketVersion::V13);
 
         if !sec_websocket_version_eq_13 {
             return SecWebSocketVersionHeaderNotEqual13Snafu.fail();

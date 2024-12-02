@@ -22,10 +22,10 @@ pub fn has_media_type<'a>(
     };
 
     let mut has = mime.type_() == ty
-        && (mime.subtype() == subtype || mime.suffix().map_or(false, |name| name == suffix));
+        && (mime.subtype() == subtype || mime.suffix().is_some_and(|name| name == suffix));
 
     if let Some((key, value)) = param {
-        has = has && mime.get_param(key).map_or(false, |name| name == value);
+        has = has && mime.get_param(key).is_some_and(|name| name == value);
     }
 
     has

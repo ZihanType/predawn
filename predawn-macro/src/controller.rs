@@ -117,7 +117,10 @@ pub(crate) fn generate(
         # use predawn::controller::Controller;
 
         paste! {
-            #[Singleton(name = type_name::<#self_ty>())]
+            #[Singleton(
+                name = type_name::<#self_ty>(),
+                condition = |cx| cx.contains_provider::<#self_ty>(),
+            )]
             fn [<#self_ty ToController>](c: #self_ty) -> Arc<dyn Controller> {
                 Arc::new(c)
             }

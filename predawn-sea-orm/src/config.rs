@@ -11,7 +11,7 @@ pub struct DataSourcesConfig {
     pub data_sources: HashMap<String, ConnectOptions>,
 }
 
-#[Singleton]
+#[Singleton(eager_create)]
 impl DataSourcesConfig {
     #[di]
     pub fn new(#[di(ref)] config: &Config) -> Self {
