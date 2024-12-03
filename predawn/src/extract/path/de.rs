@@ -5,10 +5,7 @@ use serde::{
     forward_to_deserialize_any, Deserializer,
 };
 
-use crate::{
-    path_params::PercentDecodedStr,
-    response_error::{DeserializePathError, ParseErrorAtKeySnafu, UnsupportedTypeSnafu},
-};
+use crate::response_error::{DeserializePathError, ParseErrorAtKeySnafu, UnsupportedTypeSnafu};
 
 macro_rules! unsupported_type {
     ($trait_fn:ident) => {
@@ -25,12 +22,12 @@ macro_rules! unsupported_type {
 }
 
 pub(crate) struct PathDeserializer<'de> {
-    path_params: &'de [(Arc<str>, PercentDecodedStr)],
+    path_params: &'de [(Arc<str>, Arc<str>)],
 }
 
 impl<'de> PathDeserializer<'de> {
     #[inline]
-    pub(crate) fn new(path_params: &'de [(Arc<str>, PercentDecodedStr)]) -> Self {
+    pub(crate) fn new(path_params: &'de [(Arc<str>, Arc<str>)]) -> Self {
         PathDeserializer { path_params }
     }
 }
@@ -166,8 +163,8 @@ impl<'de> Deserializer<'de> for PathDeserializer<'de> {
 }
 
 struct MapDeserializer<'de> {
-    params: &'de [(Arc<str>, PercentDecodedStr)],
-    pair: Option<(&'de str, &'de PercentDecodedStr)>,
+    params: &'de [(Arc<str>, Arc<str>)],
+    pair: Option<(&'de str, &'de str)>,
 }
 
 impl<'de> MapAccess<'de> for MapDeserializer<'de> {
@@ -246,7 +243,7 @@ macro_rules! parse_value {
             let v = self.value.parse().map_err(|_| {
                 ParseErrorAtKeySnafu {
                     key: self.key.clone(),
-                    value: self.value.clone().into_inner(),
+                    value: self.value.clone(),
                     expected_type: $ty,
                 }
                 .build()
@@ -259,7 +256,7 @@ macro_rules! parse_value {
 #[derive(Debug)]
 struct ValueDeserializer<'de> {
     key: &'de str,
-    value: &'de PercentDecodedStr,
+    value: &'de str,
 }
 
 impl<'de> Deserializer<'de> for ValueDeserializer<'de> {

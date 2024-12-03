@@ -112,9 +112,11 @@ impl Handler for Router {
 
         let matched = self.at(&path).context(MatchSnafu)?;
 
-        head.extensions
-            .get_or_insert_default::<PathParams>()
-            .insert(matched.params);
+        if !matched.params.is_empty() {
+            #[allow(unused_variables)]
+            let prev = head.extensions.insert(PathParams::new(matched.params));
+            debug_assert!(prev.is_none());
+        }
 
         matched.value.call(req).await
     }
@@ -174,6 +176,14 @@ mod tests {
             split_path("/", &mut parts);
 
             assert_eq!(parts, vec![Part::Slash]);
+
+            parts.clear();
+        }
+
+        {
+            split_path("foo/bar", &mut parts);
+
+            assert_eq!(parts, vec![Part::Str("foo"), Part::Slash, Part::Str("bar")]);
 
             parts.clear();
         }
