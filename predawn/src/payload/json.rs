@@ -10,7 +10,7 @@ use predawn_core::{
     api_request::ApiRequest,
     api_response::ApiResponse,
     body::RequestBody,
-    from_request::FromRequest,
+    from_request::{FromRequest, OptionalFromRequest},
     impl_deref,
     into_response::IntoResponse,
     media_type::{
@@ -44,16 +44,43 @@ where
     async fn from_request(head: &'a mut Head, body: RequestBody) -> Result<Self, Self::Error> {
         let content_type = head.content_type().unwrap_or_default();
 
-        if <Self as RequestMediaType>::check_content_type(content_type) {
-            let bytes = Bytes::from_request(head, body)
-                .await
-                .context(ReadJsonBytesSnafu)?;
-
-            let json = crate::util::deserialize_json(&bytes).context(DeserializeJsonSnafu)?;
-            Ok(Json(json))
-        } else {
-            InvalidJsonContentTypeSnafu.fail()
+        if !<Self as RequestMediaType>::check_content_type(content_type) {
+            return InvalidJsonContentTypeSnafu.fail();
         }
+
+        let bytes = Bytes::from_request(head, body)
+            .await
+            .context(ReadJsonBytesSnafu)?;
+
+        let json = crate::util::deserialize_json(&bytes).context(DeserializeJsonSnafu)?;
+        Ok(Json(json))
+    }
+}
+
+impl<'a, T> OptionalFromRequest<'a> for Json<T>
+where
+    T: DeserializeOwned,
+{
+    type Error = ReadJsonError;
+
+    async fn from_request(
+        head: &'a mut Head,
+        body: RequestBody,
+    ) -> Result<Option<Self>, Self::Error> {
+        let Some(content_type) = head.content_type() else {
+            return Ok(None);
+        };
+
+        if !<Self as RequestMediaType>::check_content_type(content_type) {
+            return InvalidJsonContentTypeSnafu.fail();
+        }
+
+        let bytes = Bytes::from_request(head, body)
+            .await
+            .context(ReadJsonBytesSnafu)?;
+
+        let json = crate::util::deserialize_json(&bytes).context(DeserializeJsonSnafu)?;
+        Ok(Some(Json(json)))
     }
 }
 

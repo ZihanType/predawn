@@ -33,6 +33,23 @@ pub trait FromRequest<'a, M = ViaRequest>: Sized {
     ) -> impl Future<Output = Result<Self, Self::Error>> + Send;
 }
 
+pub trait OptionalFromRequestHead<'a>: Sized {
+    type Error: ResponseError;
+
+    fn from_request_head(
+        head: &'a mut Head,
+    ) -> impl Future<Output = Result<Option<Self>, Self::Error>> + Send;
+}
+
+pub trait OptionalFromRequest<'a, M = ViaRequest>: Sized {
+    type Error: ResponseError;
+
+    fn from_request(
+        head: &'a mut Head,
+        body: RequestBody,
+    ) -> impl Future<Output = Result<Option<Self>, Self::Error>> + Send;
+}
+
 impl<'a, T> FromRequest<'a, ViaRequestHead> for T
 where
     T: FromRequestHead<'a>,
@@ -45,21 +62,21 @@ where
     }
 }
 
-impl<'a, T: FromRequestHead<'a>> FromRequestHead<'a> for Option<T> {
-    type Error = Infallible;
+impl<'a, T: OptionalFromRequestHead<'a>> FromRequestHead<'a> for Option<T> {
+    type Error = T::Error;
 
     async fn from_request_head(head: &'a mut Head) -> Result<Self, Self::Error> {
         // TODO: remove boxed when https://github.com/rust-lang/rust/issues/100013 is resolved
-        Ok(T::from_request_head(head).boxed().await.ok())
+        T::from_request_head(head).boxed().await
     }
 }
 
-impl<'a, T: FromRequest<'a>> FromRequest<'a> for Option<T> {
-    type Error = Infallible;
+impl<'a, T: OptionalFromRequest<'a>> FromRequest<'a> for Option<T> {
+    type Error = T::Error;
 
     async fn from_request(head: &'a mut Head, body: RequestBody) -> Result<Self, Self::Error> {
         // TODO: remove boxed when https://github.com/rust-lang/rust/issues/100013 is resolved
-        Ok(T::from_request(head, body).boxed().await.ok())
+        T::from_request(head, body).boxed().await
     }
 }
 

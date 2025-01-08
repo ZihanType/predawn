@@ -3,7 +3,7 @@ use mime::{FORM_DATA, MULTIPART};
 use multer::Field;
 use predawn_core::{
     body::RequestBody,
-    from_request::FromRequest,
+    from_request::{FromRequest, OptionalFromRequest},
     media_type::{has_media_type, MediaType, RequestMediaType},
     request::Head,
 };
@@ -23,13 +23,34 @@ impl<'a> FromRequest<'a> for Multipart {
     async fn from_request(head: &'a mut Head, body: RequestBody) -> Result<Self, Self::Error> {
         let content_type = head.content_type().unwrap_or_default();
 
-        if <Multipart as RequestMediaType>::check_content_type(content_type) {
-            let boundary = multer::parse_boundary(content_type).context(ByParseMultipartSnafu)?;
-            let multipart = multer::Multipart::new(body.into_data_stream(), boundary);
-            Ok(Multipart(multipart))
-        } else {
-            InvalidMultipartContentTypeSnafu.fail()
+        if !<Multipart as RequestMediaType>::check_content_type(content_type) {
+            return InvalidMultipartContentTypeSnafu.fail();
         }
+
+        let boundary = multer::parse_boundary(content_type).context(ByParseMultipartSnafu)?;
+        let multipart = multer::Multipart::new(body.into_data_stream(), boundary);
+        Ok(Multipart(multipart))
+    }
+}
+
+impl<'a> OptionalFromRequest<'a> for Multipart {
+    type Error = MultipartError;
+
+    async fn from_request(
+        head: &'a mut Head,
+        body: RequestBody,
+    ) -> Result<Option<Self>, Self::Error> {
+        let Some(content_type) = head.content_type() else {
+            return Ok(None);
+        };
+
+        if !<Multipart as RequestMediaType>::check_content_type(content_type) {
+            return InvalidMultipartContentTypeSnafu.fail();
+        }
+
+        let boundary = multer::parse_boundary(content_type).context(ByParseMultipartSnafu)?;
+        let multipart = multer::Multipart::new(body.into_data_stream(), boundary);
+        Ok(Some(Multipart(multipart)))
     }
 }
 

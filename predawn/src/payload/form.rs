@@ -7,7 +7,7 @@ use predawn_core::{
     api_request::ApiRequest,
     api_response::ApiResponse,
     body::RequestBody,
-    from_request::FromRequest,
+    from_request::{FromRequest, OptionalFromRequest},
     impl_deref,
     into_response::IntoResponse,
     media_type::{
@@ -41,16 +41,43 @@ where
     async fn from_request(head: &'a mut Head, body: RequestBody) -> Result<Self, Self::Error> {
         let content_type = head.content_type().unwrap_or_default();
 
-        if <Self as RequestMediaType>::check_content_type(content_type) {
-            let bytes = Bytes::from_request(head, body)
-                .await
-                .context(ReadFormBytesSnafu)?;
-
-            let form = crate::util::deserialize_form(&bytes).context(DeserializeFormSnafu)?;
-            Ok(Form(form))
-        } else {
-            InvalidFormContentTypeSnafu.fail()
+        if !<Self as RequestMediaType>::check_content_type(content_type) {
+            return InvalidFormContentTypeSnafu.fail();
         }
+
+        let bytes = Bytes::from_request(head, body)
+            .await
+            .context(ReadFormBytesSnafu)?;
+
+        let form = crate::util::deserialize_form(&bytes).context(DeserializeFormSnafu)?;
+        Ok(Form(form))
+    }
+}
+
+impl<'a, T> OptionalFromRequest<'a> for Form<T>
+where
+    T: DeserializeOwned,
+{
+    type Error = ReadFormError;
+
+    async fn from_request(
+        head: &'a mut Head,
+        body: RequestBody,
+    ) -> Result<Option<Self>, Self::Error> {
+        let Some(content_type) = head.content_type() else {
+            return Ok(None);
+        };
+
+        if !<Self as RequestMediaType>::check_content_type(content_type) {
+            return InvalidFormContentTypeSnafu.fail();
+        }
+
+        let bytes = Bytes::from_request(head, body)
+            .await
+            .context(ReadFormBytesSnafu)?;
+
+        let form = crate::util::deserialize_form(&bytes).context(DeserializeFormSnafu)?;
+        Ok(Some(Form(form)))
     }
 }
 

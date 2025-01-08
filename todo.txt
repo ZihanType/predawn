@@ -1,6 +1,5 @@
 skip sse incompatible chars of serde_json::RawValue
 Add support for WebSockets over HTTP/2
-OptionalFromRequest
 add description for `ParameterData` and `RequestBody` in `Operation`
 
 expect: /{a}/{b}
@@ -24,7 +23,7 @@ OAuth2
 OpenIDConnect
 HttpAuthScheme
 
-delete `predawn-sea-orm` unnacessary `async` in `async fn inject`
+delete `predawn-sea-orm` unnacessary `async` in `async fn inject(...)`
 
 controller: condition, skip
 

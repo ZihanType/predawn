@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use headers::Header;
 use predawn_core::{
     api_request::ApiRequestHead,
-    from_request::FromRequestHead,
+    from_request::{FromRequestHead, OptionalFromRequestHead},
     impl_deref,
     openapi::{Parameter, Schema},
     request::Head,
@@ -36,6 +36,26 @@ where
             } else {
                 DecodeSnafu { name }.into_error(e)
             }),
+        }
+    }
+}
+
+impl<'a, T> OptionalFromRequestHead<'a> for TypedHeader<T>
+where
+    T: Header,
+{
+    type Error = TypedHeaderError;
+
+    async fn from_request_head(head: &'a mut Head) -> Result<Option<Self>, Self::Error> {
+        let name = T::name();
+
+        let mut values = head.headers.get_all(name).iter();
+        let is_missing = values.size_hint() == (0, Some(0));
+
+        match T::decode(&mut values) {
+            Ok(o) => Ok(Some(Self(o))),
+            Err(_) if is_missing => Ok(None),
+            Err(e) => Err(DecodeSnafu { name }.into_error(e)),
         }
     }
 }
