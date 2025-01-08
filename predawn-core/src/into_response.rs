@@ -16,7 +16,8 @@ pub trait IntoResponse {
 
 impl<B> IntoResponse for Response<B>
 where
-    B: http_body::Body<Data = Bytes> + Send + 'static,
+    B: http_body::Body + Send + 'static,
+    B::Data: Into<Bytes>,
     B::Error: Into<BoxError>,
 {
     type Error = Infallible;

@@ -1,5 +1,6 @@
 use std::{fmt, net::SocketAddr};
 
+use error2::{ErrorExt, Location, NextError};
 use http::{
     header::{CONTENT_LENGTH, CONTENT_TYPE},
     request::Parts,
@@ -8,12 +9,7 @@ use http::{
 use hyper::body::Incoming;
 use snafu::{OptionExt, Snafu};
 
-use crate::{
-    body::RequestBody,
-    error_ext::{ErrorExt, NextError},
-    impl_deref, impl_display,
-    location::Location,
-};
+use crate::{body::RequestBody, impl_deref, impl_display};
 
 pub const DEFAULT_BODY_LIMIT: usize = 2 * 1024 * 1024; // 2 mb
 

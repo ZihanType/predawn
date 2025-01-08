@@ -2,8 +2,7 @@ use std::{collections::BTreeSet, sync::Arc};
 
 use http::StatusCode;
 use predawn::{
-    error_ext::{ErrorExt, NextError},
-    location::Location,
+    error2::{ErrorExt, Location, NextError},
     response_error::ResponseError,
 };
 use sea_orm::DbErr;

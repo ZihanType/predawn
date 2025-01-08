@@ -52,6 +52,7 @@ pin-project-lite = { workspace = true }
 form_urlencoded = { workspace = true }
 snafu = { workspace = true, features = ["rust_1_65", "std"] }
 log = { workspace = true }
+error2 = { workspace = true, features = ["snafu"] }
 
 # Optional dependencies
 tower = { workspace = true, optional = true }

@@ -4,12 +4,11 @@ use std::{
     fmt,
 };
 
+use error2::{ErrorExt, Location, NextError};
 use http::StatusCode;
 
 use crate::{
     error::BoxError,
-    error_ext::{ErrorExt, NextError},
-    location::Location,
     openapi::{self, merge_responses, Schema},
     response::Response,
     response_error::ResponseError,

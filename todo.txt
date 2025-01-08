@@ -1,12 +1,20 @@
+custom `required`
+skip sse incompatible chars of serde_json::RawValue
+Add support for WebSockets over HTTP/2
+OptionalFromRequest
+add description for `ParameterData` and `RequestBody` in `Operation`
+
+expect: /{a}/{b}
+actual: //1
+
 add prefix for attribute macros
 
 flatten panic
 pretty openapi json
 丰富 Error.response.body 的错误内容
 
-抽出 ErrorExt
 discriminator
-ToParameter flatten
+ToParameters expand
 
 tempfile
 

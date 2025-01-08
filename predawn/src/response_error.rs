@@ -1,12 +1,9 @@
 use std::{collections::BTreeSet, error::Error, fmt, sync::Arc};
 
+use error2::{ErrorExt, Location, NextError};
 use http::{header::CONTENT_TYPE, HeaderName, StatusCode};
+use predawn_core::media_type::MediaType;
 pub use predawn_core::response_error::*;
-use predawn_core::{
-    error_ext::{ErrorExt, NextError},
-    location::Location,
-    media_type::MediaType,
-};
 use snafu::Snafu;
 
 use crate::{
@@ -68,11 +65,12 @@ impl ResponseError for MatchError {
 
 #[derive(Debug, Snafu)]
 #[snafu(visibility(pub(crate)))]
-#[snafu(display("can not decode the percent encoded path `{path}` to utf-8"))]
+#[snafu(display("can not decode the path `{path}` to UTF-8, its lossy decoded is `{decoded}`"))]
 pub struct DecodePathToUtf8Error {
     #[snafu(implicit)]
     location: Location,
     path: Box<str>,
+    decoded: Box<str>,
 }
 
 impl ErrorExt for DecodePathToUtf8Error {

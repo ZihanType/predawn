@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use bytes::{BufMut, Bytes, BytesMut};
-use predawn_core::location::Location;
+use error2::Location;
 
 use crate::response_error::EventStreamError;
 

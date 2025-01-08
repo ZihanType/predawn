@@ -1,9 +1,10 @@
 use std::{error::Error as StdError, fmt};
 
+use error2::Location;
 use http::{header::CONTENT_TYPE, HeaderValue, StatusCode};
 use mime::TEXT_PLAIN_UTF_8;
 
-use crate::{location::Location, response::Response, response_error::ResponseError};
+use crate::{response::Response, response_error::ResponseError};
 
 /// Alias for a type-erased error type.
 pub type BoxError = Box<dyn StdError + Send + Sync>;

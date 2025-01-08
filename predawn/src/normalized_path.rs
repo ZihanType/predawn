@@ -1,8 +1,9 @@
 use std::{fmt, ops::Deref};
 
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[serde(into = "String", from = "&str")]
 pub struct NormalizedPath(String);
 
 impl NormalizedPath {
@@ -81,24 +82,6 @@ impl<'a> From<&'a str> for NormalizedPath {
 impl From<NormalizedPath> for String {
     fn from(path: NormalizedPath) -> Self {
         path.0
-    }
-}
-
-impl Serialize for NormalizedPath {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        self.0.serialize(serializer)
-    }
-}
-
-impl<'de> Deserialize<'de> for NormalizedPath {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        <String as Deserialize<'de>>::deserialize(deserializer).map(|s| NormalizedPath::new(&s))
     }
 }
 

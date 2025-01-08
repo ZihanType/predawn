@@ -79,13 +79,13 @@ where
 
         poll_fn(|cx| svc.lock().unwrap().poll_ready(cx))
             .await
-            .map_err(Into::into)?;
+            .map_err(|e| e.into())?;
 
         let fut = svc
             .lock()
             .unwrap()
             .call(http::Request::<Incoming>::from(req));
 
-        Ok(fut.await.map_err(Into::into)?.into_response()?)
+        Ok(fut.await.map_err(|e| e.into())?.into_response()?)
     }
 }

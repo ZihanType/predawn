@@ -4,14 +4,13 @@ use std::{
     string::FromUtf8Error,
 };
 
+use error2::{ErrorExt, Location, NextError};
 use http::{header::CONTENT_TYPE, HeaderValue, StatusCode};
 use mime::TEXT_PLAIN_UTF_8;
 use snafu::Snafu;
 
 use crate::{
     error::BoxError,
-    error_ext::{ErrorExt, NextError},
-    location::Location,
     media_type::MultiResponseMediaType,
     openapi::{self, Schema},
     response::Response,
@@ -65,12 +64,6 @@ pub trait ResponseError: ErrorExt + Send + Sync + Sized + 'static {
     }
 }
 
-impl ErrorExt for Infallible {
-    fn entry(&self) -> (Location, NextError<'_>) {
-        match *self {}
-    }
-}
-
 impl ResponseError for Infallible {
     fn as_status(&self) -> StatusCode {
         match *self {}
@@ -92,7 +85,6 @@ impl ResponseError for Infallible {
 
 #[derive(Debug, Snafu)]
 #[snafu(visibility(pub(crate)))]
-#[snafu(context(suffix(false)))]
 #[snafu(display("length limit exceeded, limit is `{}`", limit))]
 pub struct LengthLimitError {
     #[snafu(implicit)]
@@ -118,6 +110,7 @@ impl ResponseError for LengthLimitError {
 
 #[derive(Debug, Snafu)]
 #[snafu(visibility(pub(crate)))]
+#[snafu(module)]
 pub enum ReadBytesError {
     #[snafu(display("{source}"))]
     LengthLimitError {

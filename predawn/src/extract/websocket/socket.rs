@@ -34,12 +34,6 @@ impl WebSocket {
         self.inner.send(msg).await
     }
 
-    /// Gracefully close this WebSocket.
-    #[inline(always)]
-    pub async fn close(mut self) -> Result<(), tungstenite::Error> {
-        self.inner.close(None).await
-    }
-
     /// Return the selected WebSocket subprotocol, if one has been chosen.
     #[inline(always)]
     pub fn protocol(&self) -> Option<&HeaderValue> {

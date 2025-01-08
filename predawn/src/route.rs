@@ -97,15 +97,22 @@ impl Handler for Router {
         split_path(head.uri.path(), &mut parts);
 
         let mut path = String::new();
+
         for part in parts {
             match part {
                 Part::Slash => path.push('/'),
                 Part::Str(s) => {
-                    let s = percent_encoding::percent_decode(s.as_bytes())
-                        .decode_utf8()
-                        .map_err(|_| DecodePathToUtf8Snafu { path: s }.build())?;
+                    let bytes = s.as_bytes();
 
-                    path.push_str(&s);
+                    match percent_encoding::percent_decode(bytes).decode_utf8() {
+                        Ok(s) => path.push_str(&s),
+                        Err(_) => {
+                            let decoded =
+                                percent_encoding::percent_decode(bytes).decode_utf8_lossy();
+
+                            return Err(DecodePathToUtf8Snafu { path: s, decoded }.build().into());
+                        }
+                    }
                 }
             }
         }

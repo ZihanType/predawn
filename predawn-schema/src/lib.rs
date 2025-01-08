@@ -9,7 +9,9 @@ mod schemars_transform;
 #[doc(hidden)]
 pub mod to_schema;
 
-pub use openapiv3 as openapi;
+pub mod openapi {
+    pub use openapiv3::*;
+}
 #[cfg_attr(docsrs, doc(cfg(feature = "macro")))]
 #[cfg(feature = "macro")]
 pub use predawn_schema_macro::ToSchema;

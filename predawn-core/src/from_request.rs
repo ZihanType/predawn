@@ -11,8 +11,8 @@ use crate::{
     private::{ViaRequest, ViaRequestHead},
     request::{BodyLimit, Head, LocalAddr, OriginalUri, RemoteAddr},
     response_error::{
-        InvalidUtf8Snafu, LengthLimit, LengthLimitSnafu, ReadBytesError, ReadBytesSnafu,
-        ReadStringError, ResponseError, UnknownBodySnafu,
+        read_bytes_error, InvalidUtf8Snafu, LengthLimitSnafu, ReadBytesError, ReadBytesSnafu,
+        ReadStringError, ResponseError,
     },
 };
 
@@ -99,10 +99,10 @@ impl<'a> FromRequest<'a> for Bytes {
             Ok(collected) => Ok(collected.to_bytes()),
             Err(err) => match err.downcast::<http_body_util::LengthLimitError>() {
                 Ok(_) => {
-                    let err = LengthLimit { limit }.build();
-                    Err(LengthLimitSnafu.into_error(err))
+                    let err = LengthLimitSnafu { limit }.build();
+                    Err(read_bytes_error::LengthLimitSnafu.into_error(err))
                 }
-                Err(err) => Err(UnknownBodySnafu.into_error(err)),
+                Err(err) => Err(read_bytes_error::UnknownBodySnafu.into_error(err)),
             },
         }
     }

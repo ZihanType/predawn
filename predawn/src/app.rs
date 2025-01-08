@@ -1,5 +1,10 @@
 use core::panic;
-use std::{collections::BTreeMap, io, net::SocketAddr, sync::Arc};
+use std::{
+    collections::{BTreeMap, HashMap},
+    io,
+    net::SocketAddr,
+    sync::Arc,
+};
 
 use config::ConfigError;
 use http::Method;
@@ -146,7 +151,8 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
         .map(|(name, schema)| (name, ReferenceOr::Item(schema)))
         .collect();
 
-    let mut duplicate_endpoints = Vec::new();
+    let mut duplicate_endpoints: HashMap<String, Vec<Method>> = HashMap::new();
+    let mut appeared_method_cache: Vec<Method> = Vec::new();
 
     let paths = paths
         .into_iter()
@@ -155,32 +161,33 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
 
             let mut path_item = PathItem::default();
 
+            appeared_method_cache.clear();
+
             operations.into_iter().for_each(|(method, operation)| {
-                let duplicate = if method == Method::GET {
-                    path_item.get.replace(operation)
-                } else if method == Method::PUT {
-                    path_item.put.replace(operation)
-                } else if method == Method::POST {
-                    path_item.post.replace(operation)
-                } else if method == Method::DELETE {
-                    path_item.delete.replace(operation)
-                } else if method == Method::OPTIONS {
-                    path_item.options.replace(operation)
-                } else if method == Method::HEAD {
-                    path_item.head.replace(operation)
-                } else if method == Method::PATCH {
-                    path_item.patch.replace(operation)
-                } else if method == Method::TRACE {
-                    path_item.trace.replace(operation)
+                match method {
+                    Method::GET => path_item.get = Some(operation),
+                    Method::POST => path_item.post = Some(operation),
+                    Method::PUT => path_item.put = Some(operation),
+                    Method::DELETE => path_item.delete = Some(operation),
+                    Method::HEAD => path_item.head = Some(operation),
+                    Method::OPTIONS => path_item.options = Some(operation),
+                    Method::PATCH => path_item.patch = Some(operation),
+                    Method::TRACE => path_item.trace = Some(operation),
+                    _ => {
+                        tracing::info!(
+                            "the `{method} {path}` endpoint does not appear in the OpenAPI documentation"
+                        )
+                    }
+                }
+
+                if !appeared_method_cache.contains(&method) {
+                    appeared_method_cache.push(method);
+                } else if !duplicate_endpoints.contains_key(&path) {
+                    duplicate_endpoints.insert(path.clone(), vec![method]);
                 } else {
-                    panic!("unsupported method: {:?}", method);
-                };
-
-                if duplicate.is_some() {
-                    let endpoint = (method, path.clone());
-
-                    if !duplicate_endpoints.contains(&endpoint) {
-                        duplicate_endpoints.push(endpoint);
+                    let duplicate_methods = duplicate_endpoints.get_mut(&path).unwrap();
+                    if !duplicate_methods.contains(&method) {
+                        duplicate_methods.push(method);
                     }
                 }
             });
@@ -190,7 +197,7 @@ pub async fn create_app<H: Hooks>(env: Environment) -> (Context, impl Handler) {
         .collect();
 
     if !duplicate_endpoints.is_empty() {
-        panic!("duplicate endpoints: {:?}", duplicate_endpoints);
+        panic!("duplicate endpoints: {:#?}", duplicate_endpoints);
     }
 
     let mut tag_name_to_type_names: BTreeMap<_, Vec<_>> = BTreeMap::new();

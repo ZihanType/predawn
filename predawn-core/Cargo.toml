@@ -24,4 +24,4 @@ http-body-util = { workspace = true }
 mime = { workspace = true }
 indexmap = { workspace = true, features = ["std"] }
 snafu = { workspace = true, features = ["rust_1_65", "std"] }
-macro-v = { workspace = true }
+error2 = { workspace = true, features = ["snafu"] }
