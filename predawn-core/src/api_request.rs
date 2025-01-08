@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 use bytes::Bytes;
 use http::{HeaderMap, Method, Uri, Version};
+use predawn_schema::ToSchema;
 
 use crate::{
     body::RequestBody,
@@ -73,7 +74,7 @@ macro_rules! some_api_request_impl {
                 fn request_body(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> Option<openapi::RequestBody> {
                     Some(openapi::RequestBody {
                         content: <$ty as MultiRequestMediaType>::content(schemas, schemas_in_progress),
-                        required: true,
+                        required: <$ty as ToSchema>::REQUIRED,
                         ..Default::default()
                     })
                 }

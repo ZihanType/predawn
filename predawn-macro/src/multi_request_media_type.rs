@@ -39,6 +39,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
     let variants = util::extract_variants(data, "MultiRequestMediaType")?;
 
     let variants_len = variants.len();
+    let mut required_exprs = Vec::new();
     let mut media_type_exprs = Vec::new();
     let mut content_bodies = Vec::new();
     let mut from_request_bodies = Vec::new();
@@ -46,7 +47,13 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
 
     for variant in variants.into_iter() {
         match handle_single_variant(variant, &ident, &from_request_error) {
-            Ok((media_type_expr, content_body, from_request_body)) => {
+            Ok(Holder {
+                required_expr,
+                media_type_expr,
+                content_body,
+                from_request_body,
+            }) => {
+                required_exprs.push(required_expr);
                 media_type_exprs.push(media_type_expr);
                 content_bodies.push(content_body);
                 from_request_bodies.push(from_request_body);
@@ -96,7 +103,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         # use predawn::api_request::ApiRequest;
         # use predawn::request::Head;
         # use predawn::body::RequestBody;
-        # use predawn::location::Location;
+        # use predawn::error2::Location;
 
         impl #impl_generics MultiRequestMediaType for #ident #ty_generics #where_clause {
             fn content(schemas: &mut BTreeMap<String, Schema>, schemas_in_progress: &mut Vec<String>) -> IndexMap<String, openapi::MediaType> {
@@ -131,7 +138,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
                 Some(openapi::RequestBody {
                     description: #description,
                     content: <Self as MultiRequestMediaType>::content(schemas, schemas_in_progress),
-                    required: true,
+                    required: #(#required_exprs &&)* true,
                     extensions: Default::default(),
                 })
             }
@@ -141,11 +148,18 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
     Ok(expand)
 }
 
+struct Holder {
+    required_expr: TokenStream,
+    media_type_expr: TokenStream,
+    content_body: TokenStream,
+    from_request_body: TokenStream,
+}
+
 fn handle_single_variant<'a>(
     variant: Variant,
     enum_ident: &'a Ident,
     from_request_error: &'a Type,
-) -> syn::Result<(TokenStream, TokenStream, TokenStream)> {
+) -> syn::Result<Holder> {
     let variant_span = variant.span();
 
     let Variant {
@@ -155,6 +169,13 @@ fn handle_single_variant<'a>(
     } = variant;
 
     let ty = util::extract_single_unnamed_field_type_from_variant(fields, variant_span)?;
+
+    let required_expr = quote_use! {
+        # use predawn::api_request::ApiRequest;
+
+        <#ty as ApiRequest>::request_body(schemas, schemas_in_progress)
+            .is_some_and(|body| body.required)
+    };
 
     let media_type_expr = quote_use! {
         # use predawn::media_type::MediaType;
@@ -185,5 +206,10 @@ fn handle_single_variant<'a>(
         }
     };
 
-    Ok((media_type_expr, content_body, from_request_body))
+    Ok(Holder {
+        required_expr,
+        media_type_expr,
+        content_body,
+        from_request_body,
+    })
 }

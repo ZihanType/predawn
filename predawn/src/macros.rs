@@ -64,17 +64,17 @@ macro_rules! define_from_request_error {
             }
         }
 
-        impl $crate::error_ext::ErrorExt for $name {
-            fn entry(&self) -> ($crate::location::Location, $crate::error_ext::NextError<'_>) {
+        impl $crate::error2::ErrorExt for $name {
+            fn entry(&self) -> ($crate::error2::Location, $crate::error2::NextError<'_>) {
                 match self {
                     $(
-                        $name::$error(e) => <$error as $crate::error_ext::ErrorExt>::entry(e),
+                        $name::$error(e) => <$error as $crate::error2::ErrorExt>::entry(e),
                     )+
 
                     $name::InvalidContentType(e) => <
                         $crate::response_error::InvalidContentType<{ $crate::count!($($error,)+) }>
                         as
-                        $crate::error_ext::ErrorExt
+                        $crate::error2::ErrorExt
                     >::entry(e),
                 }
             }
@@ -171,11 +171,11 @@ macro_rules! define_into_response_error {
             }
         }
 
-        impl $crate::error_ext::ErrorExt for $name {
-            fn entry(&self) -> ($crate::location::Location, $crate::error_ext::NextError<'_>) {
+        impl $crate::error2::ErrorExt for $name {
+            fn entry(&self) -> ($crate::error2::Location, $crate::error2::NextError<'_>) {
                 match self {
                     $(
-                        $name::$error(e) => <$error as $crate::error_ext::ErrorExt>::entry(e),
+                        $name::$error(e) => <$error as $crate::error2::ErrorExt>::entry(e),
                     )+
                 }
             }

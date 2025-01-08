@@ -68,7 +68,7 @@ impl<T: ToSchema> ApiRequest for Json<T> {
     ) -> Option<openapi::RequestBody> {
         Some(openapi::RequestBody {
             content: <Self as MultiRequestMediaType>::content(schemas, schemas_in_progress),
-            required: true,
+            required: <T as ToSchema>::REQUIRED,
             ..Default::default()
         })
     }

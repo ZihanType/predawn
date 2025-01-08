@@ -105,7 +105,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
                 Some(openapi::RequestBody {
                     description: #description,
                     content: <Self as MultiRequestMediaType>::content(schemas, schemas_in_progress),
-                    required: true,
+                    required: <Self as ToSchema>::REQUIRED,
                     extensions: Default::default(),
                 })
             }

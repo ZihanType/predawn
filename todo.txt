@@ -1,4 +1,3 @@
-custom `required`
 skip sse incompatible chars of serde_json::RawValue
 Add support for WebSockets over HTTP/2
 OptionalFromRequest
