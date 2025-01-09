@@ -1,6 +1,7 @@
 skip sse incompatible chars of serde_json::RawValue
 add description for `ParameterData` and `RequestBody` in `Operation`
 
+"/" => ""
 expect: /{a}/{b}
 actual: //1
 

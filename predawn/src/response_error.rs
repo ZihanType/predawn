@@ -786,34 +786,78 @@ pub enum WebSocketError {
         location: Location,
     },
 
-    #[snafu(display("`connection` header does not contains `upgrade`"))]
+    #[snafu(display("missing `connection` header"))]
+    MissingConnectionHeader {
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    #[snafu(display(
+        "`connection` header is expected to contain `upgrade`, but it actually contains `{:?}`",
+        value
+    ))]
     ConnectionHeaderNotContainsUpgrade {
         #[snafu(implicit)]
         location: Location,
+
+        value: Option<Box<str>>,
     },
 
-    #[snafu(display("`upgrade` header does not equal `websocket`"))]
+    #[snafu(display("missing `upgrade` header"))]
+    MissingUpgradeHeader {
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    #[snafu(display(
+        "`upgrade` header is expected to be `websocket`, but it is actually `{:?}`",
+        value
+    ))]
     UpgradeHeaderNotEqualWebSocket {
         #[snafu(implicit)]
         location: Location,
+
+        value: Option<Box<str>>,
     },
 
-    #[snafu(display("`sec-websocket-key` header not present"))]
-    SecWebSocketKeyHeaderNotPresent {
+    #[snafu(display("missing `sec-websocket-key` header"))]
+    MissingSecWebSocketKeyHeader {
         #[snafu(implicit)]
         location: Location,
     },
 
-    #[snafu(display("`:protocol` pseudo-header does not equal `websocket`"))]
+    #[snafu(display("missing `:protocol` pseudo-header"))]
+    MissingProtocolPseudoHeader {
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    #[snafu(display(
+        "`:protocol` pseudo-header is expected to be `websocket`, but it is actually `{:?}`",
+        value
+    ))]
     ProtocolPseudoHeaderNotEqualWebSocket {
         #[snafu(implicit)]
         location: Location,
+
+        value: Box<str>,
     },
 
-    #[snafu(display("`sec-websocket-version` header does not equal `13`"))]
+    #[snafu(display("missing `sec-websocket-version` pseudo-header"))]
+    MissingSecWebSocketVersionHeader {
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    #[snafu(display(
+        "`sec-websocket-version` header is expected to be `13`, but it is actually `{:?}`",
+        value
+    ))]
     SecWebSocketVersionHeaderNotEqual13 {
         #[snafu(implicit)]
         location: Location,
+
+        value: Option<Box<str>>,
     },
 
     #[snafu(display("request couldn't be upgraded to a WebSocket connection"))]
@@ -828,11 +872,15 @@ impl ErrorExt for WebSocketError {
         match self {
             WebSocketError::MethodNotGet { location }
             | WebSocketError::MethodNotConnect { location }
-            | WebSocketError::ConnectionHeaderNotContainsUpgrade { location }
-            | WebSocketError::UpgradeHeaderNotEqualWebSocket { location }
-            | WebSocketError::SecWebSocketKeyHeaderNotPresent { location }
-            | WebSocketError::ProtocolPseudoHeaderNotEqualWebSocket { location }
-            | WebSocketError::SecWebSocketVersionHeaderNotEqual13 { location }
+            | WebSocketError::MissingConnectionHeader { location }
+            | WebSocketError::ConnectionHeaderNotContainsUpgrade { location, .. }
+            | WebSocketError::MissingUpgradeHeader { location }
+            | WebSocketError::UpgradeHeaderNotEqualWebSocket { location, .. }
+            | WebSocketError::MissingSecWebSocketKeyHeader { location }
+            | WebSocketError::MissingProtocolPseudoHeader { location }
+            | WebSocketError::ProtocolPseudoHeaderNotEqualWebSocket { location, .. }
+            | WebSocketError::MissingSecWebSocketVersionHeader { location }
+            | WebSocketError::SecWebSocketVersionHeaderNotEqual13 { location, .. }
             | WebSocketError::ConnectionNotUpgradable { location } => (*location, NextError::None),
         }
     }
@@ -845,10 +893,14 @@ impl ResponseError for WebSocketError {
                 StatusCode::METHOD_NOT_ALLOWED
             }
 
-            WebSocketError::ConnectionHeaderNotContainsUpgrade { .. }
+            WebSocketError::MissingConnectionHeader { .. }
+            | WebSocketError::ConnectionHeaderNotContainsUpgrade { .. }
+            | WebSocketError::MissingUpgradeHeader { .. }
             | WebSocketError::UpgradeHeaderNotEqualWebSocket { .. }
-            | WebSocketError::SecWebSocketKeyHeaderNotPresent { .. }
+            | WebSocketError::MissingSecWebSocketKeyHeader { .. }
+            | WebSocketError::MissingProtocolPseudoHeader { .. }
             | WebSocketError::ProtocolPseudoHeaderNotEqualWebSocket { .. }
+            | WebSocketError::MissingSecWebSocketVersionHeader { .. }
             | WebSocketError::SecWebSocketVersionHeaderNotEqual13 { .. } => StatusCode::BAD_REQUEST,
 
             WebSocketError::ConnectionNotUpgradable { .. } => StatusCode::UPGRADE_REQUIRED,

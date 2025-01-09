@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, future::Future};
 
-use headers::{Connection, HeaderMapExt, SecWebsocketKey, SecWebsocketVersion, Upgrade};
+use headers::{Connection, Header, HeaderMapExt, SecWebsocketKey, SecWebsocketVersion, Upgrade};
 use http::{
     header::{SEC_WEBSOCKET_PROTOCOL, UPGRADE},
     HeaderValue, Method, Version,
@@ -109,33 +109,53 @@ impl<'a> FromRequestHead<'a> for WebSocketRequest {
     type Error = WebSocketError;
 
     async fn from_request_head(head: &'a mut Head) -> Result<Self, Self::Error> {
+        const WEBSOCKET: &str = "websocket";
+
+        let mut buf = Vec::<HeaderValue>::with_capacity(1);
+
+        macro_rules! extract_value {
+            ($header:expr) => {{
+                Header::encode(&$header, &mut buf);
+                debug_assert_eq!(buf.len(), 1);
+                buf.pop().unwrap()
+            }};
+        }
+
         let sec_websocket_key = if head.version <= Version::HTTP_11 {
             if head.method != Method::GET {
                 return MethodNotGetSnafu.fail();
             }
 
-            let connection_contains_upgrade = head
-                .headers
-                .typed_get::<Connection>()
-                .is_some_and(|connection| connection.contains(UPGRADE));
+            let Some(connection) = head.headers.typed_get::<Connection>() else {
+                return MissingConnectionHeaderSnafu.fail();
+            };
 
-            if !connection_contains_upgrade {
-                return ConnectionHeaderNotContainsUpgradeSnafu.fail();
+            if !connection.contains(UPGRADE) {
+                let value = extract_value!(connection);
+                let value = value.to_str().ok().map(Box::from);
+
+                return ConnectionHeaderNotContainsUpgradeSnafu { value }.fail();
             }
 
-            let upgrade_eq_websocket = head
-                .headers
-                .typed_get::<Upgrade>()
-                .is_some_and(|upgrade| upgrade == Upgrade::websocket());
+            let Some(upgrade) = head.headers.typed_get::<Upgrade>() else {
+                return MissingUpgradeHeaderSnafu.fail();
+            };
 
-            if !upgrade_eq_websocket {
-                return UpgradeHeaderNotEqualWebSocketSnafu.fail();
+            let upgrade = extract_value!(upgrade);
+
+            if !upgrade
+                .as_bytes()
+                .eq_ignore_ascii_case(WEBSOCKET.as_bytes())
+            {
+                let value = upgrade.to_str().ok().map(Box::from);
+
+                return UpgradeHeaderNotEqualWebSocketSnafu { value }.fail();
             }
 
             Some(
                 head.headers
                     .typed_get::<SecWebsocketKey>()
-                    .context(SecWebSocketKeyHeaderNotPresentSnafu)?
+                    .context(MissingSecWebSocketKeyHeaderSnafu)?
                     .clone(),
             )
         } else {
@@ -143,22 +163,31 @@ impl<'a> FromRequestHead<'a> for WebSocketRequest {
                 return MethodNotConnectSnafu.fail();
             }
 
-            if head
-                .extensions
-                .get::<Protocol>()
-                .is_none_or(|p| p.as_str() != "websocket")
-            {
-                return ProtocolPseudoHeaderNotEqualWebSocketSnafu.fail();
+            let Some(protocol) = head.extensions.get::<Protocol>() else {
+                return MissingProtocolPseudoHeaderSnafu.fail();
+            };
+
+            let protocol = protocol.as_str();
+
+            if protocol != WEBSOCKET {
+                return ProtocolPseudoHeaderNotEqualWebSocketSnafu {
+                    value: Box::from(protocol),
+                }
+                .fail();
             }
 
             None
         };
 
-        let sec_websocket_version_eq_13 =
-            head.headers.typed_get::<SecWebsocketVersion>() == Some(SecWebsocketVersion::V13);
+        let Some(sec_websocket_version) = head.headers.typed_get::<SecWebsocketVersion>() else {
+            return MissingSecWebSocketVersionHeaderSnafu.fail();
+        };
 
-        if !sec_websocket_version_eq_13 {
-            return SecWebSocketVersionHeaderNotEqual13Snafu.fail();
+        if sec_websocket_version != SecWebsocketVersion::V13 {
+            let value = extract_value!(sec_websocket_version);
+            let value = value.to_str().ok().map(Box::from);
+
+            return SecWebSocketVersionHeaderNotEqual13Snafu { value }.fail();
         }
 
         let on_upgrade = head
