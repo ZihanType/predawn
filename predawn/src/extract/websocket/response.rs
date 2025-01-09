@@ -57,20 +57,32 @@ impl WebSocketResponse {
             });
         }
 
-        let mut response = http::Response::builder()
-            .status(StatusCode::SWITCHING_PROTOCOLS)
-            .body(ResponseBody::empty())
-            .unwrap();
+        let response = match sec_websocket_key {
+            Some(sec_websocket_key) => {
+                let mut response = http::Response::builder()
+                    .status(StatusCode::SWITCHING_PROTOCOLS)
+                    .body(ResponseBody::empty())
+                    .unwrap();
 
-        let headers = response.headers_mut();
+                let headers = response.headers_mut();
 
-        headers.typed_insert(Connection::upgrade());
-        headers.typed_insert(Upgrade::websocket());
-        headers.typed_insert(SecWebsocketAccept::from(sec_websocket_key));
+                headers.typed_insert(Connection::upgrade());
+                headers.typed_insert(Upgrade::websocket());
+                headers.typed_insert(SecWebsocketAccept::from(sec_websocket_key));
 
-        if let Some(protocol) = protocol {
-            headers.insert(SEC_WEBSOCKET_PROTOCOL, protocol);
-        }
+                if let Some(protocol) = protocol {
+                    headers.insert(SEC_WEBSOCKET_PROTOCOL, protocol);
+                }
+
+                response
+            }
+            None => {
+                // Otherwise, we are HTTP/2+. As established in RFC 9113 section 8.5, we just respond
+                // with a 2XX with an empty body:
+                // <https://datatracker.ietf.org/doc/html/rfc9113#name-the-connect-method>.
+                http::Response::new(ResponseBody::empty())
+            }
+        };
 
         WebSocketResponse(response)
     }

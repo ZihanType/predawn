@@ -780,26 +780,38 @@ pub enum WebSocketError {
         location: Location,
     },
 
-    #[snafu(display("`Connection` header does not contains `upgrade`"))]
+    #[snafu(display("request method must be `CONNECT`"))]
+    MethodNotConnect {
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    #[snafu(display("`connection` header does not contains `upgrade`"))]
     ConnectionHeaderNotContainsUpgrade {
         #[snafu(implicit)]
         location: Location,
     },
 
-    #[snafu(display("`Upgrade` header does not equal `websocket`"))]
+    #[snafu(display("`upgrade` header does not equal `websocket`"))]
     UpgradeHeaderNotEqualWebSocket {
         #[snafu(implicit)]
         location: Location,
     },
 
-    #[snafu(display("`Sec-WebSocket-Version` header does not equal `13`"))]
-    SecWebSocketVersionHeaderNotEqual13 {
+    #[snafu(display("`sec-websocket-key` header not present"))]
+    SecWebSocketKeyHeaderNotPresent {
         #[snafu(implicit)]
         location: Location,
     },
 
-    #[snafu(display("`Sec-WebSocket-Key` header not present"))]
-    SecWebSocketKeyHeaderNotPresent {
+    #[snafu(display("`:protocol` pseudo-header does not equal `websocket`"))]
+    ProtocolPseudoHeaderNotEqualWebSocket {
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    #[snafu(display("`sec-websocket-version` header does not equal `13`"))]
+    SecWebSocketVersionHeaderNotEqual13 {
         #[snafu(implicit)]
         location: Location,
     },
@@ -815,10 +827,12 @@ impl ErrorExt for WebSocketError {
     fn entry(&self) -> (Location, NextError<'_>) {
         match self {
             WebSocketError::MethodNotGet { location }
+            | WebSocketError::MethodNotConnect { location }
             | WebSocketError::ConnectionHeaderNotContainsUpgrade { location }
             | WebSocketError::UpgradeHeaderNotEqualWebSocket { location }
-            | WebSocketError::SecWebSocketVersionHeaderNotEqual13 { location }
             | WebSocketError::SecWebSocketKeyHeaderNotPresent { location }
+            | WebSocketError::ProtocolPseudoHeaderNotEqualWebSocket { location }
+            | WebSocketError::SecWebSocketVersionHeaderNotEqual13 { location }
             | WebSocketError::ConnectionNotUpgradable { location } => (*location, NextError::None),
         }
     }
@@ -827,11 +841,16 @@ impl ErrorExt for WebSocketError {
 impl ResponseError for WebSocketError {
     fn as_status(&self) -> StatusCode {
         match self {
-            WebSocketError::MethodNotGet { .. } => StatusCode::METHOD_NOT_ALLOWED,
+            WebSocketError::MethodNotGet { .. } | WebSocketError::MethodNotConnect { .. } => {
+                StatusCode::METHOD_NOT_ALLOWED
+            }
+
             WebSocketError::ConnectionHeaderNotContainsUpgrade { .. }
             | WebSocketError::UpgradeHeaderNotEqualWebSocket { .. }
-            | WebSocketError::SecWebSocketVersionHeaderNotEqual13 { .. }
-            | WebSocketError::SecWebSocketKeyHeaderNotPresent { .. } => StatusCode::BAD_REQUEST,
+            | WebSocketError::SecWebSocketKeyHeaderNotPresent { .. }
+            | WebSocketError::ProtocolPseudoHeaderNotEqualWebSocket { .. }
+            | WebSocketError::SecWebSocketVersionHeaderNotEqual13 { .. } => StatusCode::BAD_REQUEST,
+
             WebSocketError::ConnectionNotUpgradable { .. } => StatusCode::UPGRADE_REQUIRED,
         }
     }

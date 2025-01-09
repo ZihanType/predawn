@@ -234,7 +234,7 @@ impl MyController {
         })
     }
 
-    #[endpoint(paths = ["/websocket"], methods = [GET])]
+    #[endpoint(paths = ["/websocket"], methods = [GET, CONNECT])]
     async fn websocket(&self, ws: WebSocketRequest) -> WebSocketResponse {
         ws.on_upgrade(|mut socket| async move {
             loop {

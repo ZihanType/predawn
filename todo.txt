@@ -1,5 +1,4 @@
 skip sse incompatible chars of serde_json::RawValue
-Add support for WebSockets over HTTP/2
 add description for `ParameterData` and `RequestBody` in `Operation`
 
 expect: /{a}/{b}

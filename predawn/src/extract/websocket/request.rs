@@ -3,9 +3,9 @@ use std::{collections::BTreeMap, future::Future};
 use headers::{Connection, HeaderMapExt, SecWebsocketKey, SecWebsocketVersion, Upgrade};
 use http::{
     header::{SEC_WEBSOCKET_PROTOCOL, UPGRADE},
-    HeaderValue, Method,
+    HeaderValue, Method, Version,
 };
-use hyper::upgrade::OnUpgrade;
+use hyper::{ext::Protocol, upgrade::OnUpgrade};
 use predawn_core::{
     api_request::ApiRequestHead,
     from_request::FromRequestHead,
@@ -16,17 +16,14 @@ use snafu::OptionExt;
 use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
 
 use super::{WebSocket, WebSocketResponse};
-use crate::response_error::{
-    ConnectionHeaderNotContainsUpgradeSnafu, ConnectionNotUpgradableSnafu, MethodNotGetSnafu,
-    SecWebSocketKeyHeaderNotPresentSnafu, SecWebSocketVersionHeaderNotEqual13Snafu,
-    UpgradeHeaderNotEqualWebSocketSnafu, WebSocketError,
-};
+use crate::response_error::{WebSocketError, *};
 
 pub struct WebSocketRequest<F = DefaultOnFailedUpgrade> {
     pub config: WebSocketConfig,
     /// The chosen protocol sent in the `Sec-WebSocket-Protocol` header of the response.
     pub(crate) protocol: Option<HeaderValue>,
-    pub(crate) sec_websocket_key: SecWebsocketKey,
+    /// `None` if HTTP/2+ WebSockets are used.
+    pub(crate) sec_websocket_key: Option<SecWebsocketKey>,
     pub(crate) on_upgrade: OnUpgrade,
     pub(crate) on_failed_upgrade: F,
     pub(crate) sec_websocket_protocol: Option<HeaderValue>,
@@ -112,27 +109,50 @@ impl<'a> FromRequestHead<'a> for WebSocketRequest {
     type Error = WebSocketError;
 
     async fn from_request_head(head: &'a mut Head) -> Result<Self, Self::Error> {
-        if head.method != Method::GET {
-            return MethodNotGetSnafu.fail();
-        }
+        let sec_websocket_key = if head.version <= Version::HTTP_11 {
+            if head.method != Method::GET {
+                return MethodNotGetSnafu.fail();
+            }
 
-        let connection_contains_upgrade = head
-            .headers
-            .typed_get::<Connection>()
-            .is_some_and(|connection| connection.contains(UPGRADE));
+            let connection_contains_upgrade = head
+                .headers
+                .typed_get::<Connection>()
+                .is_some_and(|connection| connection.contains(UPGRADE));
 
-        if !connection_contains_upgrade {
-            return ConnectionHeaderNotContainsUpgradeSnafu.fail();
-        }
+            if !connection_contains_upgrade {
+                return ConnectionHeaderNotContainsUpgradeSnafu.fail();
+            }
 
-        let upgrade_eq_websocket = head
-            .headers
-            .typed_get::<Upgrade>()
-            .is_some_and(|upgrade| upgrade == Upgrade::websocket());
+            let upgrade_eq_websocket = head
+                .headers
+                .typed_get::<Upgrade>()
+                .is_some_and(|upgrade| upgrade == Upgrade::websocket());
 
-        if !upgrade_eq_websocket {
-            return UpgradeHeaderNotEqualWebSocketSnafu.fail();
-        }
+            if !upgrade_eq_websocket {
+                return UpgradeHeaderNotEqualWebSocketSnafu.fail();
+            }
+
+            Some(
+                head.headers
+                    .typed_get::<SecWebsocketKey>()
+                    .context(SecWebSocketKeyHeaderNotPresentSnafu)?
+                    .clone(),
+            )
+        } else {
+            if head.method != Method::CONNECT {
+                return MethodNotConnectSnafu.fail();
+            }
+
+            if head
+                .extensions
+                .get::<Protocol>()
+                .is_none_or(|p| p.as_str() != "websocket")
+            {
+                return ProtocolPseudoHeaderNotEqualWebSocketSnafu.fail();
+            }
+
+            None
+        };
 
         let sec_websocket_version_eq_13 =
             head.headers.typed_get::<SecWebsocketVersion>() == Some(SecWebsocketVersion::V13);
@@ -140,12 +160,6 @@ impl<'a> FromRequestHead<'a> for WebSocketRequest {
         if !sec_websocket_version_eq_13 {
             return SecWebSocketVersionHeaderNotEqual13Snafu.fail();
         }
-
-        let sec_websocket_key = head
-            .headers
-            .typed_get::<SecWebsocketKey>()
-            .context(SecWebSocketKeyHeaderNotPresentSnafu)?
-            .clone();
 
         let on_upgrade = head
             .extensions
