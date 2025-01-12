@@ -9,9 +9,10 @@ use hyper::{ext::Protocol, upgrade::OnUpgrade};
 use predawn_core::{
     api_request::ApiRequestHead,
     from_request::FromRequestHead,
-    openapi::{self, Schema},
+    openapi::{self, ParameterData, ParameterSchemaOrContent, Schema},
     request::Head,
 };
+use predawn_schema::ToSchema;
 use snafu::OptionExt;
 use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
 
@@ -98,10 +99,78 @@ impl<F> WebSocketRequest<F> {
 
 impl ApiRequestHead for WebSocketRequest {
     fn parameters(
-        _: &mut BTreeMap<String, Schema>,
-        _: &mut Vec<String>,
+        schemas: &mut BTreeMap<String, Schema>,
+        schemas_in_progress: &mut Vec<String>,
     ) -> Option<Vec<openapi::Parameter>> {
-        None
+        let str_schema = <String as ToSchema>::schema_ref(schemas, schemas_in_progress);
+        let u8_schema = <u8 as ToSchema>::schema_ref(schemas, schemas_in_progress);
+
+        let connection = openapi::Parameter::Header {
+            parameter_data: ParameterData {
+                name: "connection".to_string(),
+                description: Default::default(),
+                required: false, // it is not required when the request is HTTP/2+
+                deprecated: Default::default(),
+                format: ParameterSchemaOrContent::Schema(str_schema.clone()),
+                example: Some(serde_json::json!("upgrade")),
+                examples: Default::default(),
+                explode: Default::default(),
+                extensions: Default::default(),
+            },
+            style: Default::default(),
+        };
+
+        let upgrade = openapi::Parameter::Header {
+            parameter_data: ParameterData {
+                name: "upgrade".to_string(),
+                description: Default::default(),
+                required: false, // it is not required when the request is HTTP/2+
+                deprecated: Default::default(),
+                format: ParameterSchemaOrContent::Schema(str_schema.clone()),
+                example: Some(serde_json::json!("websocket")),
+                examples: Default::default(),
+                explode: Default::default(),
+                extensions: Default::default(),
+            },
+            style: Default::default(),
+        };
+
+        let sec_websocket_key = openapi::Parameter::Header {
+            parameter_data: ParameterData {
+                name: "sec-websocket-key".to_string(),
+                description: Default::default(),
+                required: false, // it is not required when the request is HTTP/2+
+                deprecated: Default::default(),
+                format: ParameterSchemaOrContent::Schema(str_schema),
+                example: Some(serde_json::json!("CgpkGOwMZTwleAoYngEPpQ==")),
+                examples: Default::default(),
+                explode: Default::default(),
+                extensions: Default::default(),
+            },
+            style: Default::default(),
+        };
+
+        let sec_websocket_version = openapi::Parameter::Header {
+            parameter_data: ParameterData {
+                name: "sec-websocket-version".to_string(),
+                description: Default::default(),
+                required: true, // it is required in both HTTP/1.1 and HTTP/2+
+                deprecated: Default::default(),
+                format: ParameterSchemaOrContent::Schema(u8_schema),
+                example: Some(serde_json::json!(13)),
+                examples: Default::default(),
+                explode: Default::default(),
+                extensions: Default::default(),
+            },
+            style: Default::default(),
+        };
+
+        Some(vec![
+            connection,
+            upgrade,
+            sec_websocket_key,
+            sec_websocket_version,
+        ])
     }
 }
 

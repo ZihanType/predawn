@@ -238,10 +238,14 @@ impl MyController {
     async fn websocket(&self, ws: WebSocketRequest) -> WebSocketResponse {
         ws.on_upgrade(|mut socket| async move {
             loop {
-                if socket.send(Message::Text("hello".into())).await.is_err() {
-                    break;
-                } else {
-                    tokio::time::sleep(Duration::from_secs(1)).await;
+                match socket.send(Message::Text("hello".into())).await {
+                    Ok(_) => {
+                        tokio::time::sleep(Duration::from_secs(1)).await;
+                    }
+                    Err(e) => {
+                        tracing::error!("send error: {}", e);
+                        break;
+                    }
                 }
             }
         })
