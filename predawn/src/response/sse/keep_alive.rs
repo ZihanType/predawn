@@ -9,27 +9,27 @@ use bytes::Bytes;
 use pin_project_lite::pin_project;
 use tokio::time::Sleep;
 
-use super::event::Event;
+use super::Event;
 use crate::response_error::EventStreamError;
 
 #[derive(Debug, Clone)]
 pub struct KeepAlive {
-    comment: String,
+    comment: Box<str>,
     max_interval: Duration,
 }
 
 impl Default for KeepAlive {
     fn default() -> Self {
         Self {
-            comment: String::new(),
+            comment: Default::default(),
             max_interval: Duration::from_secs(15),
         }
     }
 }
 
 impl KeepAlive {
-    pub fn comment<T: Into<String>>(self, comment: T) -> Self {
-        fn inner(mut ka: KeepAlive, comment: String) -> KeepAlive {
+    pub fn comment<T: Into<Box<str>>>(self, comment: T) -> Self {
+        fn inner(mut ka: KeepAlive, comment: Box<str>) -> KeepAlive {
             ka.comment = comment;
             ka
         }
@@ -61,8 +61,8 @@ impl KeepAliveStream {
             max_interval,
         } = keep_alive;
 
-        let event = Event::only_comment(comment);
-        let event = event.as_bytes()?;
+        let event = Event::only_comment(comment)?;
+        let event = event.as_bytes();
 
         Ok(Self {
             event,

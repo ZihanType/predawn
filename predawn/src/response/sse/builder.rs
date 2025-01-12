@@ -106,13 +106,11 @@ where
             let item = item.into();
 
             let data = F::data(&item);
-            let data = serde_json::to_string(data).map_err(Box::new)?;
 
-            let mut event = Event::data(data);
-            F::modify_event(item, &mut event);
+            let event = Event::data(data).map_err(Box::new)?;
+            let event = F::modify_event(item, event).map_err(Box::new)?;
 
-            let bytes = event.as_bytes().map_err(Box::new)?;
-            Ok::<_, BoxError>(bytes)
+            Ok::<_, BoxError>(event.as_bytes())
         }),
         keep_alive: builder.keep_alive.map(KeepAliveStream::new).transpose()?,
     };
@@ -136,7 +134,7 @@ pub trait OnCreateEvent {
 
     fn data(item: &Self::Item) -> &Self::Data;
 
-    fn modify_event(item: Self::Item, event: &mut Event);
+    fn modify_event(item: Self::Item, event: Event) -> Result<Event, EventStreamError>;
 }
 
 #[derive(Debug)]
@@ -155,5 +153,7 @@ where
         item
     }
 
-    fn modify_event(_: Self::Item, _: &mut Event) {}
+    fn modify_event(_: Self::Item, event: Event) -> Result<Event, EventStreamError> {
+        Ok(event)
+    }
 }

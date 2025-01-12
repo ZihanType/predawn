@@ -1,77 +1,121 @@
-use std::time::Duration;
+use std::{
+    io::{self, Write},
+    time::Duration,
+};
 
 use bytes::{BufMut, Bytes, BytesMut};
-use error2::Location;
+use serde::Serialize;
+use snafu::ResultExt;
 
-use crate::response_error::EventStreamError;
+use crate::response_error::{EventStreamError, *};
 
 #[derive(Debug, Clone)]
 pub struct Event {
-    ty: Option<String>,
-    id: Option<String>,
-    data: Option<String>,
-    comment: Option<String>,
+    ty: Option<Box<str>>,
+    id: Option<Box<str>>,
+    data: Option<Box<[u8]>>,
+    comment: Option<Box<str>>,
     retry: Option<Duration>,
 }
 
 impl Event {
-    pub(crate) fn data<T: Into<String>>(data: T) -> Self {
-        fn inner(data: String) -> Event {
-            Event {
-                ty: Default::default(),
-                id: Default::default(),
-                data: Some(data),
-                comment: Default::default(),
-                retry: Default::default(),
-            }
-        }
+    pub(crate) fn data<T: ?Sized + Serialize>(data: &T) -> Result<Self, EventStreamError> {
+        let mut buf = Vec::with_capacity(1024);
+        let writer = IgnoreNewLines(&mut buf);
 
-        inner(data.into())
+        let mut serializer = serde_json::Serializer::new(writer);
+        serde_path_to_error::serialize(data, &mut serializer).context(SerializeJsonSnafu)?;
+
+        Ok(Self {
+            ty: Default::default(),
+            id: Default::default(),
+            data: Some(buf.into_boxed_slice()),
+            comment: Default::default(),
+            retry: Default::default(),
+        })
     }
 
-    pub fn ty<T: Into<String>>(&mut self, ty: T) -> &mut Self {
-        fn inner(evt: &mut Event, ty: String) -> &mut Event {
+    pub(crate) fn only_comment(comment: Box<str>) -> Result<Self, EventStreamError> {
+        if invalid(comment.as_bytes()) {
+            return ContainNewLinesOrCarriageReturnsSnafu {
+                field: InvalidSseField::Comment,
+            }
+            .fail();
+        }
+
+        Ok(Self {
+            ty: Default::default(),
+            id: Default::default(),
+            data: Default::default(),
+            comment: Some(comment),
+            retry: Default::default(),
+        })
+    }
+
+    pub fn ty<T: Into<Box<str>>>(self, ty: T) -> Result<Self, EventStreamError> {
+        fn inner(mut evt: Event, ty: Box<str>) -> Result<Event, EventStreamError> {
+            if invalid(ty.as_bytes()) {
+                return ContainNewLinesOrCarriageReturnsSnafu {
+                    field: InvalidSseField::Type,
+                }
+                .fail();
+            }
+
             evt.ty = Some(ty);
-            evt
+            Ok(evt)
         }
 
         inner(self, ty.into())
     }
 
-    pub fn id<T: Into<String>>(&mut self, id: T) -> &mut Self {
-        fn inner(evt: &mut Event, id: String) -> &mut Event {
+    pub fn id<T: Into<Box<str>>>(self, id: T) -> Result<Self, EventStreamError> {
+        fn inner(mut evt: Event, id: Box<str>) -> Result<Event, EventStreamError> {
+            if invalid(id.as_bytes()) {
+                return ContainNewLinesOrCarriageReturnsSnafu {
+                    field: InvalidSseField::Id,
+                }
+                .fail();
+            }
+
+            if memchr::memchr(b'\0', id.as_bytes()).is_some() {
+                return IdContainNullCharacterSnafu.fail();
+            }
+
             evt.id = Some(id);
-            evt
+            Ok(evt)
         }
 
         inner(self, id.into())
     }
 
-    pub fn comment<T: Into<String>>(&mut self, comment: T) -> &mut Self {
-        fn inner(evt: &mut Event, comment: String) -> &mut Event {
+    pub fn comment<T: Into<Box<str>>>(self, comment: T) -> Result<Self, EventStreamError> {
+        fn inner(mut evt: Event, comment: Box<str>) -> Result<Event, EventStreamError> {
+            if invalid(comment.as_bytes()) {
+                return ContainNewLinesOrCarriageReturnsSnafu {
+                    field: InvalidSseField::Comment,
+                }
+                .fail();
+            }
+
             evt.comment = Some(comment);
-            evt
+            Ok(evt)
         }
 
         inner(self, comment.into())
     }
 
-    pub fn retry(&mut self, retry: Duration) -> &mut Self {
+    pub fn retry(mut self, retry: Duration) -> Self {
         self.retry = Some(retry);
         self
     }
 
-    pub fn as_bytes(&self) -> Result<Bytes, EventStreamError> {
+    pub fn as_bytes(&self) -> Bytes {
         fn append_line(buf: &mut BytesMut, key: &'static str, value: &[u8]) {
             buf.extend_from_slice(key.as_bytes());
             buf.put_u8(b':');
             buf.put_u8(b' ');
             buf.extend_from_slice(value);
             buf.put_u8(b'\n');
-        }
-
-        fn valid(value: &[u8]) -> bool {
-            memchr::memchr2(b'\r', b'\n', value).is_none()
         }
 
         let Self {
@@ -82,48 +126,22 @@ impl Event {
             retry,
         } = self;
 
-        let mut buf = BytesMut::new();
+        let mut buf = BytesMut::with_capacity(1024);
 
         if let Some(ty) = ty {
-            let bytes = ty.as_bytes();
-
-            if valid(bytes) {
-                append_line(&mut buf, "event", bytes);
-            } else {
-                return Err(EventStreamError::InvalidType {
-                    location: Location::caller(),
-                });
-            }
+            append_line(&mut buf, "event", ty.as_bytes());
         }
 
         if let Some(id) = id {
-            let bytes = id.as_bytes();
-
-            if valid(bytes) {
-                append_line(&mut buf, "id", bytes);
-            } else {
-                return Err(EventStreamError::InvalidId {
-                    location: Location::caller(),
-                });
-            }
+            append_line(&mut buf, "id", id.as_bytes());
         }
 
         if let Some(comment) = comment {
-            let bytes = comment.as_bytes();
-
-            if valid(bytes) {
-                append_line(&mut buf, "", bytes);
-            } else {
-                return Err(EventStreamError::InvalidComment {
-                    location: Location::caller(),
-                });
-            }
+            append_line(&mut buf, "", comment.as_bytes());
         }
 
         if let Some(data) = data {
-            for line in memchr_split(b'\n', data.as_bytes()) {
-                append_line(&mut buf, "data", line);
-            }
+            append_line(&mut buf, "data", data.as_ref());
         }
 
         if let Some(retry) = retry {
@@ -136,43 +154,31 @@ impl Event {
         }
 
         buf.put_u8(b'\n');
-        Ok(buf.freeze())
+        buf.freeze()
     }
+}
 
-    pub(crate) fn only_comment(comment: String) -> Self {
-        Event {
-            ty: Default::default(),
-            id: Default::default(),
-            data: Default::default(),
-            comment: Some(comment),
-            retry: Default::default(),
+fn invalid(value: &[u8]) -> bool {
+    memchr::memchr2(b'\r', b'\n', value).is_some()
+}
+
+struct IgnoreNewLines<'a>(&'a mut Vec<u8>);
+
+impl Write for IgnoreNewLines<'_> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        let mut last_split = 0;
+
+        for delimiter in memchr::memchr2_iter(b'\r', b'\n', buf) {
+            self.0.write_all(&buf[last_split..delimiter])?;
+            last_split = delimiter + 1;
         }
+
+        self.0.write_all(&buf[last_split..])?;
+
+        Ok(buf.len())
     }
-}
 
-fn memchr_split(needle: u8, haystack: &[u8]) -> MemchrSplit<'_> {
-    MemchrSplit {
-        needle,
-        haystack: Some(haystack),
-    }
-}
-
-struct MemchrSplit<'a> {
-    needle: u8,
-    haystack: Option<&'a [u8]>,
-}
-
-impl<'a> Iterator for MemchrSplit<'a> {
-    type Item = &'a [u8];
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let haystack = self.haystack?;
-        if let Some(pos) = memchr::memchr(self.needle, haystack) {
-            let (front, back) = haystack.split_at(pos);
-            self.haystack = Some(&back[1..]);
-            Some(front)
-        } else {
-            self.haystack.take()
-        }
+    fn flush(&mut self) -> io::Result<()> {
+        self.0.flush()
     }
 }

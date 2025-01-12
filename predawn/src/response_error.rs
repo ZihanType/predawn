@@ -914,37 +914,53 @@ impl ResponseError for WebSocketError {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EventStreamError {
-    InvalidType { location: Location },
-    InvalidId { location: Location },
-    InvalidComment { location: Location },
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum InvalidSseField {
+    Type,
+    Id,
+    Comment,
 }
 
-impl fmt::Display for EventStreamError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let field = match self {
-            EventStreamError::InvalidType { .. } => "event",
-            EventStreamError::InvalidId { .. } => "id",
-            EventStreamError::InvalidComment { .. } => "comment",
-        };
-
-        write!(
-            f,
-            "SSE `{}` field value cannot contain newlines or carriage returns",
-            field
-        )
+impl InvalidSseField {
+    pub const fn as_str(&self) -> &'static str {
+        match self {
+            InvalidSseField::Type => "event",
+            InvalidSseField::Id => "id",
+            InvalidSseField::Comment => "comment",
+        }
     }
 }
 
-impl Error for EventStreamError {}
+#[derive(Debug, Snafu)]
+#[snafu(visibility(pub(crate)))]
+pub enum EventStreamError {
+    #[snafu(display("failed to serialize `data` field as JSON"))]
+    SerializeJsonError {
+        #[snafu(implicit)]
+        location: Location,
+        source: serde_path_to_error::Error<serde_json::Error>,
+    },
+
+    #[snafu(display("`{}` field value contain newlines or carriage returns", field.as_str()))]
+    ContainNewLinesOrCarriageReturns {
+        #[snafu(implicit)]
+        location: Location,
+        field: InvalidSseField,
+    },
+
+    #[snafu(display("`id` field value contain null character"))]
+    IdContainNullCharacter {
+        #[snafu(implicit)]
+        location: Location,
+    },
+}
 
 impl ErrorExt for EventStreamError {
     fn entry(&self) -> (Location, NextError<'_>) {
         match self {
-            EventStreamError::InvalidType { location }
-            | EventStreamError::InvalidId { location }
-            | EventStreamError::InvalidComment { location } => (*location, NextError::None),
+            EventStreamError::SerializeJsonError { location, .. }
+            | EventStreamError::ContainNewLinesOrCarriageReturns { location, .. }
+            | EventStreamError::IdContainNullCharacter { location } => (*location, NextError::None),
         }
     }
 }
