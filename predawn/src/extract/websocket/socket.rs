@@ -9,7 +9,7 @@ use http::HeaderValue;
 use hyper::upgrade::Upgraded;
 use hyper_util::rt::TokioIo;
 use tokio_tungstenite::{
-    tungstenite::{self, Message},
+    tungstenite::{self, protocol::CloseFrame, Message},
     WebSocketStream,
 };
 
@@ -32,6 +32,12 @@ impl WebSocket {
     #[inline(always)]
     pub async fn send(&mut self, msg: Message) -> Result<(), tungstenite::Error> {
         self.inner.send(msg).await
+    }
+
+    /// Gracefully close this WebSocket.
+    #[inline(always)]
+    pub async fn close(&mut self, msg: Option<CloseFrame>) -> Result<(), tungstenite::Error> {
+        self.inner.close(msg).await
     }
 
     /// Return the selected WebSocket subprotocol, if one has been chosen.

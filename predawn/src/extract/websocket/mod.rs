@@ -3,7 +3,7 @@ mod response;
 mod socket;
 
 pub use tokio_tungstenite::tungstenite::protocol::{
-    frame::{coding::CloseCode, CloseFrame, Frame},
+    frame::{coding::CloseCode, CloseFrame, Frame, Utf8Bytes},
     Message,
 };
 
