@@ -1,15 +1,6 @@
-use proc_macro2::TokenStream;
-use quote::quote;
 use syn::{Data, DataEnum, DataStruct, DataUnion, Fields, FieldsNamed, FieldsUnnamed, Variant};
 
 use crate::types::{SchemaFields, SchemaProperties, SchemaVariant, UnitVariant};
-
-pub(crate) fn get_crate_name() -> TokenStream {
-    #[cfg(not(feature = "schema"))]
-    quote! { ::predawn }
-    #[cfg(feature = "schema")]
-    quote! { ::predawn_schema }
-}
 
 pub(crate) fn extract_schema_properties(data: Data) -> syn::Result<SchemaProperties> {
     match data {

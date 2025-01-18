@@ -18,7 +18,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         ..
     } = input;
 
-    let crate_name = crate::util::get_crate_name();
+    let crate_name = predawn_macro_core::util::get_crate_name();
 
     match crate::util::extract_schema_properties(data)? {
         SchemaProperties::NamedStruct(fields) => {

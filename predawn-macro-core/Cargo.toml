@@ -19,4 +19,6 @@ quote = { workspace = true }
 quote-use = { workspace = true }
 
 [features]
-schema = []
+default = ["__used_in_predawn"]
+__used_in_predawn = []
+__used_in_predawn_schema = []

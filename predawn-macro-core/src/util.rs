@@ -4,11 +4,21 @@ use quote::quote;
 use quote_use::quote_use;
 use syn::{parse_quote, Attribute, Expr, ExprLit, Lit, Meta, MetaNameValue, Path, Type};
 
-fn get_crate_name() -> TokenStream {
-    #[cfg(not(feature = "schema"))]
+#[doc(hidden)]
+pub fn get_crate_name() -> TokenStream {
+    #[cfg(feature = "__used_in_predawn")]
     quote! { ::predawn }
-    #[cfg(feature = "schema")]
+
+    #[cfg(all(
+        feature = "__used_in_predawn_schema",
+        not(feature = "__used_in_predawn")
+    ))]
     quote! { ::predawn_schema }
+
+    #[cfg(not(any(feature = "__used_in_predawn", feature = "__used_in_predawn_schema")))]
+    compile_error!(
+        "either `__used_in_predawn` or `__used_in_predawn_schema` feature must be enabled"
+    );
 }
 
 pub fn extract_description(attrs: &[Attribute]) -> String {

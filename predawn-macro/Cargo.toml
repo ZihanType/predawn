@@ -15,7 +15,7 @@ readme.workspace = true
 proc-macro = true
 
 [dependencies]
-predawn-macro-core = { workspace = true }
+predawn-macro-core = { workspace = true, features = ["__used_in_predawn"] }
 
 from-attr = { workspace = true }
 proc-macro2 = { workspace = true }
@@ -30,8 +30,6 @@ predawn = { path = "../predawn", default-features = false, features = [
     "macro",
     "auto-register",
 ] }
-# just close errors when run `cargo test --doc` in root workspace
-predawn-schema = { path = "../predawn-schema", default-features = false }
 
 serde = { workspace = true }
 

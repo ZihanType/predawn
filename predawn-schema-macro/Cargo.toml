@@ -15,7 +15,7 @@ readme.workspace = true
 proc-macro = true
 
 [dependencies]
-predawn-macro-core = { workspace = true, features = ["schema"] }
+predawn-macro-core = { workspace = true }
 
 from-attr = { workspace = true }
 proc-macro2 = { workspace = true }
@@ -24,4 +24,6 @@ quote-use = { workspace = true }
 syn = { workspace = true }
 
 [features]
-schema = []
+default = ["__used_in_predawn"]
+__used_in_predawn = ["predawn-macro-core/__used_in_predawn"]
+__used_in_predawn_schema = ["predawn-macro-core/__used_in_predawn_schema"]

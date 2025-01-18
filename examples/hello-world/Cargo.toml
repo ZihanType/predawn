@@ -16,9 +16,6 @@ predawn = { workspace = true, features = [
     "tower-compat",
 ] }
 
-# just close rust-analyzer warnings
-predawn-schema = { workspace = true }
-
 http = { workspace = true }
 rudi = { workspace = true, features = [
     "rudi-macro",

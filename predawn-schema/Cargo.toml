@@ -13,7 +13,7 @@ readme.workspace = true
 
 [dependencies]
 predawn-schema-macro = { workspace = true, optional = true, features = [
-    "schema",
+    "__used_in_predawn_schema",
 ] }
 
 openapiv3 = { workspace = true }

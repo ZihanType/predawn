@@ -15,7 +15,9 @@ readme.workspace = true
 predawn-core = { workspace = true }
 predawn-macro = { workspace = true, optional = true }
 predawn-schema = { workspace = true }
-predawn-schema-macro = { workspace = true, optional = true }
+predawn-schema-macro = { workspace = true, optional = true, features = [
+    "__used_in_predawn",
+] }
 
 hyper = { workspace = true, features = ["server", "http1", "http2"] }
 bytes = { workspace = true }
@@ -59,8 +61,8 @@ tower = { workspace = true, optional = true }
 
 [features]
 default = ["macro", "auto-register"]
-auto-register = ["predawn-macro?/auto-register"]
 macro = ["dep:predawn-macro", "dep:predawn-schema-macro"]
+auto-register = ["predawn-macro?/auto-register"]
 tower-compat = ["dep:tower"]
 schemars = ["predawn-schema/schemars"]
 
