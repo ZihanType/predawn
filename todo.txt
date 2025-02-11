@@ -1,5 +1,3 @@
-add description for `ParameterData` and `RequestBody` in `Operation`
-
 "/" => ""
 expect: /{a}/{b}
 actual: //1

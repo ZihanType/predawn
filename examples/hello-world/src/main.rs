@@ -143,7 +143,11 @@ impl MyController {
     }
 
     #[endpoint(paths = ["/json"], methods = [POST], security = [{ MyScheme2: ["read", "write"] }])]
-    async fn json_person(&self, mut person: Json<Person>) -> Json<Person> {
+    async fn json_person(
+        &self,
+        /// The person to be updated.
+        mut person: Json<Person>,
+    ) -> Json<Person> {
         person.age += 1;
         person
     }

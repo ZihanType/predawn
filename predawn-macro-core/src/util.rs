@@ -25,23 +25,21 @@ pub fn extract_description(attrs: &[Attribute]) -> String {
     let mut docs = String::new();
 
     attrs.iter().for_each(|attr| {
-        let meta = if attr.path().is_ident("doc") {
-            &attr.meta
-        } else {
+        if !attr.path().is_ident("doc") {
             return;
-        };
+        }
 
-        let doc = if let Meta::NameValue(MetaNameValue {
+        let Meta::NameValue(MetaNameValue {
             value: Expr::Lit(ExprLit {
                 lit: Lit::Str(doc), ..
             }),
             ..
-        }) = meta
-        {
-            doc.value()
-        } else {
+        }) = &attr.meta
+        else {
             return;
         };
+
+        let doc = doc.value();
 
         if !docs.is_empty() {
             docs.push('\n');
@@ -51,6 +49,10 @@ pub fn extract_description(attrs: &[Attribute]) -> String {
     });
 
     docs
+}
+
+pub fn remove_description(attrs: &mut Vec<Attribute>) {
+    attrs.retain(|attr| !attr.path().is_ident("doc"));
 }
 
 pub fn generate_string_expr(s: &str) -> Expr {

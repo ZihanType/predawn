@@ -170,7 +170,7 @@ fn generate_single_fn_impl<'a>(
     controller_tags: &'a [Type],
     controller_security: &'a [Map<Type, Vec<String>>],
     self_ty: &'a Type,
-    f: &'a ImplItemFn,
+    f: &'a mut ImplItemFn,
     method_attr: MethodAttr,
 ) -> syn::Result<TokenStream> {
     if f.sig.asyncness.is_none() {
@@ -205,7 +205,7 @@ fn generate_single_fn_impl<'a>(
 
     let fn_name = &f.sig.ident;
 
-    let mut args = f.sig.inputs.iter();
+    let mut args = f.sig.inputs.iter_mut();
     let first = args.next();
     let last = args.next_back();
 
@@ -278,7 +278,7 @@ fn generate_single_fn_impl<'a>(
     let last_request_body;
     let last_error_responses;
 
-    if let Some(FnArg::Typed(PatType { ty, .. })) = last {
+    if let Some(FnArg::Typed(PatType { attrs, ty, .. })) = last {
         arg_idents.push(format_ident!("last"));
 
         last_from_request = quote_use! {
@@ -298,11 +298,27 @@ fn generate_single_fn_impl<'a>(
             }
         };
 
+        let description = predawn_macro_core::util::extract_description(attrs);
+        let description = if description.is_empty() {
+            quote! { None }
+        } else {
+            let description = predawn_macro_core::util::generate_string_expr(&description);
+            quote! { Some(#description) }
+        };
+
+        predawn_macro_core::util::remove_description(attrs);
+
         last_request_body = quote_use! {
             # use predawn::api_request::ApiRequest;
             # use predawn::openapi::transform_request_body;
 
-            operation.request_body = transform_request_body(<#ty as ApiRequest<_>>::request_body(schemas, schemas_in_progress));
+            let mut request_body = <#ty as ApiRequest<_>>::request_body(schemas, schemas_in_progress);
+
+            if let Some(request_body) = request_body.as_mut() {
+                request_body.description = #description;
+            }
+
+            operation.request_body = transform_request_body(request_body);
         };
 
         last_error_responses = quote_use! {
