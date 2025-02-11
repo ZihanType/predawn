@@ -10,12 +10,12 @@ use predawn_core::{
     request::Head,
 };
 use serde::Deserialize;
-use snafu::ResultExt;
+use snafu::{IntoError, ResultExt};
 
 use self::de::PathDeserializer;
 use crate::{
     path_params::PathParams,
-    response_error::{DeserializePathSnafu, MissingPathParamsSnafu, PathError},
+    response_error::{path_error, PathError},
     ToParameters,
 };
 
@@ -32,13 +32,16 @@ where
 
     async fn from_request_head(head: &'a mut Head) -> Result<Self, Self::Error> {
         let params = match head.extensions.get::<PathParams>() {
-            Some(PathParams(params)) => params,
-            None => return MissingPathParamsSnafu.fail(),
+            Some(PathParams::Ok(params)) => params,
+            Some(PathParams::Err(e)) => {
+                return Err(path_error::InvalidUtf8InPathParamsSnafu.into_error(e.clone()))
+            }
+            None => return Err(path_error::MissingPathParamsSnafu.build()),
         };
 
         let deserializer = PathDeserializer::new(params);
 
-        let path = T::deserialize(deserializer).context(DeserializePathSnafu)?;
+        let path = T::deserialize(deserializer).context(path_error::DeserializePathSnafu)?;
         Ok(Path(path))
     }
 }

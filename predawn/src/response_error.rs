@@ -65,32 +65,6 @@ impl ResponseError for MatchError {
 
 #[derive(Debug, Snafu)]
 #[snafu(visibility(pub(crate)))]
-#[snafu(display("can not decode the path `{path}` to UTF-8, its lossy decoded is `{decoded}`"))]
-pub struct DecodePathToUtf8Error {
-    #[snafu(implicit)]
-    location: Location,
-    path: Box<str>,
-    decoded: Box<str>,
-}
-
-impl ErrorExt for DecodePathToUtf8Error {
-    fn entry(&self) -> (Location, NextError<'_>) {
-        (self.location, NextError::None)
-    }
-}
-
-impl ResponseError for DecodePathToUtf8Error {
-    fn as_status(&self) -> StatusCode {
-        StatusCode::BAD_REQUEST
-    }
-
-    fn status_codes(codes: &mut BTreeSet<StatusCode>) {
-        codes.insert(StatusCode::BAD_REQUEST);
-    }
-}
-
-#[derive(Debug, Snafu)]
-#[snafu(visibility(pub(crate)))]
 #[snafu(display("{source}"))]
 pub struct QueryError {
     #[snafu(implicit)]
@@ -114,9 +88,42 @@ impl ResponseError for QueryError {
     }
 }
 
+#[derive(Debug, Snafu, Clone)]
+#[snafu(visibility(pub(crate)))]
+#[snafu(display("invalid UTF-8 in the following path parameters: {keys:?}"))]
+pub struct InvalidUtf8InPathParams {
+    #[snafu(implicit)]
+    location: Location,
+    keys: Box<[Arc<str>]>,
+}
+
+impl ErrorExt for InvalidUtf8InPathParams {
+    fn entry(&self) -> (Location, NextError<'_>) {
+        (self.location, NextError::None)
+    }
+}
+
+impl ResponseError for InvalidUtf8InPathParams {
+    fn as_status(&self) -> StatusCode {
+        StatusCode::BAD_REQUEST
+    }
+
+    fn status_codes(codes: &mut BTreeSet<StatusCode>) {
+        codes.insert(StatusCode::BAD_REQUEST);
+    }
+}
+
 #[derive(Debug, Snafu)]
 #[snafu(visibility(pub(crate)))]
+#[snafu(module)]
 pub enum PathError {
+    #[snafu(display("{source}"))]
+    InvalidUtf8InPathParams {
+        #[snafu(implicit)]
+        location: Location,
+        source: InvalidUtf8InPathParams,
+    },
+
     #[snafu(display("no paths parameters found for matched route"))]
     MissingPathParams {
         #[snafu(implicit)]
@@ -134,6 +141,9 @@ pub enum PathError {
 impl ErrorExt for PathError {
     fn entry(&self) -> (Location, NextError<'_>) {
         match self {
+            PathError::InvalidUtf8InPathParams { location, source } => {
+                (*location, NextError::Ext(source))
+            }
             PathError::MissingPathParams { location } => (*location, NextError::None),
             PathError::DeserializePathError { location, source } => {
                 (*location, NextError::Ext(source))
@@ -145,12 +155,14 @@ impl ErrorExt for PathError {
 impl ResponseError for PathError {
     fn as_status(&self) -> StatusCode {
         match self {
+            PathError::InvalidUtf8InPathParams { source, .. } => source.as_status(),
             PathError::MissingPathParams { .. } => StatusCode::INTERNAL_SERVER_ERROR,
             PathError::DeserializePathError { source, .. } => source.as_status(),
         }
     }
 
     fn status_codes(codes: &mut BTreeSet<StatusCode>) {
+        InvalidUtf8InPathParams::status_codes(codes);
         codes.insert(StatusCode::INTERNAL_SERVER_ERROR);
         DeserializePathError::status_codes(codes);
     }
