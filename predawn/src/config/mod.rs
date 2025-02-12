@@ -29,18 +29,17 @@ impl Config {
             let mut dir_path = match env::var("CARGO_MANIFEST_DIR") {
                 Ok(dir) => PathBuf::from(dir),
                 Err(_) => {
-                    let binary_file_path =
-                        env::args().next().expect("failed to get binary file path");
+                    let mut current_exe =
+                        env::current_exe().expect("failed to get current executable file path");
 
-                    Path::new(&binary_file_path)
-                        .parent()
-                        .expect("failed to get parent directory of binary file")
-                        .canonicalize()
-                        .expect("failed to get canonical, absolute form of the path to the parent directory of binary file")
+                    current_exe.pop();
+
+                    current_exe
                 }
             };
 
             dir_path.push("config");
+
             dir_path
         });
 
