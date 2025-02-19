@@ -17,10 +17,10 @@ use crate::response_error::{
 #[derive(Debug)]
 pub struct Multipart(multer::Multipart<'static>);
 
-impl<'a> FromRequest<'a> for Multipart {
+impl FromRequest for Multipart {
     type Error = MultipartError;
 
-    async fn from_request(head: &'a mut Head, body: RequestBody) -> Result<Self, Self::Error> {
+    async fn from_request(head: &mut Head, body: RequestBody) -> Result<Self, Self::Error> {
         let content_type = head.content_type().unwrap_or_default();
 
         if !<Multipart as RequestMediaType>::check_content_type(content_type) {
@@ -33,13 +33,10 @@ impl<'a> FromRequest<'a> for Multipart {
     }
 }
 
-impl<'a> OptionalFromRequest<'a> for Multipart {
+impl OptionalFromRequest for Multipart {
     type Error = MultipartError;
 
-    async fn from_request(
-        head: &'a mut Head,
-        body: RequestBody,
-    ) -> Result<Option<Self>, Self::Error> {
+    async fn from_request(head: &mut Head, body: RequestBody) -> Result<Option<Self>, Self::Error> {
         let Some(content_type) = head.content_type() else {
             return Ok(None);
         };

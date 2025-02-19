@@ -17,13 +17,13 @@ pub struct TypedHeader<T>(pub T);
 
 impl_deref!(TypedHeader);
 
-impl<'a, T> FromRequestHead<'a> for TypedHeader<T>
+impl<T> FromRequestHead for TypedHeader<T>
 where
     T: Header,
 {
     type Error = TypedHeaderError;
 
-    async fn from_request_head(head: &'a mut Head) -> Result<Self, Self::Error> {
+    async fn from_request_head(head: &mut Head) -> Result<Self, Self::Error> {
         let name = T::name();
 
         let mut values = head.headers.get_all(name).iter();
@@ -40,13 +40,13 @@ where
     }
 }
 
-impl<'a, T> OptionalFromRequestHead<'a> for TypedHeader<T>
+impl<T> OptionalFromRequestHead for TypedHeader<T>
 where
     T: Header,
 {
     type Error = TypedHeaderError;
 
-    async fn from_request_head(head: &'a mut Head) -> Result<Option<Self>, Self::Error> {
+    async fn from_request_head(head: &mut Head) -> Result<Option<Self>, Self::Error> {
         let name = T::name();
 
         let mut values = head.headers.get_all(name).iter();

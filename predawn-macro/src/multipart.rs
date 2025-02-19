@@ -45,17 +45,6 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
 
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
-    let impl_generics_with_lifetime = {
-        let mut s = quote!(#impl_generics).to_string();
-        match s.find('<') {
-            Some(pos) => {
-                s.insert_str(pos + 1, "'a,");
-                syn::parse_str(&s).unwrap()
-            }
-            _ => quote!(<'a>),
-        }
-    };
-
     let description = predawn_macro_core::util::extract_description(&attrs);
     let description = if description.is_empty() {
         quote! { None }
@@ -78,10 +67,10 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
         # use predawn::api_request::ApiRequest;
         # use predawn::openapi::{self, Schema, Parameter};
 
-        impl #impl_generics_with_lifetime FromRequest<'a> for #ident #ty_generics #where_clause {
+        impl #impl_generics FromRequest for #ident #ty_generics #where_clause {
             type Error = MultipartError;
 
-            async fn from_request(head: &'a mut Head, body: RequestBody) -> Result<Self, Self::Error> {
+            async fn from_request(head: &mut Head, body: RequestBody) -> Result<Self, Self::Error> {
                 let mut multipart = <Multipart as FromRequest<_>>::from_request(head, body).await?;
 
                 #(#define_vars)*

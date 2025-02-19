@@ -9,7 +9,7 @@ use predawn_core::{
     openapi::{Parameter, Schema},
     request::Head,
 };
-use serde::Deserialize;
+use serde::de::DeserializeOwned;
 use snafu::{IntoError, ResultExt};
 
 use self::de::PathDeserializer;
@@ -24,13 +24,13 @@ pub struct Path<T>(pub T);
 
 impl_deref!(Path);
 
-impl<'a, T> FromRequestHead<'a> for Path<T>
+impl<T> FromRequestHead for Path<T>
 where
-    T: Deserialize<'a>,
+    T: DeserializeOwned,
 {
     type Error = PathError;
 
-    async fn from_request_head(head: &'a mut Head) -> Result<Self, Self::Error> {
+    async fn from_request_head(head: &mut Head) -> Result<Self, Self::Error> {
         let params = match head.extensions.get::<PathParams>() {
             Some(PathParams::Ok(params)) => params,
             Some(PathParams::Err(e)) => {

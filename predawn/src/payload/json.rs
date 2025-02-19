@@ -35,13 +35,13 @@ pub struct Json<T>(pub T);
 
 impl_deref!(Json);
 
-impl<'a, T> FromRequest<'a> for Json<T>
+impl<T> FromRequest for Json<T>
 where
     T: DeserializeOwned,
 {
     type Error = ReadJsonError;
 
-    async fn from_request(head: &'a mut Head, body: RequestBody) -> Result<Self, Self::Error> {
+    async fn from_request(head: &mut Head, body: RequestBody) -> Result<Self, Self::Error> {
         let content_type = head.content_type().unwrap_or_default();
 
         if !<Self as RequestMediaType>::check_content_type(content_type) {
@@ -57,16 +57,13 @@ where
     }
 }
 
-impl<'a, T> OptionalFromRequest<'a> for Json<T>
+impl<T> OptionalFromRequest for Json<T>
 where
     T: DeserializeOwned,
 {
     type Error = ReadJsonError;
 
-    async fn from_request(
-        head: &'a mut Head,
-        body: RequestBody,
-    ) -> Result<Option<Self>, Self::Error> {
+    async fn from_request(head: &mut Head, body: RequestBody) -> Result<Option<Self>, Self::Error> {
         let Some(content_type) = head.content_type() else {
             return Ok(None);
         };

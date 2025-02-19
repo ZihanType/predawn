@@ -7,7 +7,7 @@ use predawn_core::{
     openapi::{Parameter, Schema},
     request::Head,
 };
-use serde::Deserialize;
+use serde::de::DeserializeOwned;
 use snafu::ResultExt;
 
 use crate::{
@@ -20,13 +20,13 @@ pub struct Query<T>(pub T);
 
 impl_deref!(Query);
 
-impl<'a, T> FromRequestHead<'a> for Query<T>
+impl<T> FromRequestHead for Query<T>
 where
-    T: Deserialize<'a>,
+    T: DeserializeOwned,
 {
     type Error = QueryError;
 
-    async fn from_request_head(head: &'a mut Head) -> Result<Self, Self::Error> {
+    async fn from_request_head(head: &mut Head) -> Result<Self, Self::Error> {
         let bytes = head.uri.query().unwrap_or_default().as_bytes();
         let query = crate::util::deserialize_form(bytes).context(QuerySnafu)?;
         Ok(Query(query))

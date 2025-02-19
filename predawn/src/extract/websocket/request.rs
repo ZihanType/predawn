@@ -174,10 +174,10 @@ impl ApiRequestHead for WebSocketRequest {
     }
 }
 
-impl<'a> FromRequestHead<'a> for WebSocketRequest {
+impl FromRequestHead for WebSocketRequest {
     type Error = WebSocketError;
 
-    async fn from_request_head(head: &'a mut Head) -> Result<Self, Self::Error> {
+    async fn from_request_head(head: &mut Head) -> Result<Self, Self::Error> {
         const WEBSOCKET: &str = "websocket";
 
         let mut buf = Vec::<HeaderValue>::with_capacity(1);

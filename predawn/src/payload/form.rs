@@ -32,13 +32,13 @@ pub struct Form<T>(pub T);
 
 impl_deref!(Form);
 
-impl<'a, T> FromRequest<'a> for Form<T>
+impl<T> FromRequest for Form<T>
 where
     T: DeserializeOwned,
 {
     type Error = ReadFormError;
 
-    async fn from_request(head: &'a mut Head, body: RequestBody) -> Result<Self, Self::Error> {
+    async fn from_request(head: &mut Head, body: RequestBody) -> Result<Self, Self::Error> {
         let content_type = head.content_type().unwrap_or_default();
 
         if !<Self as RequestMediaType>::check_content_type(content_type) {
@@ -54,16 +54,13 @@ where
     }
 }
 
-impl<'a, T> OptionalFromRequest<'a> for Form<T>
+impl<T> OptionalFromRequest for Form<T>
 where
     T: DeserializeOwned,
 {
     type Error = ReadFormError;
 
-    async fn from_request(
-        head: &'a mut Head,
-        body: RequestBody,
-    ) -> Result<Option<Self>, Self::Error> {
+    async fn from_request(head: &mut Head, body: RequestBody) -> Result<Option<Self>, Self::Error> {
         let Some(content_type) = head.content_type() else {
             return Ok(None);
         };
