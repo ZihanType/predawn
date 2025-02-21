@@ -1,4 +1,4 @@
-use std::{future::Future, marker::PhantomData};
+use std::marker::PhantomData;
 
 use predawn_core::{
     error::Error, into_response::IntoResponse, request::Request, response::Response,

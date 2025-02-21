@@ -101,4 +101,6 @@ macro_rules! impl_to_header_value_by_to_string {
     };
 }
 
-impl_to_header_value_by_to_string![i8, i128, u8, u128, f32, f64, Ipv4Addr, Ipv6Addr, IpAddr, Uri];
+impl_to_header_value_by_to_string![
+    i8, i128, u8, u128, f32, f64, Ipv4Addr, Ipv6Addr, IpAddr, Uri
+];

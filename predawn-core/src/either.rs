@@ -9,7 +9,7 @@ use http::StatusCode;
 
 use crate::{
     error::BoxError,
-    openapi::{self, merge_responses, Schema},
+    openapi::{self, Schema, merge_responses},
     response::Response,
     response_error::ResponseError,
 };

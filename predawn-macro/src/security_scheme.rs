@@ -3,7 +3,7 @@ use http::HeaderName;
 use proc_macro2::TokenStream;
 use quote::quote;
 use quote_use::quote_use;
-use syn::{parse_quote, spanned::Spanned, Attribute, DeriveInput, Ident, LitStr};
+use syn::{Attribute, DeriveInput, Ident, LitStr, parse_quote, spanned::Spanned};
 
 #[derive(FromAttr)]
 #[attribute(idents = [api_key])]

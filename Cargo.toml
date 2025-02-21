@@ -1,5 +1,5 @@
 [workspace]
-resolver = "2"
+resolver = "3"
 members = [
     "examples/*",
     "predawn",
@@ -13,13 +13,16 @@ members = [
 
 [workspace.package]
 version = "0.9.0"
-edition = "2021"
+edition = "2024"
 authors = ["zihan <ZihanType@proton.me>"]
 license = "MIT/Apache-2.0"
 homepage = "https://github.com/ZihanType/predawn"
 repository = "https://github.com/ZihanType/predawn"
 include = ["src/**/*", "Cargo.toml"]
 readme = "README.md"
+
+[workspace.lints.rust]
+rust-2024-compatibility = "warn"
 
 [workspace.dependencies]
 # self

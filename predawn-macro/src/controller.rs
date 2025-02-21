@@ -3,12 +3,12 @@ use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote};
 use quote_use::quote_use;
 use syn::{
-    parse_quote, spanned::Spanned, Expr, FnArg, ImplItem, ImplItemFn, ItemImpl, Label, PatType,
-    Path, Receiver, ReturnType, Type,
+    Expr, FnArg, ImplItem, ImplItemFn, ItemImpl, Label, PatType, Path, Receiver, ReturnType, Type,
+    parse_quote, spanned::Spanned,
 };
 
 use crate::{
-    method::{Method, ENUM_METHODS},
+    method::{ENUM_METHODS, Method},
     util,
 };
 

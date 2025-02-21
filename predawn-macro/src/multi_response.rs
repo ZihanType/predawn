@@ -4,7 +4,7 @@ use from_attr::{AttrsValue, FromAttr};
 use http::StatusCode;
 use proc_macro2::TokenStream;
 use quote_use::quote_use;
-use syn::{spanned::Spanned, Attribute, DeriveInput, Expr, ExprLit, Ident, Lit, Type, Variant};
+use syn::{Attribute, DeriveInput, Expr, ExprLit, Ident, Lit, Type, Variant, spanned::Spanned};
 
 use crate::util;
 
@@ -33,7 +33,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
             return Err(syn::Error::new(
                 ident.span(),
                 "missing `#[multi_response(error = SomeIntoResponseError)]` attribute",
-            ))
+            ));
         }
         Err(AttrsValue { value: e, .. }) => return Err(e),
     };

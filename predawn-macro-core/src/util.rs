@@ -2,7 +2,7 @@ use from_attr::FlagOrValue;
 use proc_macro2::TokenStream;
 use quote::quote;
 use quote_use::quote_use;
-use syn::{parse_quote, Attribute, Expr, ExprLit, Lit, Meta, MetaNameValue, Path, Type};
+use syn::{Attribute, Expr, ExprLit, Lit, Meta, MetaNameValue, Path, Type, parse_quote};
 
 #[doc(hidden)]
 pub fn get_crate_name() -> TokenStream {

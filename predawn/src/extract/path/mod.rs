@@ -14,9 +14,9 @@ use snafu::{IntoError, ResultExt};
 
 use self::de::PathDeserializer;
 use crate::{
-    path_params::PathParams,
-    response_error::{path_error, PathError},
     ToParameters,
+    path_params::PathParams,
+    response_error::{PathError, path_error},
 };
 
 #[derive(Debug)]
@@ -34,7 +34,7 @@ where
         let params = match head.extensions.get::<PathParams>() {
             Some(PathParams::Ok(params)) => params,
             Some(PathParams::Err(e)) => {
-                return Err(path_error::InvalidUtf8InPathParamsSnafu.into_error(e.clone()))
+                return Err(path_error::InvalidUtf8InPathParamsSnafu.into_error(e.clone()));
             }
             None => return Err(path_error::MissingPathParamsSnafu.build()),
         };

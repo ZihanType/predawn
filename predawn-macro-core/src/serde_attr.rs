@@ -1,7 +1,7 @@
 use from_attr::FlagOrValue;
 use syn::{
-    punctuated::Punctuated, spanned::Spanned, Attribute, Expr, ExprLit, Lit, Meta, MetaNameValue,
-    Token,
+    Attribute, Expr, ExprLit, Lit, Meta, MetaNameValue, Token, punctuated::Punctuated,
+    spanned::Spanned,
 };
 
 pub struct SerdeAttr {

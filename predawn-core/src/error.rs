@@ -1,7 +1,7 @@
 use std::{error::Error as StdError, fmt};
 
 use error2::Location;
-use http::{header::CONTENT_TYPE, HeaderValue, StatusCode};
+use http::{HeaderValue, StatusCode, header::CONTENT_TYPE};
 use mime::TEXT_PLAIN_UTF_8;
 
 use crate::{response::Response, response_error::ResponseError};

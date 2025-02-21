@@ -33,7 +33,9 @@ pub enum Error {
         location: Location,
     },
 
-    #[snafu(display("inconsistent data source and transaction, data source name: `{data_source_name}`, transaction name : `{transaction_name}`"))]
+    #[snafu(display(
+        "inconsistent data source and transaction, data source name: `{data_source_name}`, transaction name : `{transaction_name}`"
+    ))]
     InconsistentDataSourceAndTransaction {
         #[snafu(implicit)]
         location: Location,
@@ -42,7 +44,9 @@ pub enum Error {
         txn: Transaction,
     },
 
-    #[snafu(display("transaction have more than one reference, data source name: `{data_source_name}`, transaction hierarchy: `{transaction_hierarchy}`"))]
+    #[snafu(display(
+        "transaction have more than one reference, data source name: `{data_source_name}`, transaction hierarchy: `{transaction_hierarchy}`"
+    ))]
     TransactionHaveMoreThanOneReference {
         #[snafu(implicit)]
         location: Location,
@@ -51,7 +55,9 @@ pub enum Error {
         txn: Transaction,
     },
 
-    #[snafu(display("nested transaction have more than one reference, data source name: `{data_source_name}`, current transaction hierarchy: `{current_transaction_hierarchy}`, nested transaction hierarchy: `{nested_transaction_hierarchy}`"))]
+    #[snafu(display(
+        "nested transaction have more than one reference, data source name: `{data_source_name}`, current transaction hierarchy: `{current_transaction_hierarchy}`, nested transaction hierarchy: `{nested_transaction_hierarchy}`"
+    ))]
     NestedTransactionHaveMoreThanOneReference {
         #[snafu(implicit)]
         location: Location,

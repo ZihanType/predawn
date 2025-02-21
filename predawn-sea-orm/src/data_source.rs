@@ -5,11 +5,11 @@ use snafu::ResultExt;
 use tokio::sync::Mutex;
 
 use crate::{
+    Error, Transaction,
     error::{
         DbErrSnafu, InconsistentDataSourceAndTransactionSnafu,
         NestedTransactionHaveMoreThanOneReferenceSnafu, TransactionHaveMoreThanOneReferenceSnafu,
     },
-    Error, Transaction,
 };
 
 #[derive(Debug)]

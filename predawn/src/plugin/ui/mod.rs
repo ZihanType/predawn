@@ -4,7 +4,7 @@ mod redoc;
 mod scalar;
 mod swagger_ui;
 
-use http::{header::CONTENT_TYPE, HeaderValue, Method};
+use http::{HeaderValue, Method, header::CONTENT_TYPE};
 use indexmap::IndexMap;
 use mime::TEXT_HTML_UTF_8;
 use predawn_core::response::Response;
@@ -12,8 +12,8 @@ use rudi::Context;
 
 pub use self::{rapidoc::RapiDoc, swagger_ui::SwaggerUI};
 use crate::{
-    config::{openapi::OpenAPIConfig, server::ServerConfig, Config},
-    handler::{handler_fn, DynHandler},
+    config::{Config, openapi::OpenAPIConfig, server::ServerConfig},
+    handler::{DynHandler, handler_fn},
     normalized_path::NormalizedPath,
 };
 

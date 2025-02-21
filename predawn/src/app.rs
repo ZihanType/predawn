@@ -18,13 +18,13 @@ use tokio::net::TcpListener;
 
 use crate::{
     any_map::AnyMap,
-    config::{logger::LoggerConfig, server::ServerConfig, Config},
+    config::{Config, logger::LoggerConfig, server::ServerConfig},
     controller::Controller,
     environment::Environment,
     handler::{Handler, HandlerExt},
     plugin::Plugin,
     route::{MethodRouter, Router},
-    server::{shutdown_signal, Server},
+    server::{Server, shutdown_signal},
 };
 
 pub trait Hooks {

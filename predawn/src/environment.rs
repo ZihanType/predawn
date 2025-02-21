@@ -96,17 +96,23 @@ mod tests {
     fn test_resolve_from_env() {
         let original = env::var(PREDAWN_ENV);
 
-        env::remove_var(PREDAWN_ENV);
+        unsafe {
+            env::remove_var(PREDAWN_ENV);
+        }
         assert_eq!(Environment::resolve_from_env(), Environment::Dev);
 
-        env::set_var(PREDAWN_ENV, "foo");
+        unsafe {
+            env::set_var(PREDAWN_ENV, "foo");
+        }
         assert_eq!(
             Environment::resolve_from_env(),
             Environment::Custom("foo".into())
         );
 
         if let Ok(v) = original {
-            env::set_var(PREDAWN_ENV, v);
+            unsafe {
+                env::set_var(PREDAWN_ENV, v);
+            }
         }
     }
 

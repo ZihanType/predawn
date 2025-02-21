@@ -1,7 +1,6 @@
 use std::{
     any,
     collections::{BTreeSet, HashSet},
-    future::Future,
     hash::{BuildHasher, Hash},
     net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
 };

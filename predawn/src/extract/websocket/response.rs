@@ -1,7 +1,7 @@
-use std::{collections::BTreeMap, convert::Infallible, future::Future};
+use std::{collections::BTreeMap, convert::Infallible};
 
 use headers::{Connection, HeaderMapExt, SecWebsocketAccept, Upgrade};
-use http::{header::SEC_WEBSOCKET_PROTOCOL, StatusCode};
+use http::{StatusCode, header::SEC_WEBSOCKET_PROTOCOL};
 use hyper_util::rt::TokioIo;
 use predawn_core::{
     api_response::ApiResponse,
@@ -10,7 +10,7 @@ use predawn_core::{
     openapi::{self, Schema},
     response::{MultiResponse, Response, SingleResponse},
 };
-use tokio_tungstenite::{tungstenite::protocol::Role, WebSocketStream};
+use tokio_tungstenite::{WebSocketStream, tungstenite::protocol::Role};
 
 use super::{OnFailedUpgrade, WebSocket, WebSocketRequest};
 

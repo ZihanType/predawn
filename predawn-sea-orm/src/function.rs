@@ -3,8 +3,8 @@ use std::sync::Arc;
 use snafu::OptionExt;
 
 use crate::{
+    DATA_SOURCES, DEFAULT_DATA_SOURCE, DataSources, Transaction,
     error::{Error, NotFoundDataSourceSnafu, NotSetDataSourcesSnafu},
-    DataSources, Transaction, DATA_SOURCES, DEFAULT_DATA_SOURCE,
 };
 
 #[inline(always)]

@@ -4,7 +4,7 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use quote_use::quote_use;
 use syn::{
-    punctuated::Punctuated, Attribute, DeriveInput, Field, GenericParam, Generics, Ident, Token,
+    Attribute, DeriveInput, Field, GenericParam, Generics, Ident, Token, punctuated::Punctuated,
 };
 
 use crate::types::{SchemaFields, SchemaProperties, SchemaVariant, UnitVariant};

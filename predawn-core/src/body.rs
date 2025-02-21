@@ -9,7 +9,7 @@ use bytes::{Bytes, BytesMut};
 use futures_core::TryStream;
 use futures_util::TryStreamExt;
 use http_body::SizeHint;
-use http_body_util::{combinators::UnsyncBoxBody, BodyExt, Empty, Full, Limited, StreamBody};
+use http_body_util::{BodyExt, Empty, Full, Limited, StreamBody, combinators::UnsyncBoxBody};
 use hyper::body::{Frame, Incoming};
 
 use crate::error::BoxError;

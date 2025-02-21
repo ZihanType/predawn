@@ -1,12 +1,12 @@
 mod entity;
 
 use predawn::{
-    app::{run_app, Hooks},
+    ToParameters,
+    app::{Hooks, run_app},
     controller,
     extract::Query,
     handler::{Handler, HandlerExt},
     middleware::Tracing,
-    ToParameters,
 };
 use predawn_sea_orm::SeaOrmMiddleware;
 use rudi::{Context, Singleton};

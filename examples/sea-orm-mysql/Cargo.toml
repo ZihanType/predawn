@@ -9,6 +9,9 @@ repository.workspace = true
 include.workspace = true
 readme.workspace = true
 
+[lints]
+workspace = true
+
 [dependencies]
 predawn = { workspace = true, features = ["macro", "auto-register"] }
 predawn-sea-orm = { workspace = true, features = [

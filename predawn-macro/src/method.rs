@@ -1,7 +1,7 @@
 use std::fmt;
 
 use from_attr::FromIdent;
-use syn::{parse_quote, Ident};
+use syn::{Ident, parse_quote};
 
 #[derive(Copy, Clone, FromIdent)]
 pub(crate) enum Method {

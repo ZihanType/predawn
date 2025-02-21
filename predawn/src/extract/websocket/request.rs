@@ -1,9 +1,9 @@
-use std::{collections::BTreeMap, future::Future};
+use std::collections::BTreeMap;
 
 use headers::{Connection, Header, HeaderMapExt, SecWebsocketKey, SecWebsocketVersion, Upgrade};
 use http::{
-    header::{SEC_WEBSOCKET_PROTOCOL, UPGRADE},
     HeaderValue, Method, Version,
+    header::{SEC_WEBSOCKET_PROTOCOL, UPGRADE},
 };
 use hyper::{ext::Protocol, upgrade::OnUpgrade};
 use predawn_core::{

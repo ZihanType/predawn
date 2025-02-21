@@ -11,6 +11,9 @@ repository.workspace = true
 include.workspace = true
 readme.workspace = true
 
+[lints]
+workspace = true
+
 [dependencies]
 syn = { workspace = true }
 from-attr = { workspace = true }

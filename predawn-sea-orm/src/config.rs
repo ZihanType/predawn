@@ -1,6 +1,6 @@
 use std::{collections::HashMap, time::Duration};
 
-use predawn::config::{logger::Level, Config, ConfigPrefix};
+use predawn::config::{Config, ConfigPrefix, logger::Level};
 use rudi::Singleton;
 use serde::{Deserialize, Serialize};
 use url::Url;

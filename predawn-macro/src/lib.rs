@@ -12,7 +12,7 @@ mod util;
 
 use from_attr::FromAttr;
 use proc_macro::TokenStream;
-use syn::{parse_macro_input, DeriveInput, ItemImpl};
+use syn::{DeriveInput, ItemImpl, parse_macro_input};
 
 #[proc_macro_attribute]
 pub fn controller(attr: TokenStream, item: TokenStream) -> TokenStream {

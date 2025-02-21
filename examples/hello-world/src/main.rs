@@ -7,24 +7,24 @@ use std::{
 use futures_util::StreamExt;
 use http::StatusCode;
 use predawn::{
+    SecurityScheme, Tag, ToParameters, ToSchema,
     any_map::AnyMap,
-    app::{run_app, Hooks},
-    config::{logger::LoggerConfig, Config},
+    app::{Hooks, run_app},
+    config::{Config, logger::LoggerConfig},
     controller,
     error2::{ErrorExt, Location, NextError},
     extract::{
+        Path, Query,
         multipart::{JsonField, Multipart, Upload},
         websocket::{Message, WebSocketRequest, WebSocketResponse},
-        Path, Query,
     },
     handler::{Handler, HandlerExt},
     middleware::{TowerLayerCompatExt, Tracing},
     openapi::{self, SecurityRequirement},
     payload::{Form, Json},
-    response::{sse::EventStream, Download},
+    response::{Download, sse::EventStream},
     response_error::ResponseError,
     route::Router,
-    SecurityScheme, Tag, ToParameters, ToSchema,
 };
 use rudi::{Context, Singleton};
 use serde::{Deserialize, Serialize};
@@ -258,6 +258,7 @@ impl MyController {
     #[endpoint(paths = ["/event_stream"], methods = [GET])]
     async fn event_stream(&self) -> EventStream<Person> {
         EventStream::new(
+            #[expect(tail_expr_drop_order)]
             async_stream::stream! {
                 let names = ["Alice", "Bob", "Charlie", "David"];
 

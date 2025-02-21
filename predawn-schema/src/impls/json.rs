@@ -43,7 +43,7 @@ impl ToSchema for Number {
 #[cfg_attr(docsrs, doc(cfg(feature = "raw_value")))]
 #[cfg(feature = "raw_value")]
 mod raw_value {
-    use serde_json::{value::RawValue, Value};
+    use serde_json::{Value, value::RawValue};
 
     use super::forward_impl;
     forward_impl!(RawValue => Value);
