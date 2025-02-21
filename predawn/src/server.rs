@@ -1,10 +1,4 @@
-use std::{
-    convert::Infallible,
-    future::{self, Future},
-    io,
-    sync::Arc,
-    time::Duration,
-};
+use std::{convert::Infallible, future, io, sync::Arc, time::Duration};
 
 use hyper::{body::Incoming, service::service_fn};
 use hyper_util::{

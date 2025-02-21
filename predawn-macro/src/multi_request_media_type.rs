@@ -2,7 +2,7 @@ use from_attr::{AttrsValue, FromAttr};
 use proc_macro2::TokenStream;
 use quote::quote;
 use quote_use::quote_use;
-use syn::{spanned::Spanned, DeriveInput, Ident, Type, Variant};
+use syn::{DeriveInput, Ident, Type, Variant, spanned::Spanned};
 
 use crate::util;
 
@@ -31,7 +31,7 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
             return Err(syn::Error::new(
                 ident.span(),
                 "missing `#[multi_request_media_type(error = SomeFromRequestError)]` attribute",
-            ))
+            ));
         }
         Err(AttrsValue { value: e, .. }) => return Err(e),
     };

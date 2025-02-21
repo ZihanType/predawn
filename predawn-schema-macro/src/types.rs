@@ -1,4 +1,4 @@
-use syn::{punctuated::Punctuated, Attribute, Field, Ident, Token};
+use syn::{Attribute, Field, Ident, Token, punctuated::Punctuated};
 
 pub(crate) struct UnitVariant {
     pub(crate) attrs: Vec<Attribute>,

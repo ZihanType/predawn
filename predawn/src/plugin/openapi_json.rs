@@ -8,7 +8,7 @@ use rudi::{Context, Singleton};
 use super::Plugin;
 use crate::{
     config::openapi::OpenAPIConfig,
-    handler::{handler_fn, DynHandler},
+    handler::{DynHandler, handler_fn},
     normalized_path::NormalizedPath,
     payload::Json,
 };

@@ -11,6 +11,9 @@ repository.workspace = true
 include.workspace = true
 readme.workspace = true
 
+[lints]
+workspace = true
+
 [dependencies]
 predawn-schema-macro = { workspace = true, optional = true, features = [
     "__used_in_predawn_schema",

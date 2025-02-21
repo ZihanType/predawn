@@ -1,7 +1,7 @@
 use from_attr::{AttrsValue, FromAttr};
 use proc_macro2::TokenStream;
 use quote_use::quote_use;
-use syn::{spanned::Spanned, DeriveInput, Ident, LitInt, Type, Variant};
+use syn::{DeriveInput, Ident, LitInt, Type, Variant, spanned::Spanned};
 
 use crate::util;
 
@@ -24,17 +24,18 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
     let EnumAttr {
         error: into_response_error,
         status: status_code,
-    } =
-        match EnumAttr::from_attributes(&attrs) {
-            Ok(Some(AttrsValue {
-                value: enum_attr, ..
-            })) => enum_attr,
-            Ok(None) => return Err(syn::Error::new(
+    } = match EnumAttr::from_attributes(&attrs) {
+        Ok(Some(AttrsValue {
+            value: enum_attr, ..
+        })) => enum_attr,
+        Ok(None) => {
+            return Err(syn::Error::new(
                 ident.span(),
                 "missing `#[multi_response_media_type(error = SomeIntoResponseError)]` attribute",
-            )),
-            Err(AttrsValue { value: e, .. }) => return Err(e),
-        };
+            ));
+        }
+        Err(AttrsValue { value: e, .. }) => return Err(e),
+    };
 
     let status_code_value = util::extract_status_code_value(status_code)?;
 

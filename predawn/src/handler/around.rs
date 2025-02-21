@@ -1,4 +1,4 @@
-use std::{future::Future, sync::Arc};
+use std::sync::Arc;
 
 use predawn_core::{
     error::Error, into_response::IntoResponse, request::Request, response::Response,

@@ -14,7 +14,7 @@ use predawn_core::{
 };
 use serde::Serialize;
 
-use super::{keep_alive::KeepAliveStream, Event, EventStream, KeepAlive};
+use super::{Event, EventStream, KeepAlive, keep_alive::KeepAliveStream};
 use crate::response_error::EventStreamError;
 
 pub struct EventStreamBuilder<F> {

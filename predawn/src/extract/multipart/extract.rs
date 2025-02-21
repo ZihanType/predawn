@@ -4,7 +4,7 @@ use multer::Field;
 use predawn_core::{
     body::RequestBody,
     from_request::{FromRequest, OptionalFromRequest},
-    media_type::{has_media_type, MediaType, RequestMediaType},
+    media_type::{MediaType, RequestMediaType, has_media_type},
     request::Head,
 };
 use snafu::ResultExt;

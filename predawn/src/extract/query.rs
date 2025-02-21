@@ -11,8 +11,8 @@ use serde::de::DeserializeOwned;
 use snafu::ResultExt;
 
 use crate::{
-    response_error::{QueryError, QuerySnafu},
     ToParameters,
+    response_error::{QueryError, QuerySnafu},
 };
 
 #[derive(Debug, Clone, Copy, Default)]

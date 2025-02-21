@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, convert::Infallible};
 
 use bytes::Bytes;
-use http::{header::CONTENT_TYPE, HeaderValue, StatusCode};
+use http::{HeaderValue, StatusCode, header::CONTENT_TYPE};
 use mime::{APPLICATION, WWW_FORM_URLENCODED};
 use predawn_core::{
     api_request::ApiRequest,
@@ -11,15 +11,15 @@ use predawn_core::{
     impl_deref,
     into_response::IntoResponse,
     media_type::{
-        has_media_type, MediaType, MultiRequestMediaType, MultiResponseMediaType, RequestMediaType,
-        ResponseMediaType, SingleMediaType,
+        MediaType, MultiRequestMediaType, MultiResponseMediaType, RequestMediaType,
+        ResponseMediaType, SingleMediaType, has_media_type,
     },
     openapi::{self, Parameter, Schema},
     request::Head,
     response::{MultiResponse, Response, SingleResponse},
 };
 use predawn_schema::ToSchema;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 use snafu::ResultExt;
 
 use crate::response_error::{

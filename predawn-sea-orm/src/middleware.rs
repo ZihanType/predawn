@@ -6,7 +6,7 @@ use predawn::{
 use rudi::Transient;
 use sea_orm::DatabaseConnection;
 
-use crate::{inner::Inner, DataSources, DATA_SOURCES, DEFAULT_DATA_SOURCE};
+use crate::{DATA_SOURCES, DEFAULT_DATA_SOURCE, DataSources, inner::Inner};
 
 #[derive(Debug, Clone)]
 pub struct SeaOrmMiddleware {

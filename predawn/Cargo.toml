@@ -11,6 +11,9 @@ repository.workspace = true
 include.workspace = true
 readme.workspace = true
 
+[lints]
+workspace = true
+
 [dependencies]
 predawn-core = { workspace = true }
 predawn-macro = { workspace = true, optional = true }

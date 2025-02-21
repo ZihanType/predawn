@@ -1,11 +1,11 @@
 use std::net::SocketAddr;
 
-use reqwest::{redirect::Policy, Client, RequestBuilder};
+use reqwest::{Client, RequestBuilder, redirect::Policy};
 use rudi::Context;
 use tokio::net::TcpListener;
 
 use crate::{
-    app::{create_app, Hooks},
+    app::{Hooks, create_app},
     environment::Environment,
     server::Server,
 };

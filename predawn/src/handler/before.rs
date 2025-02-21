@@ -1,5 +1,3 @@
-use std::future::Future;
-
 use predawn_core::{error::Error, request::Request, response::Response};
 
 use crate::handler::Handler;

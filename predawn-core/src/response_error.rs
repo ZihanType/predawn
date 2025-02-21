@@ -5,7 +5,7 @@ use std::{
 };
 
 use error2::{ErrorExt, Location, NextError};
-use http::{header::CONTENT_TYPE, HeaderValue, StatusCode};
+use http::{HeaderValue, StatusCode, header::CONTENT_TYPE};
 use mime::TEXT_PLAIN_UTF_8;
 use snafu::Snafu;
 
