@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use rudi::SingleOwner;
 use sea_orm::DatabaseConnection;
 
-use crate::{inner::Inner, DataSource, Error, DEFAULT_DATA_SOURCE};
+use crate::{DEFAULT_DATA_SOURCE, DataSource, Error, inner::Inner};
 
 #[derive(Debug)]
 pub struct DataSources(HashMap<Arc<str>, DataSource>);

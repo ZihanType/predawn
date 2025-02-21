@@ -1,8 +1,8 @@
 use http::StatusCode;
 use proc_macro2::Span;
 use syn::{
-    punctuated::Punctuated, spanned::Spanned, Attribute, Data, DataEnum, DataStruct, DataUnion,
-    Field, Fields, FieldsNamed, FieldsUnnamed, LitInt, Token, Type, Variant,
+    Attribute, Data, DataEnum, DataStruct, DataUnion, Field, Fields, FieldsNamed, FieldsUnnamed,
+    LitInt, Token, Type, Variant, punctuated::Punctuated, spanned::Spanned,
 };
 
 pub(crate) fn extract_variants(
@@ -92,7 +92,7 @@ pub(crate) fn extract_single_unnamed_field_type_from_variant(
                     return Err(syn::Error::new(
                         paren_token.span.join(),
                         "must have one field",
-                    ))
+                    ));
                 }
             };
 

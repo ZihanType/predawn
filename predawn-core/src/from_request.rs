@@ -1,4 +1,4 @@
-use std::{convert::Infallible, future::Future};
+use std::convert::Infallible;
 
 use bytes::Bytes;
 use http::{HeaderMap, Method, Uri, Version};
@@ -10,8 +10,8 @@ use crate::{
     private::{ViaRequest, ViaRequestHead},
     request::{BodyLimit, Head, LocalAddr, OriginalUri, RemoteAddr},
     response_error::{
-        read_bytes_error, InvalidUtf8Snafu, LengthLimitSnafu, ReadBytesError, ReadBytesSnafu,
-        ReadStringError, ResponseError,
+        InvalidUtf8Snafu, LengthLimitSnafu, ReadBytesError, ReadBytesSnafu, ReadStringError,
+        ResponseError, read_bytes_error,
     },
 };
 
@@ -19,7 +19,7 @@ pub trait FromRequestHead: Sized {
     type Error: ResponseError;
 
     fn from_request_head(head: &mut Head)
-        -> impl Future<Output = Result<Self, Self::Error>> + Send;
+    -> impl Future<Output = Result<Self, Self::Error>> + Send;
 }
 
 pub trait FromRequest<M = ViaRequest>: Sized {

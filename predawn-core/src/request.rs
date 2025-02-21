@@ -2,9 +2,9 @@ use std::{fmt, net::SocketAddr};
 
 use error2::{ErrorExt, Location, NextError};
 use http::{
+    Extensions, HeaderMap, HeaderValue, Method, Uri, Version,
     header::{CONTENT_LENGTH, CONTENT_TYPE},
     request::Parts,
-    Extensions, HeaderMap, HeaderValue, Method, Uri, Version,
 };
 use hyper::body::Incoming;
 use snafu::{OptionExt, Snafu};

@@ -1,7 +1,7 @@
 use std::{borrow::Cow, convert::Infallible};
 
 use bytes::{Bytes, BytesMut};
-use http::{header::CONTENT_TYPE, HeaderValue, StatusCode};
+use http::{HeaderValue, StatusCode, header::CONTENT_TYPE};
 
 use crate::{
     body::ResponseBody, either::Either, error::BoxError, media_type::MediaType, response::Response,

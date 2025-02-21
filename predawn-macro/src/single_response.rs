@@ -6,9 +6,9 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use quote_use::quote_use;
 use syn::{
-    parse_quote, spanned::Spanned, Attribute, Data, DataEnum, DataStruct, DataUnion, DeriveInput,
-    Expr, ExprLit, Field, Fields, FieldsNamed, FieldsUnnamed, Generics, Ident, Lit, LitInt, Member,
-    Type,
+    Attribute, Data, DataEnum, DataStruct, DataUnion, DeriveInput, Expr, ExprLit, Field, Fields,
+    FieldsNamed, FieldsUnnamed, Generics, Ident, Lit, LitInt, Member, Type, parse_quote,
+    spanned::Spanned,
 };
 
 use crate::util;
@@ -46,13 +46,13 @@ pub(crate) fn generate(input: DeriveInput) -> syn::Result<TokenStream> {
             return Err(syn::Error::new(
                 enum_token.span,
                 "`SingleResponse` can only be derived for structs",
-            ))
+            ));
         }
         Data::Union(DataUnion { union_token, .. }) => {
             return Err(syn::Error::new(
                 union_token.span,
                 "`SingleResponse` can only be derived for structs",
-            ))
+            ));
         }
     };
 

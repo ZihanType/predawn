@@ -1,5 +1,3 @@
-use std::future::Future;
-
 use predawn_core::{
     error::Error, into_response::IntoResponse, request::Request, response::Response,
 };

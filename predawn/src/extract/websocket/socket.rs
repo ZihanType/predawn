@@ -4,13 +4,13 @@ use std::{
 };
 
 use futures_core::Stream;
-use futures_util::{sink::Sink, SinkExt, StreamExt};
+use futures_util::{SinkExt, StreamExt, sink::Sink};
 use http::HeaderValue;
 use hyper::upgrade::Upgraded;
 use hyper_util::rt::TokioIo;
 use tokio_tungstenite::{
-    tungstenite::{self, protocol::CloseFrame, Message},
     WebSocketStream,
+    tungstenite::{self, Message, protocol::CloseFrame},
 };
 
 #[derive(Debug)]

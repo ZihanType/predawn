@@ -2,7 +2,7 @@ use std::{borrow::Cow, collections::BTreeMap};
 
 use bytes::{Bytes, BytesMut};
 use indexmap::IndexMap;
-use mime::{Mime, APPLICATION, CHARSET, OCTET_STREAM, PLAIN, TEXT, UTF_8};
+use mime::{APPLICATION, CHARSET, Mime, OCTET_STREAM, PLAIN, TEXT, UTF_8};
 use predawn_schema::ToSchema;
 
 use crate::openapi::{self, Schema};

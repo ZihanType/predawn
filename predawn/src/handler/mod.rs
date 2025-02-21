@@ -6,7 +6,7 @@ mod catch_error;
 mod inspect_all_error;
 mod inspect_error;
 
-use std::{any::Any, future::Future, marker::PhantomData, sync::Arc};
+use std::{any::Any, marker::PhantomData, sync::Arc};
 
 use futures_core::future::BoxFuture;
 use predawn_core::{

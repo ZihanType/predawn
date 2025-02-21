@@ -1,7 +1,7 @@
 use std::{collections::BTreeSet, error::Error, fmt, sync::Arc};
 
 use error2::{ErrorExt, Location, NextError};
-use http::{header::CONTENT_TYPE, HeaderName, StatusCode};
+use http::{HeaderName, StatusCode, header::CONTENT_TYPE};
 use predawn_core::media_type::MediaType;
 pub use predawn_core::response_error::*;
 use snafu::Snafu;
@@ -481,9 +481,7 @@ pub enum MultipartError {
         name: &'static str,
     },
 
-    #[snafu(display(
-        "failed to parse field `{name}` with value {value:?} to a `{expected_type}`"
-    ))]
+    #[snafu(display("failed to parse field `{name}` with value {value:?} to a `{expected_type}`"))]
     ParseErrorAtName {
         #[snafu(implicit)]
         location: Location,
