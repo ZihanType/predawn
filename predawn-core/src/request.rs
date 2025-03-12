@@ -9,32 +9,36 @@ use http::{
 use hyper::body::Incoming;
 use snafu::{OptionExt, Snafu};
 
-use crate::{body::RequestBody, impl_deref, impl_display};
+use crate::{body::RequestBody, impl_debug, impl_deref, impl_display};
 
 pub const DEFAULT_BODY_LIMIT: usize = 2 * 1024 * 1024; // 2 mb
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct BodyLimit(pub usize);
 
 impl_deref!(BodyLimit : usize);
+impl_debug!(BodyLimit);
 impl_display!(BodyLimit);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct LocalAddr(pub SocketAddr);
 
 impl_deref!(LocalAddr : SocketAddr);
+impl_debug!(LocalAddr);
 impl_display!(LocalAddr);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RemoteAddr(pub SocketAddr);
 
 impl_deref!(RemoteAddr : SocketAddr);
+impl_debug!(RemoteAddr);
 impl_display!(RemoteAddr);
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct OriginalUri(pub Uri);
 
 impl_deref!(OriginalUri : Uri);
+impl_debug!(OriginalUri);
 impl_display!(OriginalUri);
 
 #[derive(Debug)]

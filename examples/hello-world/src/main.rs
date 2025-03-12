@@ -142,7 +142,7 @@ impl MyController {
     #[endpoint(paths = ["/no_arg"], methods = [GET], security = [{}, { MyScheme2: [] }])] // override the global security
     async fn no_arg(&self) {}
 
-    #[endpoint(methods = [GET, POST, PUT], middleware = add_middlewares, tags = [Hello])]
+    #[endpoint(methods = [POST, PUT], middleware = add_middlewares, tags = [Hello])]
     async fn hello(&self, name: String) -> Result<String, MyError> {
         Ok(format!("hello, {}", name))
     }
