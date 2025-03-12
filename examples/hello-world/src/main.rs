@@ -49,21 +49,26 @@ impl Hooks for App {
             concat!(env!("CARGO_MANIFEST_DIR"), "/log"),
             "hello-world.log",
         );
-        let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
+        let (non_blocking_file_writer, file_writer_guard) =
+            tracing_appender::non_blocking(file_appender);
+
+        let (non_blocking_stdout_writer, stdout_writer_guard) =
+            tracing_appender::non_blocking(std::io::stdout());
 
         let file_layer = tracing_subscriber::fmt::layer()
             .with_ansi(false)
-            .with_writer(non_blocking.with_max_level(level));
+            .with_writer(non_blocking_file_writer.with_max_level(level));
 
-        let stdout_layer =
-            tracing_subscriber::fmt::layer().with_writer(std::io::stdout.with_max_level(level));
+        let stdout_layer = tracing_subscriber::fmt::layer()
+            .with_writer(non_blocking_stdout_writer.with_max_level(level));
 
         tracing_subscriber::registry()
             .with(file_layer)
             .with(stdout_layer)
             .init();
 
-        map.insert(guard);
+        map.insert(file_writer_guard);
+        map.insert(stdout_writer_guard);
     }
 
     async fn before_run<H: Handler>(mut cx: Context, router: H) -> (Context, impl Handler) {
@@ -94,7 +99,7 @@ impl Hooks for App {
 
     fn after_routes(router: &Router) {
         router.routes().iter().for_each(|(route, methods)| {
-            println!("{}: {:?}", route, methods);
+            tracing::info!("{}: {:?}", route, methods);
         });
     }
 }
