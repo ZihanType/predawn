@@ -435,7 +435,7 @@ fn generate_normal_enum(
             let result = match fields {
                 SchemaFields::Unit => generate_unit_variant(crate_name, attrs, ident),
                 SchemaFields::Unnamed(field) => {
-                    generate_unnamed_variant(crate_name, attrs, ident, field)
+                    generate_unnamed_variant(crate_name, attrs, ident, *field)
                 }
                 SchemaFields::Named(fields) => {
                     generate_named_variant(crate_name, attrs, ident, fields)

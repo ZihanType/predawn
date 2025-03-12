@@ -102,9 +102,9 @@ pub(crate) fn extract_schema_properties(data: Data) -> syn::Result<SchemaPropert
                                     Some(SchemaVariant {
                                         attrs,
                                         ident,
-                                        fields: SchemaFields::Unnamed(
+                                        fields: SchemaFields::Unnamed(Box::new(
                                             unnamed.pop().unwrap().into_value(),
-                                        ),
+                                        )),
                                     })
                                 }
                             }

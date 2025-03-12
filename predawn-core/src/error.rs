@@ -32,6 +32,7 @@ impl Error {
     }
 
     #[allow(clippy::type_complexity)]
+    #[allow(clippy::result_large_err)]
     pub fn downcast<T>(self) -> Result<(Response, T, Box<[Box<str>]>), Self>
     where
         T: StdError + 'static,

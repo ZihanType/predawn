@@ -13,7 +13,7 @@ pub(crate) struct SchemaVariant {
 
 pub(crate) enum SchemaFields {
     Unit,
-    Unnamed(Field),
+    Unnamed(Box<Field>),
     Named(Punctuated<Field, Token![,]>),
 }
 
